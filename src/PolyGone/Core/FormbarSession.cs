@@ -18,7 +18,7 @@ public static class FormbarSession
     /// The Formbar server used for login and Digipog transfers.
     /// Change this constant to point at a different Formbar instance.
     /// </summary>
-    public const string DefaultServerUrl = "https://formbeta.yorktechapps.com";
+    public const string DefaultServerUrl = "https://formbar.yorktechapps.com";
 
     /// <summary>Base URL of the Formbar server, set from the saved session or DefaultServerUrl.</summary>
     public static string ServerUrl { get; set; } = DefaultServerUrl;
@@ -46,7 +46,7 @@ public static class FormbarSession
     /// <summary>
     /// Cost in Digipogs to unlock all levels at once.
     /// </summary>
-    public const int LevelCost = 50;
+    public const int LevelCost = 200;
 
     /// <summary>
     /// Purchase record key used to track whether the player has unlocked all levels.
