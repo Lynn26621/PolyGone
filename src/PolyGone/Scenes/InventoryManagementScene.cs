@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -95,6 +98,15 @@ namespace PolyGone
         // Static fields to remember last selection across instances
         private static List<ItemType> _lastSelectedItems = new List<ItemType> { ItemType.DoubleJump, ItemType.SpeedBoost };
         private static WeaponType _lastSelectedWeapon = WeaponType.Blaster;
+
+        private static readonly string _loadoutSavePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "PolyGone", "loadout.json");
+
+        static InventoryManagement()
+        {
+            TryLoadLoadout();
+        }
 
         // Selection state
         private enum SelectionMode { Items, Weapon, Confirm }
@@ -376,9 +388,10 @@ namespace PolyGone
 
         private void StartGame()
         {
-            // Save current selections for next time
+            // Save current selections for next time (in memory and on disk)
             _lastSelectedItems = new List<ItemType>(_selectedItems);
             _lastSelectedWeapon = _selectedWeapon;
+            SaveLoadout();
             
             // Pop this inventory management scene
             _sceneManager.PopScene(this);
@@ -523,6 +536,55 @@ namespace PolyGone
         private bool IsKeyPressed(Keys key)
         {
             return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
+        }
+
+        private static void SaveLoadout()
+        {
+            try
+            {
+                string? dir = Path.GetDirectoryName(_loadoutSavePath);
+                if (dir != null && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                var data = new
+                {
+                    Items = _lastSelectedItems.Select(i => (int)i).ToList(),
+                    Weapon = (int)_lastSelectedWeapon
+                };
+                File.WriteAllText(_loadoutSavePath, JsonSerializer.Serialize(data));
+            }
+            catch { }
+        }
+
+        private static void TryLoadLoadout()
+        {
+            try
+            {
+                if (!File.Exists(_loadoutSavePath)) return;
+
+                string json = File.ReadAllText(_loadoutSavePath);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("Items", out var itemsEl))
+                {
+                    _lastSelectedItems.Clear();
+                    foreach (var item in itemsEl.EnumerateArray())
+                    {
+                        int val = item.GetInt32();
+                        if (Enum.IsDefined(typeof(ItemType), val))
+                            _lastSelectedItems.Add((ItemType)val);
+                    }
+                }
+
+                if (root.TryGetProperty("Weapon", out var weaponEl))
+                {
+                    int val = weaponEl.GetInt32();
+                    if (Enum.IsDefined(typeof(WeaponType), val))
+                        _lastSelectedWeapon = (WeaponType)val;
+                }
+            }
+            catch { }
         }
     }
 }
