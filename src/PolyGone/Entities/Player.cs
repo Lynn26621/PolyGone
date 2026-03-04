@@ -100,6 +100,11 @@ namespace PolyGone.Entities
                     case ItemType.IronWill:
                         item = new IronWillItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Gold, srcRect);
                         break;
+#if DEBUG
+                    case ItemType.DevMode:
+                        item = new PolyGone.Items.DevModeItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Magenta, srcRect);
+                        break;
+#endif
                 }
                 
                 if (item != null)
@@ -171,6 +176,7 @@ namespace PolyGone.Entities
 
             // Jumping with coyote time and double jump
             bool spacePressed = keyboardState.IsKeyDown(Keys.Space);
+            bool spaceJustPressed = spacePressed && !previousKeyboardState.IsKeyDown(Keys.Space);
             bool wasOnGroundLastFrame = isOnGround;
             
             if ((isOnGround || coyoteTime > 0f) && spacePressed)
@@ -187,6 +193,12 @@ namespace PolyGone.Entities
                 {
                     changeY = JumpStrength; // Same jump strength for double jump
                 }
+#if DEBUG
+                else if (GetDevModeItem()?.IsActive == true && spaceJustPressed)
+                {
+                    changeY = JumpStrength; // DEV: infinite jumps
+                }
+#endif
             }
         }
 
@@ -200,6 +212,9 @@ namespace PolyGone.Entities
                     // Only take damage from enemy projectiles
                     if (projectile.owner == Owner.Enemy && invincibilityFrames <= 0f)
                     {
+#if DEBUG
+                        if (GetDevModeItem()?.IsActive == true) break;
+#endif
                         health -= projectile.damage;
                         if (health <= 0)
                         {
@@ -225,6 +240,9 @@ namespace PolyGone.Entities
                     // Only take damage if not invincible
                     if (invincibilityFrames <= 0f)
                     {
+#if DEBUG
+                        if (GetDevModeItem()?.IsActive == true) break;
+#endif
                         // Take 40 damage
                         health -= 40;
                         if (health <= 0) TryAbsorbLethalHit();
@@ -331,6 +349,13 @@ namespace PolyGone.Entities
             return itemInventory.OfType<IronWillItem>().FirstOrDefault(item => item.IsReady);
         }
 
+#if DEBUG
+        private PolyGone.Items.DevModeItem? GetDevModeItem()
+        {
+            return itemInventory.OfType<PolyGone.Items.DevModeItem>().FirstOrDefault(i => i.IsActive);
+        }
+#endif
+
         /// <summary>If Iron Will is ready, survive the killing blow at 1 HP.</summary>
         private void TryAbsorbLethalHit()
         {
@@ -374,9 +399,19 @@ namespace PolyGone.Entities
             var currentBlaster = GetBlaster();
             if (currentBlaster != null)
             {
+#if DEBUG
+                int bulletCountBefore = bullets.Count;
+#endif
                 currentBlaster.Follow(new Rectangle((int)position.X, (int)position.Y, size[0], size[1]), cameraOffset);
                 currentBlaster.Use();
                 currentBlaster.Update(gameTime);
+#if DEBUG
+                if (GetDevModeItem()?.IsActive == true)
+                {
+                    for (int i = bulletCountBefore; i < bullets.Count; i++)
+                        bullets[i].IsInstantKill = true;
+                }
+#endif
             }
             
             // Update all bullets (shared across all weapons) - iterate backwards for safe removal

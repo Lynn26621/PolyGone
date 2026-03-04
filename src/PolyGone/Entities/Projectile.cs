@@ -21,6 +21,8 @@ namespace PolyGone
         public readonly int damage; // Fixed damage for now
         /// <summary>When true, the projectile passes through enemies instead of being destroyed on hit.</summary>
         public bool IsPiercing { get; }
+        /// <summary>When true, the projectile instantly kills any enemy it hits (DEV only).</summary>
+        public bool IsInstantKill { get; set; } = false;
         public Projectile(Texture2D texture, Vector2 position, int[] size, float lifetime, int health, Color color, float xSpeed, float ySpeed, Owner owner, int damage, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, bool isPiercing = false)
             : base(texture, position, size, health, color, srcRect, collisionMap)
         {
