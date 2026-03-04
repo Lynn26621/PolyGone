@@ -20,25 +20,37 @@ internal class OptionsScene : IScene
     private readonly (int Width, int Height)[] _availableResolutions;
     private int _pendingResolutionIndex;
     private int _appliedResolutionIndex;
+    private int _deferredCenterWidth;
+    private int _deferredCenterHeight;
+    private bool _pendingIsFullScreen;
+    private bool _appliedIsFullScreen;
+    private bool _confirmingDiscard;
+    private int _confirmSelectedIndex;
+    private int _buttonIndex; // 0 = Apply, 1 = Discard
 
-    // Option labels are dynamic — they reflect current state
-    private bool IsApplyEnabled => !_graphics.IsFullScreen && _pendingResolutionIndex != _appliedResolutionIndex;
+    private const float RowSpacing   = 50f;
+    private const float ButtonWidth  = 200f;
+    private const float ButtonHeight = 45f;
+    private const float ButtonGap    = 24f;
+
+    // Option labels are dynamic — they reflect current pending state
+    private bool HasPendingChanges =>
+        _pendingIsFullScreen != _appliedIsFullScreen ||
+        _pendingResolutionIndex != _appliedResolutionIndex;
 
     private string ResolutionLabel()
     {
-        if (_graphics.IsFullScreen)
-        {
-            return "Resolution: (fullscreen)";
-        }
+        if (_pendingIsFullScreen) { return "Resolution: (fullscreen)"; }
         var r = _availableResolutions[_pendingResolutionIndex];
         return $"Resolution: < {r.Width}x{r.Height} >";
     }
 
-    private string[] GetOptions() =>
+    // Row 0=Display, Row 1=Resolution, Row 2=Buttons (drawn separately), Row 3=Back
+    private string[] GetRowLabels() =>
     [
-        _graphics.IsFullScreen ? "Display: Fullscreen" : "Display: Windowed",
+        _pendingIsFullScreen ? "Display: Fullscreen" : "Display: Windowed",
         ResolutionLabel(),
-        "Apply",
+        "",   // placeholder — button row is drawn separately
         "Back"
     ];
 
@@ -54,6 +66,11 @@ internal class OptionsScene : IScene
         _pendingResolutionIndex = Array.IndexOf(_availableResolutions, currentRes);
         if (_pendingResolutionIndex < 0) { _pendingResolutionIndex = 0; }
         _appliedResolutionIndex = _pendingResolutionIndex;
+        _pendingIsFullScreen  = DisplaySettings.IsFullScreen;
+        _appliedIsFullScreen  = DisplaySettings.IsFullScreen;
+        _confirmingDiscard    = false;
+        _confirmSelectedIndex = 1;
+        _buttonIndex          = 0;
     }
 
     public void Load()
@@ -70,30 +87,82 @@ internal class OptionsScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        _keyboardState = Keyboard.GetState();
-        var options = GetOptions();
+        // Apply deferred window centering (must happen on the frame after ApplyChanges)
+        if (_deferredCenterWidth > 0)
+        {
+            DisplaySettings.CenterWindowOnPrimaryDisplay(_deferredCenterWidth, _deferredCenterHeight);
+            _deferredCenterWidth = 0;
+            _deferredCenterHeight = 0;
+        }
 
-        // Mouse navigation
+        _keyboardState = Keyboard.GetState();
+
+        // Handle the confirm-discard overlay independently
+        if (_confirmingDiscard)
+        {
+            if (_font != null)
+            {
+                string[] confirmOpts = ["Discard & Go Back", "Keep Editing"];
+                var viewport = _graphics.GraphicsDevice.Viewport;
+                var confirmStartY = viewport.Height / 2f - 20f;
+                for (var i = 0; i < confirmOpts.Length; i++)
+                {
+                    var textSize = _font.MeasureString(confirmOpts[i]);
+                    var pos = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
+                    var bounds = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int)textSize.Y);
+                    if (bounds.Contains(InputManager.GetMousePosition()))
+                    {
+                        _confirmSelectedIndex = i;
+                        if (InputManager.IsLeftMouseButtonClicked())
+                        {
+                            ExecuteConfirm();
+                            InputManager.ConsumeClick();
+                        }
+                    }
+                }
+            }
+            if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Left))
+            {
+                _confirmSelectedIndex = (_confirmSelectedIndex - 1 + 2) % 2;
+            }
+            if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right))
+            {
+                _confirmSelectedIndex = (_confirmSelectedIndex + 1) % 2;
+            }
+            if (IsKeyPressed(Keys.Enter))
+            {
+                ExecuteConfirm();
+            }
+            if (IsKeyPressed(Keys.Escape))
+            {
+                _confirmingDiscard = false;
+            }
+            _previousKeyboardState = _keyboardState;
+            return;
+        }
+
+        _selectedIndex = Math.Clamp(_selectedIndex, 0, 3);
+
         if (_font != null)
         {
+            var labels  = GetRowLabels();
             var viewport = _graphics.GraphicsDevice.Viewport;
-            var startY = viewport.Height / 2f - options.Length * 40f / 2f;
+            var startY   = viewport.Height / 2f - labels.Length * RowSpacing / 2f;
 
-            for (var i = 0; i < options.Length; i++)
+            // Text rows — skip row 2 (button row)
+            for (var i = 0; i < labels.Length; i++)
             {
-                var textSize = _font.MeasureString(options[i]);
-                var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * 40f);
-                var bounds = new Rectangle((int)position.X, (int)position.Y, (int)textSize.X, (int)textSize.Y);
-
+                if (i == 2) { continue; }
+                var textSize = _font.MeasureString(labels[i]);
+                var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * RowSpacing);
+                var bounds   = new Rectangle((int)position.X, (int)position.Y, (int)textSize.X, (int)textSize.Y);
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _selectedIndex = i;
-
                     if (InputManager.IsLeftMouseButtonClicked())
                     {
-                        if (i == 1 && !_graphics.IsFullScreen)
+                        if (i == 1 && !_pendingIsFullScreen)
                         {
-                            // Left half of the label = go back, right half = go forward
                             var midX = position.X + textSize.X / 2f;
                             CycleResolution(InputManager.GetMousePosition().X < midX ? -1 : 1);
                         }
@@ -105,40 +174,46 @@ internal class OptionsScene : IScene
                     }
                 }
             }
+
+            // Button row hit detection
+            var buttonRowY  = startY + 2 * RowSpacing;
+            var applyRect   = new Rectangle((int)(viewport.Width / 2f - ButtonGap / 2f - ButtonWidth), (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
+            var discardRect = new Rectangle((int)(viewport.Width / 2f + ButtonGap / 2f),               (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
+
+            if (applyRect.Contains(InputManager.GetMousePosition()))
+            {
+                _selectedIndex = 2; _buttonIndex = 0;
+                if (InputManager.IsLeftMouseButtonClicked()) { ExecuteSelection(); InputManager.ConsumeClick(); }
+            }
+            else if (discardRect.Contains(InputManager.GetMousePosition()))
+            {
+                _selectedIndex = 2; _buttonIndex = 1;
+                if (InputManager.IsLeftMouseButtonClicked()) { ExecuteSelection(); InputManager.ConsumeClick(); }
+            }
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up))
+        if (IsKeyPressed(Keys.Up))   { _selectedIndex = (_selectedIndex - 1 + 4) % 4; }
+        if (IsKeyPressed(Keys.Down)) { _selectedIndex = (_selectedIndex + 1) % 4; }
+
+        if (_selectedIndex == 1 && !_pendingIsFullScreen)
         {
-            _selectedIndex = (_selectedIndex - 1 + options.Length) % options.Length;
+            if (IsKeyPressed(Keys.Left))  { CycleResolution(-1); }
+            if (IsKeyPressed(Keys.Right)) { CycleResolution(1); }
         }
 
-        if (IsKeyPressed(Keys.Down))
+        if (_selectedIndex == 2)
         {
-            _selectedIndex = (_selectedIndex + 1) % options.Length;
+            if (IsKeyPressed(Keys.Left))  { _buttonIndex = 0; }
+            if (IsKeyPressed(Keys.Right)) { _buttonIndex = 1; }
         }
 
-        if (IsKeyPressed(Keys.Enter))
-        {
-            ExecuteSelection();
-        }
-
-        // Left/Right cycles resolution when the resolution row is selected
-        if (_selectedIndex == 1 && !_graphics.IsFullScreen)
-        {
-            if (IsKeyPressed(Keys.Left))
-            {
-                CycleResolution(-1);
-            }
-            if (IsKeyPressed(Keys.Right))
-            {
-                CycleResolution(1);
-            }
-        }
+        if (IsKeyPressed(Keys.Enter)) { ExecuteSelection(); }
 
         if (IsKeyPressed(Keys.Escape))
         {
-            _sceneManager.PopScene(this);
+            if (HasPendingChanges) { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
+            else { _sceneManager.PopScene(this); }
         }
 
         _previousKeyboardState = _keyboardState;
@@ -151,74 +226,69 @@ internal class OptionsScene : IScene
         _pendingResolutionIndex = (_pendingResolutionIndex + dir + count) % count;
     }
 
-    private void ApplyPendingResolution()
+    private void ApplyChanges()
     {
-        var r = _availableResolutions[_pendingResolutionIndex];
-        DisplaySettings.ResolutionIndex = Array.IndexOf(DisplaySettings.Resolutions, r);
-        _graphics.PreferredBackBufferWidth  = r.Width;
-        _graphics.PreferredBackBufferHeight = r.Height;
+        if (_pendingIsFullScreen)
+        {
+            var dm = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+            _graphics.PreferredBackBufferWidth  = dm.Width;
+            _graphics.PreferredBackBufferHeight = dm.Height;
+            _graphics.IsFullScreen = true;
+            DisplaySettings.IsFullScreen = true;
+        }
+        else
+        {
+            var r = _availableResolutions[_pendingResolutionIndex];
+            DisplaySettings.ResolutionIndex = Array.IndexOf(DisplaySettings.Resolutions, r);
+            _graphics.IsFullScreen = false;
+            DisplaySettings.IsFullScreen = false;
+            _graphics.PreferredBackBufferWidth  = r.Width;
+            _graphics.PreferredBackBufferHeight = r.Height;
+            _deferredCenterWidth  = r.Width;
+            _deferredCenterHeight = r.Height;
+        }
         _graphics.ApplyChanges();
-        DisplaySettings.CenterWindowOnPrimaryDisplay(r.Width, r.Height);
         DisplaySettings.Save();
-        _appliedResolutionIndex = _pendingResolutionIndex;
+        _appliedIsFullScreen      = _pendingIsFullScreen;
+        _appliedResolutionIndex   = _pendingResolutionIndex;
+    }
+
+    private void DiscardChanges()
+    {
+        _pendingIsFullScreen    = _appliedIsFullScreen;
+        _pendingResolutionIndex = _appliedResolutionIndex;
+    }
+
+    private void ExecuteConfirm()
+    {
+        if (_confirmSelectedIndex == 0)
+        {
+            _sceneManager.PopScene(this); // Discard & Go Back
+        }
+        else
+        {
+            _confirmingDiscard = false;   // Keep Editing
+        }
     }
 
     private void ExecuteSelection()
     {
-        if (_selectedIndex == 0)
+        switch (_selectedIndex)
         {
-            if (!_graphics.IsFullScreen)
-            {
-                // Going fullscreen: use native display resolution
-                var dm = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
-                _graphics.PreferredBackBufferWidth  = dm.Width;
-                _graphics.PreferredBackBufferHeight = dm.Height;
-                _graphics.IsFullScreen = true;
-                DisplaySettings.IsFullScreen = true;
-            }
-            else
-            {
-                // Going windowed: restore the persisted windowed resolution
-                _graphics.IsFullScreen = false;
-                _graphics.PreferredBackBufferWidth  = DisplaySettings.WindowedWidth;
-                _graphics.PreferredBackBufferHeight = DisplaySettings.WindowedHeight;
-                DisplaySettings.IsFullScreen = false;
-                // Sync pending/applied to the current windowed resolution
-                var currentRes = (DisplaySettings.WindowedWidth, DisplaySettings.WindowedHeight);
-                _pendingResolutionIndex = Array.IndexOf(_availableResolutions, currentRes);
-                if (_pendingResolutionIndex < 0) { _pendingResolutionIndex = 0; }
-                _appliedResolutionIndex = _pendingResolutionIndex;
-            }
-            _graphics.ApplyChanges();
-            DisplaySettings.Save();
-            // Center on primary display when switching to windowed
-            if (!_graphics.IsFullScreen)
-            {
-                DisplaySettings.CenterWindowOnPrimaryDisplay(
-                    DisplaySettings.WindowedWidth, DisplaySettings.WindowedHeight);
-            }
-        }
-        else if (_selectedIndex == 1)
-        {
-            // Click on resolution row cycles forward (if windowed)
-            if (!_graphics.IsFullScreen)
-            {
-                CycleResolution(1);
-            }
-        }
-        else if (_selectedIndex == 2)
-        {
-            // Apply pending resolution
-            if (IsApplyEnabled)
-            {
-                ApplyPendingResolution();
-            }
-        }
-        else if (_selectedIndex == 3)
-        {
-            // Back — discard any unapplied resolution change
-            _pendingResolutionIndex = DisplaySettings.ResolutionIndex;
-            _sceneManager.PopScene(this);
+            case 0:
+                _pendingIsFullScreen = !_pendingIsFullScreen;
+                break;
+            case 1:
+                if (!_pendingIsFullScreen) { CycleResolution(1); }
+                break;
+            case 2:
+                if (_buttonIndex == 0 && HasPendingChanges) { ApplyChanges(); }
+                else if (_buttonIndex == 1 && HasPendingChanges) { DiscardChanges(); }
+                break;
+            case 3:
+                if (HasPendingChanges) { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
+                else { _sceneManager.PopScene(this); }
+                break;
         }
     }
 
@@ -234,30 +304,86 @@ internal class OptionsScene : IScene
 
         if (_font != null)
         {
-            var options = GetOptions();
+            var labels   = GetRowLabels();
             var viewport = spriteBatch.GraphicsDevice.Viewport;
-            var startY = viewport.Height / 2f - options.Length * 40f / 2f;
+            var startY   = viewport.Height / 2f - labels.Length * RowSpacing / 2f;
 
             // Title
-            var title = "Options";
+            var title     = "Options";
             var titleSize = _font.MeasureString(title);
-            spriteBatch.DrawString(_font, title, new Vector2(viewport.Width / 2f - titleSize.X / 2f, startY - 60f), Color.LightGray);
+            spriteBatch.DrawString(_font, title,
+                new Vector2(viewport.Width / 2f - titleSize.X / 2f, startY - 60f),
+                _confirmingDiscard ? Color.DimGray : Color.LightGray);
 
-            for (var i = 0; i < options.Length; i++)
+            // Text rows — skip row 2 (button row)
+            for (var i = 0; i < labels.Length; i++)
             {
-                // Dim resolution row in fullscreen; dim Apply when there's nothing to apply
+                if (i == 2) { continue; }
                 Color color;
-                if ((i == 1 && _graphics.IsFullScreen) || (i == 2 && !IsApplyEnabled))
+                if (_confirmingDiscard)                              { color = Color.DimGray; }
+                else if (i == 1 && _pendingIsFullScreen)             { color = Color.DarkGray; }
+                else                                                 { color = i == _selectedIndex ? Color.Yellow : Color.White; }
+                var textSize = _font.MeasureString(labels[i]);
+                var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * RowSpacing);
+                spriteBatch.DrawString(_font, labels[i], position, color);
+            }
+
+            // Button row
+            var buttonRowY  = startY + 2 * RowSpacing;
+            var applyRect   = new Rectangle((int)(viewport.Width / 2f - ButtonGap / 2f - ButtonWidth), (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
+            var discardRect = new Rectangle((int)(viewport.Width / 2f + ButtonGap / 2f),               (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
+
+            void DrawButton(Rectangle rect, string text, bool isSelected, bool enabled, bool isDanger)
+            {
+                Color fill, border, textColor;
+                if (_confirmingDiscard || !enabled)
                 {
-                    color = Color.DarkGray;
+                    fill = new Color(55, 55, 55); border = new Color(85, 85, 85); textColor = new Color(110, 110, 110);
+                }
+                else if (isDanger)
+                {
+                    fill      = isSelected ? new Color(130, 40, 40) : new Color(85, 25, 25);
+                    border    = isSelected ? Color.Tomato            : new Color(160, 60, 60);
+                    textColor = isSelected ? Color.Yellow            : Color.Tomato;
                 }
                 else
                 {
-                    color = i == _selectedIndex ? Color.Yellow : Color.White;
+                    fill      = isSelected ? new Color(40, 110, 40)  : new Color(25, 70, 25);
+                    border    = isSelected ? Color.LightGreen         : new Color(55, 130, 55);
+                    textColor = isSelected ? Color.Yellow            : Color.White;
                 }
-                var textSize = _font.MeasureString(options[i]);
-                var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * 40f);
-                spriteBatch.DrawString(_font, options[i], position, color);
+                // Border rect (2px on each side)
+                spriteBatch.Draw(_pixel, new Rectangle(rect.X - 2, rect.Y - 2, rect.Width + 4, rect.Height + 4), border);
+                spriteBatch.Draw(_pixel, rect, fill);
+                var ts = _font.MeasureString(text);
+                spriteBatch.DrawString(_font, text,
+                    new Vector2(rect.X + (rect.Width - ts.X) / 2f, rect.Y + (rect.Height - ts.Y) / 2f),
+                    textColor);
+            }
+
+            DrawButton(applyRect,   "Apply",   _selectedIndex == 2 && _buttonIndex == 0, HasPendingChanges, false);
+            DrawButton(discardRect, "Discard", _selectedIndex == 2 && _buttonIndex == 1, HasPendingChanges, true);
+
+            // Confirm-discard overlay
+            if (_confirmingDiscard)
+            {
+                spriteBatch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, viewport.Height), Color.Black * 0.6f);
+
+                var warning = "Unsaved changes will be lost.";
+                var warningSize = _font.MeasureString(warning);
+                spriteBatch.DrawString(_font, warning,
+                    new Vector2(viewport.Width / 2f - warningSize.X / 2f, viewport.Height / 2f - 80f),
+                    Color.Red);
+
+                string[] confirmOpts = ["Discard & Go Back", "Keep Editing"];
+                var confirmStartY = viewport.Height / 2f - 20f;
+                for (var i = 0; i < confirmOpts.Length; i++)
+                {
+                    var color = i == _confirmSelectedIndex ? Color.Yellow : Color.White;
+                    var textSize = _font.MeasureString(confirmOpts[i]);
+                    var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
+                    spriteBatch.DrawString(_font, confirmOpts[i], position, color);
+                }
             }
         }
     }
