@@ -114,8 +114,7 @@ namespace PolyGone
             }
             else if (_selectedIndex == 1)
             {
-                // Options
-                _sceneManager.AddScene(new OptionsScene(_content, _sceneManager, _graphics));
+                // Options (placeholder for now)
             }
             else if (_selectedIndex == 2)
             {
