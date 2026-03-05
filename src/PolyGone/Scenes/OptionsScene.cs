@@ -27,8 +27,10 @@ internal class OptionsScene : IScene
     private bool _confirmingDiscard;
     private int _confirmSelectedIndex;
     private int _buttonIndex; // 0 = Apply, 1 = Discard
-    private int _resetConfirmStep;         // 0 = off, 1 = first prompt, 2 = second prompt
+    private int _resetConfirmStep;           // 0 = off, 1 = first prompt, 2 = second prompt
     private int _resetConfirmSelectedIndex;
+    private int _resetProgressConfirmStep;   // 0 = off, 1 = first prompt, 2 = second prompt
+    private int _resetProgressConfirmSelectedIndex;
 
     private const float RowSpacing   = 50f;
     private const float ButtonWidth  = 200f;
@@ -47,14 +49,19 @@ internal class OptionsScene : IScene
         return $"Resolution: < {r.Width}x{r.Height} >";
     }
 
-    // Row 0=Display, Row 1=Resolution, Row 2=Buttons (drawn separately), Row 3=Back, Row 4=Reset Purchases
+    // Row 0=Display, Row 1=Resolution, Row 2=Buttons (drawn separately),
+    // Row 3=Reset Purchases, Row 4=Reset Progress, Row 5 (DEBUG only)=Dev Menu, Row 5/6=Back
     private string[] GetRowLabels() =>
     [
         _pendingIsFullScreen ? "Display: Fullscreen" : "Display: Windowed",
         ResolutionLabel(),
         "",   // placeholder — button row is drawn separately
+        "Reset Purchases",
+        "Reset Progress",
+#if DEBUG
+        "Dev Menu",
+#endif
         "Back",
-        "Reset Purchases"
     ];
 
     public OptionsScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
@@ -74,8 +81,10 @@ internal class OptionsScene : IScene
         _confirmingDiscard         = false;
         _confirmSelectedIndex      = 1;
         _buttonIndex               = 0;
-        _resetConfirmStep          = 0;
-        _resetConfirmSelectedIndex = 1;
+        _resetConfirmStep                  = 0;
+        _resetConfirmSelectedIndex         = 1;
+        _resetProgressConfirmStep          = 0;
+        _resetProgressConfirmSelectedIndex = 1;
     }
 
     public void Load()
@@ -153,7 +162,14 @@ internal class OptionsScene : IScene
             return;
         }
 
-        _selectedIndex = Math.Clamp(_selectedIndex, 0, 4);
+        if (_resetProgressConfirmStep > 0)
+        {
+            HandleResetProgressConfirmInput();
+            _previousKeyboardState = _keyboardState;
+            return;
+        }
+
+        _selectedIndex = Math.Clamp(_selectedIndex, 0, GetRowLabels().Length - 1);
 
         if (_font != null)
         {
@@ -205,8 +221,9 @@ internal class OptionsScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up))   { _selectedIndex = (_selectedIndex - 1 + 5) % 5; }
-        if (IsKeyPressed(Keys.Down)) { _selectedIndex = (_selectedIndex + 1) % 5; }
+        int rowCount = GetRowLabels().Length;
+        if (IsKeyPressed(Keys.Up))   { _selectedIndex = (_selectedIndex - 1 + rowCount) % rowCount; }
+        if (IsKeyPressed(Keys.Down)) { _selectedIndex = (_selectedIndex + 1) % rowCount; }
 
         if (_selectedIndex == 1 && !_pendingIsFullScreen)
         {
@@ -298,12 +315,21 @@ internal class OptionsScene : IScene
                 else if (_buttonIndex == 1 && HasPendingChanges) { DiscardChanges(); }
                 break;
             case 3:
-                if (HasPendingChanges) { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
-                else { _sceneManager.PopScene(this); }
-                break;
-            case 4:
                 _resetConfirmStep = 1;
                 _resetConfirmSelectedIndex = 1; // default cursor on Cancel
+                break;
+            case 4:
+                _resetProgressConfirmStep = 1;
+                _resetProgressConfirmSelectedIndex = 1; // default cursor on Cancel
+                break;
+#if DEBUG
+            case 5:
+                _sceneManager.AddScene(new DevMenuScene(_content, _sceneManager, _graphics));
+                break;
+#endif
+            default: // Back — always the last row
+                if (HasPendingChanges) { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
+                else { _sceneManager.PopScene(this); }
                 break;
         }
     }
@@ -387,16 +413,19 @@ internal class OptionsScene : IScene
             var titleSize = _font.MeasureString(title);
             spriteBatch.DrawString(_font, title,
                 new Vector2(viewport.Width / 2f - titleSize.X / 2f, startY - 60f),
-                (_confirmingDiscard || _resetConfirmStep > 0) ? Color.DimGray : Color.LightGray);
+                (_confirmingDiscard || _resetConfirmStep > 0 || _resetProgressConfirmStep > 0) ? Color.DimGray : Color.LightGray);
 
             // Text rows — skip row 2 (button row)
             for (var i = 0; i < labels.Length; i++)
             {
                 if (i == 2) { continue; }
                 Color color;
-                if (_confirmingDiscard || _resetConfirmStep > 0)     { color = Color.DimGray; }
+                if (_confirmingDiscard || _resetConfirmStep > 0 || _resetProgressConfirmStep > 0) { color = Color.DimGray; }
                 else if (i == 1 && _pendingIsFullScreen)             { color = Color.DarkGray; }
-                else if (i == 4)                                     { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
+                else if (i == 3 || i == 4)                           { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
+#if DEBUG
+                else if (i == 5)                                     { color = i == _selectedIndex ? Color.Cyan : Color.DarkCyan; }
+#endif
                 else                                                 { color = i == _selectedIndex ? Color.Yellow : Color.White; }
                 var textSize = _font.MeasureString(labels[i]);
                 var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * RowSpacing);
@@ -411,7 +440,7 @@ internal class OptionsScene : IScene
             void DrawButton(Rectangle rect, string text, bool isSelected, bool enabled, bool isDanger)
             {
                 Color fill, border, textColor;
-                if (_confirmingDiscard || _resetConfirmStep > 0 || !enabled)
+                if (_confirmingDiscard || _resetConfirmStep > 0 || _resetProgressConfirmStep > 0 || !enabled)
                 {
                     fill = new Color(55, 55, 55); border = new Color(85, 85, 85); textColor = new Color(110, 110, 110);
                 }
@@ -492,6 +521,94 @@ internal class OptionsScene : IScene
                     spriteBatch.DrawString(_font, resetOpts[i], position, color);
                 }
             }
+
+            // Reset-progress confirm overlay
+            if (_resetProgressConfirmStep > 0)
+            {
+                spriteBatch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, viewport.Height), Color.Black * 0.6f);
+
+                var overlayTitle     = "Reset Progress";
+                var overlayTitleSize = _font.MeasureString(overlayTitle);
+                spriteBatch.DrawString(_font, overlayTitle,
+                    new Vector2(viewport.Width / 2f - overlayTitleSize.X / 2f, viewport.Height / 2f - 120f),
+                    Color.OrangeRed);
+
+                string resetWarning = _resetProgressConfirmStep == 1
+                    ? "All level progress and item unlocks will be permanently deleted."
+                    : "This cannot be undone!";
+                var resetWarningSize = _font.MeasureString(resetWarning);
+                spriteBatch.DrawString(_font, resetWarning,
+                    new Vector2(viewport.Width / 2f - resetWarningSize.X / 2f, viewport.Height / 2f - 70f),
+                    Color.Red);
+
+                string[] resetOpts = _resetProgressConfirmStep == 1
+                    ? ["Yes, continue", "Cancel"]
+                    : ["Confirm Reset",  "Cancel"];
+                var resetStartY = viewport.Height / 2f - 10f;
+                for (var i = 0; i < resetOpts.Length; i++)
+                {
+                    var color    = i == _resetProgressConfirmSelectedIndex ? Color.Yellow : Color.White;
+                    var textSize = _font.MeasureString(resetOpts[i]);
+                    var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, resetStartY + i * 50f);
+                    spriteBatch.DrawString(_font, resetOpts[i], position, color);
+                }
+            }
+        }
+    }
+
+    // ── Reset-progress double-confirm ───────────────────────────────────────
+
+    private void HandleResetProgressConfirmInput()
+    {
+        if (_font != null)
+        {
+            var viewport = _graphics.GraphicsDevice.Viewport;
+            string[] opts = _resetProgressConfirmStep == 1
+                ? ["Yes, continue", "Cancel"]
+                : ["Confirm Reset",  "Cancel"];
+            var confirmStartY = viewport.Height / 2f - 20f;
+            for (var i = 0; i < opts.Length; i++)
+            {
+                var textSize = _font.MeasureString(opts[i]);
+                var pos      = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
+                var bounds   = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int)textSize.Y);
+                if (bounds.Contains(InputManager.GetMousePosition()))
+                {
+                    _resetProgressConfirmSelectedIndex = i;
+                    if (InputManager.IsLeftMouseButtonClicked())
+                    {
+                        ExecuteResetProgressConfirm();
+                        InputManager.ConsumeClick();
+                    }
+                }
+            }
+        }
+
+        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left))  { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex - 1 + 2) % 2; }
+        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right)) { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex + 1) % 2; }
+        if (IsKeyPressed(Keys.Enter))  { ExecuteResetProgressConfirm(); }
+        if (IsKeyPressed(Keys.Escape)) { _resetProgressConfirmStep = 0; _resetProgressConfirmSelectedIndex = 1; }
+    }
+
+    private void ExecuteResetProgressConfirm()
+    {
+        if (_resetProgressConfirmSelectedIndex == 1) // Cancel
+        {
+            _resetProgressConfirmStep          = 0;
+            _resetProgressConfirmSelectedIndex = 1;
+            return;
+        }
+        if (_resetProgressConfirmStep == 1)
+        {
+            _resetProgressConfirmStep          = 2;
+            _resetProgressConfirmSelectedIndex = 1;
+        }
+        else
+        {
+            UnlockTracker.Reset();
+            InventoryManagement.ResetSavedLoadout();
+            _resetProgressConfirmStep          = 0;
+            _resetProgressConfirmSelectedIndex = 1;
         }
     }
 

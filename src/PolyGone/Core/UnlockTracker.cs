@@ -120,6 +120,19 @@ public static class UnlockTracker
         try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
     }
 
+#if DEBUG
+    /// <summary>[DEV] Returns whether a specific level is recorded as completed.</summary>
+    public static bool IsLevelCompleted(string levelFile) => _completedLevels.Contains(levelFile);
+
+    /// <summary>[DEV] Toggles a level's completed state and saves.</summary>
+    public static void ToggleLevelComplete(string levelFile)
+    {
+        if (!_completedLevels.Add(levelFile))
+            _completedLevels.Remove(levelFile);
+        Save();
+    }
+#endif
+
     private static void Save()
     {
         try

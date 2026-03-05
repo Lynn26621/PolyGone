@@ -119,16 +119,6 @@ namespace PolyGone
                 _sceneManager.PopScene(this);
             }
 
-            // Ctrl+Shift+R: reset all unlock/progress data
-            bool ctrlHeld  = keyboardState.IsKeyDown(Keys.LeftControl)  || keyboardState.IsKeyDown(Keys.RightControl);
-            bool shiftHeld = keyboardState.IsKeyDown(Keys.LeftShift)    || keyboardState.IsKeyDown(Keys.RightShift);
-            if (ctrlHeld && shiftHeld && IsKeyPressed(Keys.R))
-            {
-                UnlockTracker.Reset();
-                InventoryManagement.ResetSavedLoadout();
-                _selectedIndex = 0;
-            }
-
             previousKeyboardState = keyboardState;
         }
 
