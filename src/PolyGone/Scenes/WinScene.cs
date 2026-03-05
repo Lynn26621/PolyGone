@@ -46,6 +46,9 @@ public class WinScene : IScene
         
         previousKeyboardState = Keyboard.GetState();
         selectedIndex = 0;
+
+        // Record this level as completed so locked items can be unlocked
+        UnlockTracker.RecordLevelComplete(currentLevel);
     }
 
     public void Load()

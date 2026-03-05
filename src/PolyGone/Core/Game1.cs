@@ -62,6 +62,8 @@ public class Game1 : Game
 
         // Load purchase tracker before any scene that might need it
         PurchaseTracker.Load();
+        // Load item unlock data
+        UnlockTracker.Load();
 
         sceneManager.AddScene(new GameScene(Content, sceneManager, _graphics));
         sceneManager.AddScene(new MenuScene(Content, sceneManager, _graphics));
