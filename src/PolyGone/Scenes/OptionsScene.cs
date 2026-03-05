@@ -27,6 +27,8 @@ internal class OptionsScene : IScene
     private bool _confirmingDiscard;
     private int _confirmSelectedIndex;
     private int _buttonIndex; // 0 = Apply, 1 = Discard
+    private int _resetConfirmStep;         // 0 = off, 1 = first prompt, 2 = second prompt
+    private int _resetConfirmSelectedIndex;
 
     private const float RowSpacing   = 50f;
     private const float ButtonWidth  = 200f;
@@ -45,13 +47,14 @@ internal class OptionsScene : IScene
         return $"Resolution: < {r.Width}x{r.Height} >";
     }
 
-    // Row 0=Display, Row 1=Resolution, Row 2=Buttons (drawn separately), Row 3=Back
+    // Row 0=Display, Row 1=Resolution, Row 2=Buttons (drawn separately), Row 3=Back, Row 4=Reset Purchases
     private string[] GetRowLabels() =>
     [
         _pendingIsFullScreen ? "Display: Fullscreen" : "Display: Windowed",
         ResolutionLabel(),
         "",   // placeholder — button row is drawn separately
-        "Back"
+        "Back",
+        "Reset Purchases"
     ];
 
     public OptionsScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
@@ -68,9 +71,11 @@ internal class OptionsScene : IScene
         _appliedResolutionIndex = _pendingResolutionIndex;
         _pendingIsFullScreen  = DisplaySettings.IsFullScreen;
         _appliedIsFullScreen  = DisplaySettings.IsFullScreen;
-        _confirmingDiscard    = false;
-        _confirmSelectedIndex = 1;
-        _buttonIndex          = 0;
+        _confirmingDiscard         = false;
+        _confirmSelectedIndex      = 1;
+        _buttonIndex               = 0;
+        _resetConfirmStep          = 0;
+        _resetConfirmSelectedIndex = 1;
     }
 
     public void Load()
@@ -141,7 +146,14 @@ internal class OptionsScene : IScene
             return;
         }
 
-        _selectedIndex = Math.Clamp(_selectedIndex, 0, 3);
+        if (_resetConfirmStep > 0)
+        {
+            HandleResetConfirmInput();
+            _previousKeyboardState = _keyboardState;
+            return;
+        }
+
+        _selectedIndex = Math.Clamp(_selectedIndex, 0, 4);
 
         if (_font != null)
         {
@@ -193,8 +205,8 @@ internal class OptionsScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up))   { _selectedIndex = (_selectedIndex - 1 + 4) % 4; }
-        if (IsKeyPressed(Keys.Down)) { _selectedIndex = (_selectedIndex + 1) % 4; }
+        if (IsKeyPressed(Keys.Up))   { _selectedIndex = (_selectedIndex - 1 + 5) % 5; }
+        if (IsKeyPressed(Keys.Down)) { _selectedIndex = (_selectedIndex + 1) % 5; }
 
         if (_selectedIndex == 1 && !_pendingIsFullScreen)
         {
@@ -289,6 +301,68 @@ internal class OptionsScene : IScene
                 if (HasPendingChanges) { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
                 else { _sceneManager.PopScene(this); }
                 break;
+            case 4:
+                _resetConfirmStep = 1;
+                _resetConfirmSelectedIndex = 1; // default cursor on Cancel
+                break;
+        }
+    }
+
+    // ── Reset-purchases double-confirm ──────────────────────────────────────
+
+    private void HandleResetConfirmInput()
+    {
+        if (_font != null)
+        {
+            var viewport = _graphics.GraphicsDevice.Viewport;
+            string[] opts = _resetConfirmStep == 1
+                ? ["Yes, continue", "Cancel"]
+                : ["Confirm Reset",  "Cancel"];
+            var confirmStartY = viewport.Height / 2f - 20f;
+            for (var i = 0; i < opts.Length; i++)
+            {
+                var textSize = _font.MeasureString(opts[i]);
+                var pos      = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
+                var bounds   = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int)textSize.Y);
+                if (bounds.Contains(InputManager.GetMousePosition()))
+                {
+                    _resetConfirmSelectedIndex = i;
+                    if (InputManager.IsLeftMouseButtonClicked())
+                    {
+                        ExecuteResetConfirm();
+                        InputManager.ConsumeClick();
+                    }
+                }
+            }
+        }
+
+        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left))  { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex - 1 + 2) % 2; }
+        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right)) { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex + 1) % 2; }
+        if (IsKeyPressed(Keys.Enter))  { ExecuteResetConfirm(); }
+        if (IsKeyPressed(Keys.Escape)) { _resetConfirmStep = 0; _resetConfirmSelectedIndex = 1; }
+    }
+
+    private void ExecuteResetConfirm()
+    {
+        if (_resetConfirmSelectedIndex == 1) // Cancel
+        {
+            _resetConfirmStep          = 0;
+            _resetConfirmSelectedIndex = 1;
+            return;
+        }
+        // Selected index 0 = Yes / Confirm
+        if (_resetConfirmStep == 1)
+        {
+            _resetConfirmStep          = 2;   // advance to second prompt
+            _resetConfirmSelectedIndex = 1;   // keep cursor on Cancel for safety
+        }
+        else
+        {
+            PurchaseTracker.Reset();
+            _resetConfirmStep          = 0;
+            _resetConfirmSelectedIndex = 1;
+            _sceneManager.PopScene(this);
+            _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _graphics));
         }
     }
 
@@ -313,15 +387,16 @@ internal class OptionsScene : IScene
             var titleSize = _font.MeasureString(title);
             spriteBatch.DrawString(_font, title,
                 new Vector2(viewport.Width / 2f - titleSize.X / 2f, startY - 60f),
-                _confirmingDiscard ? Color.DimGray : Color.LightGray);
+                (_confirmingDiscard || _resetConfirmStep > 0) ? Color.DimGray : Color.LightGray);
 
             // Text rows — skip row 2 (button row)
             for (var i = 0; i < labels.Length; i++)
             {
                 if (i == 2) { continue; }
                 Color color;
-                if (_confirmingDiscard)                              { color = Color.DimGray; }
+                if (_confirmingDiscard || _resetConfirmStep > 0)     { color = Color.DimGray; }
                 else if (i == 1 && _pendingIsFullScreen)             { color = Color.DarkGray; }
+                else if (i == 4)                                     { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
                 else                                                 { color = i == _selectedIndex ? Color.Yellow : Color.White; }
                 var textSize = _font.MeasureString(labels[i]);
                 var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * RowSpacing);
@@ -336,7 +411,7 @@ internal class OptionsScene : IScene
             void DrawButton(Rectangle rect, string text, bool isSelected, bool enabled, bool isDanger)
             {
                 Color fill, border, textColor;
-                if (_confirmingDiscard || !enabled)
+                if (_confirmingDiscard || _resetConfirmStep > 0 || !enabled)
                 {
                     fill = new Color(55, 55, 55); border = new Color(85, 85, 85); textColor = new Color(110, 110, 110);
                 }
@@ -383,6 +458,38 @@ internal class OptionsScene : IScene
                     var textSize = _font.MeasureString(confirmOpts[i]);
                     var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
                     spriteBatch.DrawString(_font, confirmOpts[i], position, color);
+                }
+            }
+
+            // Reset-purchases confirm overlay
+            if (_resetConfirmStep > 0)
+            {
+                spriteBatch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, viewport.Height), Color.Black * 0.6f);
+
+                var overlayTitle     = "Reset Purchases";
+                var overlayTitleSize = _font.MeasureString(overlayTitle);
+                spriteBatch.DrawString(_font, overlayTitle,
+                    new Vector2(viewport.Width / 2f - overlayTitleSize.X / 2f, viewport.Height / 2f - 120f),
+                    Color.OrangeRed);
+
+                string resetWarning = _resetConfirmStep == 1
+                    ? "All purchase records will be permanently deleted."
+                    : "This cannot be undone!";
+                var resetWarningSize = _font.MeasureString(resetWarning);
+                spriteBatch.DrawString(_font, resetWarning,
+                    new Vector2(viewport.Width / 2f - resetWarningSize.X / 2f, viewport.Height / 2f - 70f),
+                    Color.Red);
+
+                string[] resetOpts = _resetConfirmStep == 1
+                    ? ["Yes, continue", "Cancel"]
+                    : ["Confirm Reset",  "Cancel"];
+                var resetStartY = viewport.Height / 2f - 10f;
+                for (var i = 0; i < resetOpts.Length; i++)
+                {
+                    var color    = i == _resetConfirmSelectedIndex ? Color.Yellow : Color.White;
+                    var textSize = _font.MeasureString(resetOpts[i]);
+                    var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, resetStartY + i * 50f);
+                    spriteBatch.DrawString(_font, resetOpts[i], position, color);
                 }
             }
         }
