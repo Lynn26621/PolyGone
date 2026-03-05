@@ -57,6 +57,9 @@ public static class UnlockTracker
     /// <summary>Returns true if the item is available for selection.</summary>
     public static bool IsItemUnlocked(ItemType item)
     {
+#if DEBUG
+        if (item == ItemType.DevMode) return true;
+#endif
         if (!_itemUnlockRequirements.TryGetValue(item, out var requiredLevel))
             return true; // No requirement — always unlocked
         return _completedLevels.Contains(requiredLevel);
