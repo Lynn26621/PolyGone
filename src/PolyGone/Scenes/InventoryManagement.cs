@@ -10,7 +10,7 @@ namespace PolyGone
     public enum ItemType
     {
         DoubleJump,
-        SpeedBoost,
+        DoubleDash,
         HealingGlow,
         MultiShot,
         RapidFire,
@@ -42,7 +42,7 @@ namespace PolyGone
         private readonly string[] _itemNames = 
         {
             "Double Jump",
-            "Speed Boost",
+            "Double Dash",
             "Healing Glow",
             "Multi-Shot",
             "Rapid Fire",
@@ -52,7 +52,7 @@ namespace PolyGone
         private readonly ItemType[] _itemTypes = 
         {
             ItemType.DoubleJump,
-            ItemType.SpeedBoost,
+            ItemType.DoubleDash,
             ItemType.HealingGlow,
             ItemType.MultiShot,
             ItemType.RapidFire,
@@ -62,7 +62,7 @@ namespace PolyGone
         private readonly string[] _itemDescriptions =
         {
             "One additional jump while airborne",
-            "Move 50% faster",
+            "Store up to 2 dash charges",
             "Regenerate 10 HP every 2 seconds",
             "Adds 2 extra spread bullets per shot to all weapons",
             "Reduces weapon cooldown to 1/3",
@@ -81,7 +81,7 @@ namespace PolyGone
         };
 
         // Static fields to remember last selection across instances
-        private static List<ItemType> _lastSelectedItems = new List<ItemType> { ItemType.DoubleJump, ItemType.SpeedBoost };
+        private static List<ItemType> _lastSelectedItems = new List<ItemType>();
         private static WeaponType _lastSelectedWeapon = WeaponType.Blaster;
 
         // Selection state
