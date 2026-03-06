@@ -42,6 +42,15 @@ class Enemy : Entity
         if (hitProjectiles.Contains(projectile) || invincibilityFrames > 0f)
             return;
 
+#if DEBUG
+        // DEV: instant kill
+        if (projectile.IsInstantKill)
+        {
+            health = 0;
+            return;
+        }
+#endif
+
         // If no damage window is active, start a new one
         if (damageWindow <= 0f)
         {

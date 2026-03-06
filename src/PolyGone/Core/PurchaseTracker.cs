@@ -82,6 +82,18 @@ public static class PurchaseTracker
         return Convert.ToBase64String(hmac.ComputeHash(data));
     }
 
+    /// <summary>Clears all purchase records for every user and deletes the save file.</summary>
+    public static void Reset()
+    {
+        _purchases = new Dictionary<int, Dictionary<string, string>>();
+        try
+        {
+            if (File.Exists(SavePath))
+                File.Delete(SavePath);
+        }
+        catch { }
+    }
+
     private static void Save()
     {
         try
