@@ -19,11 +19,21 @@ public class Game1 : Game
         IsMouseVisible = true;
         sceneManager = new();
 
-        // Resize window to screen size
-        var screenWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-        var screenHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-        _graphics.PreferredBackBufferWidth = screenWidth;
-        _graphics.PreferredBackBufferHeight = screenHeight;
+        // Apply saved display settings (defaults to 1280x720 windowed on first run)
+        DisplaySettings.Load();
+        if (DisplaySettings.IsFullScreen)
+        {
+            var dm = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+            _graphics.PreferredBackBufferWidth  = dm.Width;
+            _graphics.PreferredBackBufferHeight = dm.Height;
+            _graphics.IsFullScreen = true;
+        }
+        else
+        {
+            _graphics.PreferredBackBufferWidth  = DisplaySettings.WindowedWidth;
+            _graphics.PreferredBackBufferHeight = DisplaySettings.WindowedHeight;
+            _graphics.IsFullScreen = false;
+        }
         _graphics.ApplyChanges();
     }
 
@@ -31,6 +41,16 @@ public class Game1 : Game
     {
         // Hook up text input so scenes can accept keyboard text entry
         Window.TextInput += InputManager.OnTextInput;
+
+        // Give DisplaySettings a reference so it can center the window after resolution changes
+        DisplaySettings.Window = Window;
+
+        // Center on the primary display on startup (no-op in fullscreen)
+        if (!DisplaySettings.IsFullScreen)
+        {
+            DisplaySettings.CenterWindowOnPrimaryDisplay(
+                DisplaySettings.WindowedWidth, DisplaySettings.WindowedHeight);
+        }
 
         base.Initialize();
     }
