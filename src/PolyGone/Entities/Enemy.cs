@@ -38,19 +38,6 @@ class Enemy : Entity
 
     private void HandleProjectileHit(Projectile projectile)
     {
-        // Skip if already hit by this projectile or if in invincibility frames
-        if (hitProjectiles.Contains(projectile) || invincibilityFrames > 0f)
-            return;
-
-#if DEBUG
-        // DEV: instant kill
-        if (projectile.IsInstantKill)
-        {
-            health = 0;
-            return;
-        }
-#endif
-
         // If no damage window is active, start a new one
         if (damageWindow <= 0f)
         {
@@ -101,7 +88,6 @@ class Enemy : Entity
             if (damageWindow <= 0f && accumulatedDamage > 0)
             {
                 health -= accumulatedDamage; // Apply accumulated damage
-                invincibilityFrames = 30f; // 30 frame invincibility after damage window
                 accumulatedDamage = 0;
                 hitProjectiles.Clear();
             }
@@ -110,11 +96,6 @@ class Enemy : Entity
 
     private void PatrolUpdate()
     {
-        // Don't patrol during knockback/invincibility
-        if (invincibilityFrames > 0f)
-        {
-            return;
-        }
         
         // Only check ahead if we're on the ground
         if (!isOnGround)
