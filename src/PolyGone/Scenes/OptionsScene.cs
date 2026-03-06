@@ -56,7 +56,9 @@ internal class OptionsScene : IScene
         _pendingIsFullScreen ? "Display: Fullscreen" : "Display: Windowed",
         ResolutionLabel(),
         "",   // placeholder — button row is drawn separately
+#if DEBUG
         "Reset Purchases",
+#endif
         "Reset Progress",
 #if DEBUG
         "Dev Menu",
@@ -314,6 +316,7 @@ internal class OptionsScene : IScene
                 if (_buttonIndex == 0 && HasPendingChanges) { ApplyChanges(); }
                 else if (_buttonIndex == 1 && HasPendingChanges) { DiscardChanges(); }
                 break;
+#if DEBUG
             case 3:
                 _resetConfirmStep = 1;
                 _resetConfirmSelectedIndex = 1; // default cursor on Cancel
@@ -322,9 +325,13 @@ internal class OptionsScene : IScene
                 _resetProgressConfirmStep = 1;
                 _resetProgressConfirmSelectedIndex = 1; // default cursor on Cancel
                 break;
-#if DEBUG
             case 5:
                 _sceneManager.AddScene(new DevMenuScene(_content, _sceneManager, _graphics));
+                break;
+#else
+            case 3:
+                _resetProgressConfirmStep = 1;
+                _resetProgressConfirmSelectedIndex = 1; // default cursor on Cancel
                 break;
 #endif
             default: // Back — always the last row
@@ -422,9 +429,11 @@ internal class OptionsScene : IScene
                 Color color;
                 if (_confirmingDiscard || _resetConfirmStep > 0 || _resetProgressConfirmStep > 0) { color = Color.DimGray; }
                 else if (i == 1 && _pendingIsFullScreen)             { color = Color.DarkGray; }
-                else if (i == 3 || i == 4)                           { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
 #if DEBUG
+                else if (i == 3 || i == 4)                           { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
                 else if (i == 5)                                     { color = i == _selectedIndex ? Color.Cyan : Color.DarkCyan; }
+#else
+                else if (i == 3)                                     { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
 #endif
                 else                                                 { color = i == _selectedIndex ? Color.Yellow : Color.White; }
                 var textSize = _font.MeasureString(labels[i]);
