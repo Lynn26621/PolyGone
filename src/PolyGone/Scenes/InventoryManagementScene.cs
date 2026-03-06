@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -15,7 +18,10 @@ namespace PolyGone
         MultiShot,
         RapidFire,
         LowGravity,
-        IronWill
+        IronWill,
+#if DEBUG
+        DevMode
+#endif
     }
 
     public enum WeaponType
@@ -47,7 +53,10 @@ namespace PolyGone
             "Multi-Shot",
             "Rapid Fire",
             "Low Gravity",
-            "Iron Will"
+            "Iron Will",
+#if DEBUG
+            "Dev Mode"
+#endif
         };
         private readonly ItemType[] _itemTypes = 
         {
@@ -57,7 +66,10 @@ namespace PolyGone
             ItemType.MultiShot,
             ItemType.RapidFire,
             ItemType.LowGravity,
-            ItemType.IronWill
+            ItemType.IronWill,
+#if DEBUG
+            ItemType.DevMode
+#endif
         };
         private readonly string[] _itemDescriptions =
         {
@@ -67,7 +79,10 @@ namespace PolyGone
             "Adds 2 extra spread bullets per shot to all weapons",
             "Reduces weapon cooldown to 1/3",
             "40% gravity - rises and falls slowly, same jump height",
-            "Once per 20s, survive a killing blow and stay at 1 HP"
+            "Once per 20s, survive a killing blow and stay at 1 HP",
+#if DEBUG
+            "[DEV] Invincibility + instant kills + infinite jumps"
+#endif
         };
         private readonly string[] _weaponNames = { "Blaster", "Shotgun", "Rifle", "Automatic", "Void Lance" };
         private readonly WeaponType[] _weaponTypes = { WeaponType.Blaster, WeaponType.Shotgun, WeaponType.Rifle, WeaponType.Automatic, WeaponType.VoidLance };
@@ -83,6 +98,15 @@ namespace PolyGone
         // Static fields to remember last selection across instances
         private static List<ItemType> _lastSelectedItems = new List<ItemType> { ItemType.DoubleJump, ItemType.SpeedBoost };
         private static WeaponType _lastSelectedWeapon = WeaponType.Blaster;
+
+        private static readonly string _loadoutSavePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "PolyGone", "loadout.json");
+
+        static InventoryManagement()
+        {
+            TryLoadLoadout();
+        }
 
         // Selection state
         private enum SelectionMode { Items, Weapon, Confirm }
@@ -103,8 +127,8 @@ namespace PolyGone
             _levelFile = levelFile;
             previousKeyboardState = Keyboard.GetState();
             
-            // Initialize with last selected values
-            _selectedItems = new List<ItemType>(_lastSelectedItems);
+            // Initialize with last selected values, filtering out any that are now locked
+            _selectedItems = new List<ItemType>(_lastSelectedItems.FindAll(UnlockTracker.IsItemUnlocked));
             _selectedWeapon = _lastSelectedWeapon;
         }
 
@@ -186,13 +210,24 @@ namespace PolyGone
                     if (InputManager.IsLeftMouseButtonClicked())
                     {
                         ItemType selectedItem = _itemTypes[_itemCursor];
-                        if (_selectedItems.Contains(selectedItem))
+                        if (UnlockTracker.IsItemUnlocked(selectedItem))
                         {
-                            _selectedItems.Remove(selectedItem);
-                        }
-                        else if (_selectedItems.Count < 2)
-                        {
-                            _selectedItems.Add(selectedItem);
+                            if (_selectedItems.Contains(selectedItem))
+                            {
+                                _selectedItems.Remove(selectedItem);
+                            }
+#if DEBUG
+                            else
+                            {
+                                // DEV: no item limit
+                                _selectedItems.Add(selectedItem);
+                            }
+#else
+                            else if (_selectedItems.Count < 2)
+                            {
+                                _selectedItems.Add(selectedItem);
+                            }
+#endif
                         }
                         InputManager.ConsumeClick();
                     }
@@ -267,17 +302,29 @@ namespace PolyGone
             if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space))
             {
                 ItemType selectedItem = _itemTypes[_itemCursor];
-                
-                if (_selectedItems.Contains(selectedItem))
+
+                if (!UnlockTracker.IsItemUnlocked(selectedItem))
+                {
+                    // Item is locked — do nothing
+                }
+                else if (_selectedItems.Contains(selectedItem))
                 {
                     // Deselect item
                     _selectedItems.Remove(selectedItem);
                 }
+#if DEBUG
+                else
+                {
+                    // DEV: no item limit
+                    _selectedItems.Add(selectedItem);
+                }
+#else
                 else if (_selectedItems.Count < 2)
                 {
                     // Select item (max 2)
                     _selectedItems.Add(selectedItem);
                 }
+#endif
             }
 
             if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) && !keyboardState.IsKeyDown(Keys.LeftShift)))
@@ -346,11 +393,19 @@ namespace PolyGone
             }
         }
 
+        /// <summary>Clears the saved loadout so the next inventory screen starts fresh.</summary>
+        public static void ResetSavedLoadout()
+        {
+            _lastSelectedItems = new List<ItemType> { ItemType.DoubleJump, ItemType.SpeedBoost };
+            _lastSelectedWeapon = WeaponType.Blaster;
+        }
+
         private void StartGame()
         {
-            // Save current selections for next time
+            // Save current selections for next time (in memory and on disk)
             _lastSelectedItems = new List<ItemType>(_selectedItems);
             _lastSelectedWeapon = _selectedWeapon;
+            SaveLoadout();
             
             // Pop this inventory management scene
             _sceneManager.PopScene(this);
@@ -383,7 +438,11 @@ namespace PolyGone
                 spriteBatch.DrawString(_font, title, titlePos, Color.White);
 
                 // Draw instructions
+#if DEBUG
+                string instructions = "[DEV] Select Items | Select 1 Weapon | Press Ctrl to skip";
+#else
                 string instructions = "Select up to 2 Items | Select 1 Weapon | Press Ctrl to skip";
+#endif
                 var instructionsSize = _font.MeasureString(instructions);
                 var instructionsPos = new Vector2(viewport.Width / 2f - instructionsSize.X / 2f, 90);
                 spriteBatch.DrawString(_font, instructions, instructionsPos, Color.Gray);
@@ -406,26 +465,48 @@ namespace PolyGone
             
             // Section title
             Color sectionColor = _currentMode == SelectionMode.Items ? Color.Yellow : Color.White;
+#if DEBUG
+            spriteBatch.DrawString(_font, "Items (DEV - all):", new Vector2(startX, startY - 40), sectionColor);
+#else
             spriteBatch.DrawString(_font, "Items (choose 2):", new Vector2(startX, startY - 40), sectionColor);
+#endif
 
             for (int i = 0; i < _itemNames.Length; i++)
             {
                 string itemName = _itemNames[i];
-                bool isSelected = _selectedItems.Contains(_itemTypes[i]);
+                bool isUnlocked = UnlockTracker.IsItemUnlocked(_itemTypes[i]);
+                bool isSelected = isUnlocked && _selectedItems.Contains(_itemTypes[i]);
                 bool isCursor = i == _itemCursor && _currentMode == SelectionMode.Items;
 
-                Color color = isCursor ? Color.Yellow : (isSelected ? Color.Green : Color.White);
-                string prefix = isSelected ? "[X] " : "[ ] ";
+                Color color;
+                string prefix;
+                if (!isUnlocked)
+                {
+                    color = isCursor ? Color.Orange : Color.DarkGray;
+                    prefix = "[LOCKED] ";
+                }
+                else
+                {
+                    color = isCursor ? Color.Yellow : (isSelected ? Color.Green : Color.White);
+                    prefix = isSelected ? "[X] " : "[ ] ";
+                }
 
                 spriteBatch.DrawString(_font, prefix + itemName, new Vector2(startX, startY + i * 40), color);
             }
 
-            // Draw description for the currently highlighted item below the list
+            // Draw description (or unlock hint) for the currently highlighted item
             int descY = startY + _itemNames.Length * 40 + 10;
-            string activeItemDesc = _currentMode == SelectionMode.Items ? _itemDescriptions[_itemCursor] : "";
-            if (activeItemDesc.Length > 0)
+            if (_currentMode == SelectionMode.Items)
             {
-                spriteBatch.DrawString(_font, activeItemDesc, new Vector2(startX, descY), Color.LightGray);
+                bool cursorUnlocked = UnlockTracker.IsItemUnlocked(_itemTypes[_itemCursor]);
+                string activeItemDesc = cursorUnlocked
+                    ? _itemDescriptions[_itemCursor]
+                    : (UnlockTracker.GetUnlockHint(_itemTypes[_itemCursor]) ?? "");
+                if (activeItemDesc.Length > 0)
+                {
+                    Color descColor = cursorUnlocked ? Color.LightGray : Color.Orange;
+                    spriteBatch.DrawString(_font, activeItemDesc, new Vector2(startX, descY), descColor);
+                }
             }
         }
 
@@ -487,6 +568,55 @@ namespace PolyGone
         private bool IsKeyPressed(Keys key)
         {
             return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
+        }
+
+        private static void SaveLoadout()
+        {
+            try
+            {
+                string? dir = Path.GetDirectoryName(_loadoutSavePath);
+                if (dir != null && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                var data = new
+                {
+                    Items = _lastSelectedItems.Select(i => (int)i).ToList(),
+                    Weapon = (int)_lastSelectedWeapon
+                };
+                File.WriteAllText(_loadoutSavePath, JsonSerializer.Serialize(data));
+            }
+            catch { }
+        }
+
+        private static void TryLoadLoadout()
+        {
+            try
+            {
+                if (!File.Exists(_loadoutSavePath)) return;
+
+                string json = File.ReadAllText(_loadoutSavePath);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("Items", out var itemsEl))
+                {
+                    _lastSelectedItems.Clear();
+                    foreach (var item in itemsEl.EnumerateArray())
+                    {
+                        int val = item.GetInt32();
+                        if (Enum.IsDefined(typeof(ItemType), val))
+                            _lastSelectedItems.Add((ItemType)val);
+                    }
+                }
+
+                if (root.TryGetProperty("Weapon", out var weaponEl))
+                {
+                    int val = weaponEl.GetInt32();
+                    if (Enum.IsDefined(typeof(WeaponType), val))
+                        _lastSelectedWeapon = (WeaponType)val;
+                }
+            }
+            catch { }
         }
     }
 }

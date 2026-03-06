@@ -64,11 +64,15 @@ namespace PolyGone
                     if (bounds.Contains(InputManager.GetMousePosition()))
                     {
                         _selectedIndex = i;
-                        
-                        // Mouse click with InputManager
+
+                        // Mouse click with InputManager — ignore locked levels
                         if (InputManager.IsLeftMouseButtonClicked())
                         {
-                            ExecuteSelection();
+                            string? lf = _levelFiles[i];
+                            if (lf == null || UnlockTracker.IsLevelUnlocked(lf))
+                            {
+                                ExecuteSelection();
+                            }
                             InputManager.ConsumeClick();
                         }
                     }
@@ -78,17 +82,35 @@ namespace PolyGone
             // Keyboard navigation
             if (IsKeyPressed(Keys.Up))
             {
-                _selectedIndex = (_selectedIndex - 1 + _levelNames.Length) % _levelNames.Length;
+                int next = (_selectedIndex - 1 + _levelNames.Length) % _levelNames.Length;
+                // Skip locked level entries
+                while (next != _selectedIndex)
+                {
+                    string? lf = _levelFiles[next];
+                    if (lf == null || UnlockTracker.IsLevelUnlocked(lf)) break;
+                    next = (next - 1 + _levelNames.Length) % _levelNames.Length;
+                }
+                _selectedIndex = next;
             }
 
             if (IsKeyPressed(Keys.Down))
             {
-                _selectedIndex = (_selectedIndex + 1) % _levelNames.Length;
+                int next = (_selectedIndex + 1) % _levelNames.Length;
+                // Skip locked level entries
+                while (next != _selectedIndex)
+                {
+                    string? lf = _levelFiles[next];
+                    if (lf == null || UnlockTracker.IsLevelUnlocked(lf)) break;
+                    next = (next + 1) % _levelNames.Length;
+                }
+                _selectedIndex = next;
             }
 
             if (IsKeyPressed(Keys.Enter))
             {
-                ExecuteSelection();
+                string? lf = _levelFiles[_selectedIndex];
+                if (lf == null || UnlockTracker.IsLevelUnlocked(lf))
+                    ExecuteSelection();
             }
 
             if (InputManager.IsEscapeKeyPressed())
@@ -155,15 +177,36 @@ namespace PolyGone
 
                 // Draw level options
                 var startY = viewport.Height / 2f - _levelNames.Length * 40f / 2f;
+                string? hintText = null;
 
                 for (var i = 0; i < _levelNames.Length; i++)
                 {
-                    var levelName = _levelNames[i];
-                    var color = i == _selectedIndex ? Color.Yellow : Color.White;
-                    var textSize = _font.MeasureString(levelName);
-                    var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * 40f);
+                    string? lf = _levelFiles[i];
+                    bool isLocked = lf != null && !UnlockTracker.IsLevelUnlocked(lf);
+                    bool isCursor = i == _selectedIndex;
 
-                    spriteBatch.DrawString(_font, levelName, position, color);
+                    string displayName = isLocked ? "[LOCKED] " + _levelNames[i] : _levelNames[i];
+                    Color color;
+                    if (isLocked)
+                        color = isCursor ? Color.Orange : Color.DarkGray;
+                    else
+                        color = isCursor ? Color.Yellow : Color.White;
+
+                    var textSize = _font.MeasureString(displayName);
+                    var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * 40f);
+                    spriteBatch.DrawString(_font, displayName, position, color);
+
+                    if (isCursor && isLocked)
+                        hintText = UnlockTracker.GetLevelUnlockHint(lf!);
+                }
+
+                // Show unlock hint below the list when a locked level is highlighted
+                if (hintText != null)
+                {
+                    var hintSize = _font.MeasureString(hintText);
+                    var hintPos = new Vector2(viewport.Width / 2f - hintSize.X / 2f,
+                        startY + _levelNames.Length * 40f + 10f);
+                    spriteBatch.DrawString(_font, hintText, hintPos, Color.Orange);
                 }
             }
         }
