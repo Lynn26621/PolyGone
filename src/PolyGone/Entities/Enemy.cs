@@ -14,8 +14,6 @@ class Enemy : Entity
     private int accumulatedDamage = 0; // Damage accumulated during current window
     private readonly List<Projectile> hitProjectiles = new List<Projectile>(); // Track projectiles that hit during window
     private const float DAMAGE_WINDOW_DURATION = 2f; // 2 frames to accumulate damage
-
-    private float stunFrames = 0f; // Frames remaining in stun/knockback
     
     public Enemy(Texture2D texture, Vector2 position, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, float patrolSpeed = 1f, int[]? visualSize = null)
         : base(texture, position, size, health, color, srcRect, collisionMap, visualSize)
@@ -90,7 +88,6 @@ class Enemy : Entity
             if (damageWindow <= 0f && accumulatedDamage > 0)
             {
                 health -= accumulatedDamage; // Apply accumulated damage
-                stunFrames = 30f; // 30 frame stun after damage window
                 accumulatedDamage = 0;
                 hitProjectiles.Clear();
             }
@@ -99,11 +96,6 @@ class Enemy : Entity
 
     private void PatrolUpdate()
     {
-        // Don't patrol during knockback/invincibility
-        if (stunFrames > 0f)
-        {
-            return;
-        }
         
         // Only check ahead if we're on the ground
         if (!isOnGround)
