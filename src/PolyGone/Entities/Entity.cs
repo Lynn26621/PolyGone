@@ -24,7 +24,7 @@ public class Entity : Sprite
     public bool IsAlive => isAlive;
     /// <summary>Multiplier applied to gravity each physics tick. 1 = normal, lower = floatier.</summary>
     protected float gravityScale = 1f;
-
+    
     // Constants for tile-based calculations
     protected const int TILE_SIZE = 64;
     protected const int TILE_HALF_SIZE = TILE_SIZE / 2;
@@ -52,12 +52,10 @@ public class Entity : Sprite
     protected virtual List<(Rectangle, CollisionType)> GetIntersectingTiles(Rectangle target)
     {
         var intersectingTiles = new List<(Rectangle, CollisionType)>();
-        if (collisionMap == null)
-            return intersectingTiles;
+        if (collisionMap == null) return intersectingTiles;
         foreach (var tile in collisionMap)
         {
-            if (tile.Value == -1)
-                continue;
+            if (tile.Value == -1) continue;
             Rectangle tileRect = new Rectangle((int)tile.Key.X * TILE_SIZE, (int)tile.Key.Y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             CollisionType colType = CollisionTypeMapper.GetCollisionType(tile.Value);
             if (target.Intersects(tileRect))
@@ -67,15 +65,13 @@ public class Entity : Sprite
         }
         return intersectingTiles;
     }
-
+    
     // Helper method to check if a tile is a solid wall (not semi-solid platform)
     protected bool IsSolidWall(Vector2 tileKey)
     {
-        if (collisionMap == null)
-            return false;
-        if (!collisionMap.TryGetValue(tileKey, out int tileId) || tileId == -1)
-            return false;
-
+        if (collisionMap == null) return false;
+        if (!collisionMap.TryGetValue(tileKey, out int tileId) || tileId == -1) return false;
+        
         CollisionType colType = CollisionTypeMapper.GetCollisionType(tileId);
         return colType == CollisionType.Solid || colType == CollisionType.Rough || colType == CollisionType.Slippery;
     }
@@ -133,8 +129,7 @@ public class Entity : Sprite
         var intersectingEntities = new List<Entity>();
         foreach (var other in others)
         {
-            if (other == this)
-                continue;
+            if (other == this) continue;
             Rectangle otherRect = other.Rectangle;
             if (target.Intersects(otherRect))
             {
@@ -166,35 +161,21 @@ public class Entity : Sprite
 
         // Handle vertical movement and collisions
         HandleVerticalMovement(deltaTime);
-
+        
         // Handle horizontal movement and collisions
         HandleHorizontalMovement(deltaTime);
 
         // Apply friction to horizontal movement
-        if (isOnGround)
-        {
-            ApplyFriction();
-        }
-        else
-        {
-            // In air, apply less friction for more control
-            changeX *= 0.98f;
-        }
+        ApplyFriction();
     }
 
     protected virtual void HandleVerticalMovement(float deltaTime)
     {
         isOnGround = false;
         float nextY = position.Y + (changeY * deltaTime);
-        
-        // Create collision rect that sweeps from current to next position to catch all walls
-        float minY = Math.Min(position.Y, nextY);
-        float maxY = Math.Max(position.Y, nextY) + size[1];
-        int rectTop = (int)Math.Floor(minY);
-        int rectBottom = (int)Math.Ceiling(maxY);
-        Rectangle nextRectY = new Rectangle((int)Math.Floor(position.X), rectTop, size[0], rectBottom - rectTop);
+        Rectangle nextRectY = new Rectangle((int)position.X, (int)nextY, size[0], size[1]);
         var verticalCollisions = GetIntersectingTiles(nextRectY);
-
+        
         if (verticalCollisions.Count > 0)
         {
             verticalCollisions = verticalCollisions
@@ -213,16 +194,10 @@ public class Entity : Sprite
     protected virtual void HandleHorizontalMovement(float deltaTime)
     {
         float nextX = position.X + (changeX * deltaTime);
-        
-        // Create collision rect that sweeps from current to next position to catch all walls
-        float minX = Math.Min(position.X, nextX);
-        float maxX = Math.Max(position.X, nextX) + size[0];
-        int rectLeft = (int)Math.Floor(minX);
-        int rectRight = (int)Math.Ceiling(maxX);
-        Rectangle nextRectX = new Rectangle(rectLeft, (int)Math.Floor(position.Y), rectRight - rectLeft, size[1]);
+        Rectangle nextRectX = new Rectangle((int)nextX, (int)position.Y, size[0], size[1]);
         var horizontalCollisions = GetIntersectingTiles(nextRectX);
-
-
+        
+        
         if (horizontalCollisions.Count > 0)
         {
             horizontalCollisions = horizontalCollisions
@@ -252,20 +227,20 @@ public class Entity : Sprite
             int tileAbove = (int)((position.Y - 1f) / TILE_SIZE);
             int tileBelow = (int)((position.Y + size[1] + 1f) / TILE_SIZE);
             int currentTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
-
+            
             var keyAbove = new Vector2(currentTileX, tileAbove);
             var keyBelow = new Vector2(currentTileX, tileBelow);
-
+            
             bool wallAbove = IsSolidWall(keyAbove);
             bool wallBelow = IsSolidWall(keyBelow);
-
+            
             // If there are walls above and below (1-tile gap), center horizontally in the tile
             if (wallAbove && wallBelow)
             {
                 float tileCenter = currentTileX * TILE_SIZE + TILE_HALF_SIZE;
                 float playerCenter = position.X + size[0] / 2f;
                 float offset = tileCenter - playerCenter;
-
+                
                 // Gently nudge toward center (max 1 pixel per frame)
                 if (Math.Abs(offset) > 1f)
                 {
@@ -301,28 +276,26 @@ public class Entity : Sprite
     // Check if there's ground ahead in the movement direction
     protected virtual bool IsGroundAhead(float direction)
     {
-        if (collisionMap == null)
-            return true;
-
+        if (collisionMap == null) return true;
+        
         // Check from the bottom corner in the direction of movement
         float checkX = direction > 0
             ? position.X + size[0] + 1f   // Moving right: check from bottom-right corner, slightly ahead
             : position.X - 1f;            // Moving left: check from bottom-left corner, slightly ahead (to the left)
-
+        
         float checkY = position.Y + size[1] + 1f; // Just below feet
-
+        
         // Check if there's a tile at that position
         Rectangle checkRect = new Rectangle((int)checkX, (int)checkY, 1, 1);
         var tiles = GetIntersectingTiles(checkRect);
-
+        
         return tiles.Count > 0;
     }
 
     public void TakeDamage(int damage, float invincibilityDuration = 60f)
     {
-        if (invincibilityFrames > 0)
-            return; // Currently invincible, ignore damage
-
+        if (invincibilityFrames > 0) return; // Currently invincible, ignore damage
+        
         health -= damage;
         invincibilityFrames = invincibilityDuration; // Set invincibility frames after taking damage
     }
@@ -352,7 +325,7 @@ public class Entity : Sprite
         // Round positions only for drawing to prevent sub-pixel rendering issues
         float drawX = (float)Math.Floor(position.X - hitboxOffset.X - offset.X);
         float drawY = (float)Math.Floor(position.Y - hitboxOffset.Y - offset.Y);
-
+        
         // Check if visual sprite would clip through tiles and adjust if needed
         if (collisionMap != null)
         {
@@ -362,9 +335,9 @@ public class Entity : Sprite
                 visualSize[0],
                 visualSize[1]
             );
-
+            
             var visualCollisions = GetIntersectingTiles(visualRect);
-
+            
             // Adjust drawing position to prevent clipping
             foreach (var (tileRect, colType) in visualCollisions)
             {
@@ -381,11 +354,11 @@ public class Entity : Sprite
                         {
                             drawY = tileRect.Bottom - offset.Y;
                         }
-
+                        
                         // Adjust X if visual extends into tile horizontally
                         float visualLeft = position.X - hitboxOffset.X;
                         float visualRight = visualLeft + visualSize[0];
-
+                        
                         if (visualLeft < tileRect.Right && position.X >= tileRect.Right)
                         {
                             drawX = tileRect.Right - offset.X;
@@ -398,7 +371,7 @@ public class Entity : Sprite
                 }
             }
         }
-
+        
         Rectangle adjustedRectangle = new Rectangle(
             (int)drawX,
             (int)drawY,
@@ -408,5 +381,5 @@ public class Entity : Sprite
         spriteBatch.Draw(texture, adjustedRectangle, srcRect, color);
     }
 
-
+    
 }

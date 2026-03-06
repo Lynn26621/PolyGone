@@ -76,40 +76,7 @@ public class GameUI
             float maxCooldown = player.GetBlaster().MaxCooldown;
             int iconSize = size - 8;
             int cooldownHeight = (int)((player.Cooldown / maxCooldown) * iconSize);
-            spriteBatch.Draw(itemIndicatorTexture, new Rectangle(x + 4, y + 4, iconSize, cooldownHeight), srcRect, Color.Blue * 0.6f);
-        }
-
-        // Draw dash indicator to the right of weapon cooldown
-        int dashX = x + size + 10;
-        int dashSize = 30;
-        int dashY = y;
-        
-        // Determine color based on charge state
-        Color dashBgColor;
-        if (player.DashCharges == 0)
-            dashBgColor = Color.DarkRed; // Both on cooldown - red
-        else if (player.DashCharges == 1 && player.MaxDashCharges == 2)
-            dashBgColor = Color.DarkOrange; // One used - yellow/orange
-        else
-            dashBgColor = Color.DarkGray; // Normal background
-        
-        // Background
-        spriteBatch.Draw(itemIndicatorTexture, new Rectangle(dashX, dashY, dashSize, dashSize), srcRect, dashBgColor);
-        
-        // Border
-        spriteBatch.Draw(itemIndicatorTexture, new Rectangle(dashX - 2, dashY - 2, dashSize + 4, dashSize + 4), srcRect, Color.Black);
-        
-        // Dash icon (simple cyan square like weapon icon)
-        int dashIconSize = dashSize - 8;
-        Color iconColor = player.DashCharges > 0 ? Color.Cyan : Color.Gray;
-        spriteBatch.Draw(itemIndicatorTexture, new Rectangle(dashX + 4, dashY + 4, dashIconSize, dashIconSize), srcRect, iconColor);
-        
-        // Recharge cooldown overlay (only show DashCD, not DashCD2)
-        if (player.DashCharges < player.MaxDashCharges && player.DashCD > 0f)
-        {
-            // Recharge progress - overlay from top
-            int rechargeHeight = (int)((player.DashCD / 60f) * dashIconSize);
-            spriteBatch.Draw(itemIndicatorTexture, new Rectangle(dashX + 4, dashY + 4, dashIconSize, rechargeHeight), srcRect, Color.Blue * 0.6f);
+            spriteBatch.Draw(itemIndicatorTexture, new Rectangle(x + 4, y + 4 + (iconSize - cooldownHeight), iconSize, cooldownHeight), srcRect, Color.Blue * 0.6f);
         }
     }
 
@@ -166,28 +133,5 @@ public class GameUI
                 spriteBatch.DrawString(font, itemName, namePosition, Color.White);
             }
         }
-    }
-
-    private void DrawDashCooldownText(SpriteBatch spriteBatch)
-    {
-        if (font == null)
-            return;
-
-        int x = 20;
-        int y = spriteBatch.GraphicsDevice.Viewport.Height - (font.LineSpacing * 2) - 20;
-
-        string cooldownText = $"DashCooldown: {player.DashCD:0}";
-        string cooldownText2 = $"DashCooldown2: {player.DashCD2:0}";
-
-        Vector2 textPosition1 = new Vector2(x, y);
-        Vector2 textPosition2 = new Vector2(x, y + font.LineSpacing);
-
-        // Draw small border/shadow for readability
-        spriteBatch.DrawString(font, cooldownText, textPosition1 + new Vector2(1, 1), Color.Black);
-        spriteBatch.DrawString(font, cooldownText2, textPosition2 + new Vector2(1, 1), Color.Black);
-
-        // Main text
-        spriteBatch.DrawString(font, cooldownText, textPosition1, Color.White);
-        spriteBatch.DrawString(font, cooldownText2, textPosition2, Color.White);
     }
 }
