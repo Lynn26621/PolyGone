@@ -127,8 +127,8 @@ namespace PolyGone
             _levelFile = levelFile;
             previousKeyboardState = Keyboard.GetState();
             
-            // Initialize with last selected values
-            _selectedItems = new List<ItemType>(_lastSelectedItems);
+            // Initialize with last selected values, filtering out any that are now locked
+            _selectedItems = new List<ItemType>(_lastSelectedItems.FindAll(UnlockTracker.IsItemUnlocked));
             _selectedWeapon = _lastSelectedWeapon;
         }
 
@@ -210,22 +210,25 @@ namespace PolyGone
                     if (InputManager.IsLeftMouseButtonClicked())
                     {
                         ItemType selectedItem = _itemTypes[_itemCursor];
-                        if (_selectedItems.Contains(selectedItem))
+                        if (UnlockTracker.IsItemUnlocked(selectedItem))
                         {
-                            _selectedItems.Remove(selectedItem);
-                        }
+                            if (_selectedItems.Contains(selectedItem))
+                            {
+                                _selectedItems.Remove(selectedItem);
+                            }
 #if DEBUG
-                        else
-                        {
-                            // DEV: no item limit
-                            _selectedItems.Add(selectedItem);
-                        }
+                            else
+                            {
+                                // DEV: no item limit
+                                _selectedItems.Add(selectedItem);
+                            }
 #else
-                        else if (_selectedItems.Count < 2)
-                        {
-                            _selectedItems.Add(selectedItem);
-                        }
+                            else if (_selectedItems.Count < 2)
+                            {
+                                _selectedItems.Add(selectedItem);
+                            }
 #endif
+                        }
                         InputManager.ConsumeClick();
                     }
                 }
@@ -299,8 +302,12 @@ namespace PolyGone
             if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space))
             {
                 ItemType selectedItem = _itemTypes[_itemCursor];
-                
-                if (_selectedItems.Contains(selectedItem))
+
+                if (!UnlockTracker.IsItemUnlocked(selectedItem))
+                {
+                    // Item is locked — do nothing
+                }
+                else if (_selectedItems.Contains(selectedItem))
                 {
                     // Deselect item
                     _selectedItems.Remove(selectedItem);
@@ -386,6 +393,13 @@ namespace PolyGone
             }
         }
 
+        /// <summary>Clears the saved loadout so the next inventory screen starts fresh.</summary>
+        public static void ResetSavedLoadout()
+        {
+            _lastSelectedItems = new List<ItemType> { ItemType.DoubleJump, ItemType.SpeedBoost };
+            _lastSelectedWeapon = WeaponType.Blaster;
+        }
+
         private void StartGame()
         {
             // Save current selections for next time (in memory and on disk)
@@ -460,21 +474,39 @@ namespace PolyGone
             for (int i = 0; i < _itemNames.Length; i++)
             {
                 string itemName = _itemNames[i];
-                bool isSelected = _selectedItems.Contains(_itemTypes[i]);
+                bool isUnlocked = UnlockTracker.IsItemUnlocked(_itemTypes[i]);
+                bool isSelected = isUnlocked && _selectedItems.Contains(_itemTypes[i]);
                 bool isCursor = i == _itemCursor && _currentMode == SelectionMode.Items;
 
-                Color color = isCursor ? Color.Yellow : (isSelected ? Color.Green : Color.White);
-                string prefix = isSelected ? "[X] " : "[ ] ";
+                Color color;
+                string prefix;
+                if (!isUnlocked)
+                {
+                    color = isCursor ? Color.Orange : Color.DarkGray;
+                    prefix = "[LOCKED] ";
+                }
+                else
+                {
+                    color = isCursor ? Color.Yellow : (isSelected ? Color.Green : Color.White);
+                    prefix = isSelected ? "[X] " : "[ ] ";
+                }
 
                 spriteBatch.DrawString(_font, prefix + itemName, new Vector2(startX, startY + i * 40), color);
             }
 
-            // Draw description for the currently highlighted item below the list
+            // Draw description (or unlock hint) for the currently highlighted item
             int descY = startY + _itemNames.Length * 40 + 10;
-            string activeItemDesc = _currentMode == SelectionMode.Items ? _itemDescriptions[_itemCursor] : "";
-            if (activeItemDesc.Length > 0)
+            if (_currentMode == SelectionMode.Items)
             {
-                spriteBatch.DrawString(_font, activeItemDesc, new Vector2(startX, descY), Color.LightGray);
+                bool cursorUnlocked = UnlockTracker.IsItemUnlocked(_itemTypes[_itemCursor]);
+                string activeItemDesc = cursorUnlocked
+                    ? _itemDescriptions[_itemCursor]
+                    : (UnlockTracker.GetUnlockHint(_itemTypes[_itemCursor]) ?? "");
+                if (activeItemDesc.Length > 0)
+                {
+                    Color descColor = cursorUnlocked ? Color.LightGray : Color.Orange;
+                    spriteBatch.DrawString(_font, activeItemDesc, new Vector2(startX, descY), descColor);
+                }
             }
         }
 
