@@ -3,11 +3,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Math = System.Math;
 using System.Collections.Generic;
-using System.Linq;
-using PolyGone.Items;
-using PolyGone.Entities;
 
-namespace PolyGone.Weapons
+namespace PolyGone.Items
 {
     public class Blaster : Item
     {

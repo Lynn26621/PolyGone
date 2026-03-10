@@ -1,16 +1,15 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using PolyGone.Weapons;
 
 namespace PolyGone.Items
 {
-    /// <summary>Reduces the weapon cooldown to 1/3 of its base value.</summary>
+    /// <summary>Reduces the weapon cooldown to 1/2 of its base value and enables hold-to-fire.</summary>
     public class RapidFireItem : Item
     {
-        private const float CooldownMultiplier = 1f / 3f;
+        private const float CooldownMultiplier = 0.5f;
 
         public RapidFireItem(Texture2D texture, Vector2 position, int[] size, Color color, Rectangle? srcRect = null)
-            : base(texture, position, size, color, "Rapid Fire", "Reduces weapon cooldown to 1/3", srcRect) { }
+            : base(texture, position, size, color, "Rapid Fire", "Halves weapon cooldown, hold to fire", srcRect) { }
 
         public override void Apply(PolyGone.Entities.Player player)
         {

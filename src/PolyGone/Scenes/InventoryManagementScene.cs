@@ -116,7 +116,7 @@ namespace PolyGone
         private readonly string[] _attachmentDescriptions =
         {
             "Adds 2 extra spread bullets per shot",
-            "Reduces weapon cooldown to 1/3",
+            "Halves weapon cooldown, hold to fire",
             "Bullets pass through all enemies",
             "+50% bullet damage on every shot",
 #if DEBUG
