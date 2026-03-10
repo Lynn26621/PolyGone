@@ -48,32 +48,50 @@ namespace PolyGone.Entities
             Dictionary<Vector2, int> collisionMap, 
             Texture2D blasterTexture, 
             List<ItemType> selectedItems, 
-            WeaponType selectedWeapon, 
+            List<BlasterAttachmentType> selectedAttachments, 
             int[]? visualSize = null
         )
             : base(texture, position, size, health, color, srcRect, collisionMap, visualSize)
         {
-            // Create the selected weapon
-            switch (selectedWeapon)
+            // Always use the Blaster as the base weapon
+            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.White, collisionMap, bullets, srcRect);
+
+            // Apply blaster attachments to the freshly created blaster
+            foreach (var attachmentType in selectedAttachments)
             {
-                case WeaponType.Blaster:
-                    currentWeapon = new Blaster(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.White, collisionMap, bullets, srcRect);
-                    break;
-                case WeaponType.Shotgun:
-                    currentWeapon = new Shotgun(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, collisionMap, bullets, srcRect);
-                    break;
-                case WeaponType.Rifle:
-                    currentWeapon = new Rifle(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Black, collisionMap, bullets, srcRect);
-                    break;
-                case WeaponType.Automatic:
-                    currentWeapon = new Automatic(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Cyan, collisionMap, bullets, srcRect);
-                    break;
-                case WeaponType.VoidLance:
-                    currentWeapon = new VoidLance(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(180, 0, 220), collisionMap, bullets, srcRect);
-                    break;
+                Item? attachment = null;
+                switch (attachmentType)
+                {
+                    case BlasterAttachmentType.MultiShot:
+                        attachment = new PolyGone.Items.MultiShotItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, srcRect);
+                        break;
+                    case BlasterAttachmentType.RapidFire:
+                        attachment = new PolyGone.Items.RapidFireItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Orange, srcRect);
+                        break;
+                    case BlasterAttachmentType.Piercing:
+                        attachment = new PolyGone.Items.PiercingAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(140, 0, 200), srcRect);
+                        break;
+                    case BlasterAttachmentType.DamageBoost:
+                        attachment = new PolyGone.Items.DamageBoostAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(255, 60, 0), srcRect);
+                        break;
+#if DEBUG
+                    case BlasterAttachmentType.DevBlaster:
+                        // DEV: Apply all attachment effects at once
+                        new PolyGone.Items.MultiShotItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, srcRect).Apply(this);
+                        new PolyGone.Items.RapidFireItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Orange, srcRect).Apply(this);
+                        new PolyGone.Items.PiercingAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(140, 0, 200), srcRect).Apply(this);
+                        new PolyGone.Items.DamageBoostAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(255, 60, 0), srcRect).Apply(this);
+                        break;
+#endif
+                }
+                if (attachment != null)
+                {
+                    itemInventory.Add(attachment);
+                    attachment.Apply(this);
+                }
             }
-            
-            // Create and activate the selected items
+
+            // Create and activate the selected player items
             foreach (var itemType in selectedItems)
             {
                 Item? item = null;
@@ -87,12 +105,6 @@ namespace PolyGone.Entities
                         break;
                     case ItemType.HealingGlow:
                         item = new HealingGlowItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Green, srcRect);
-                        break;
-                    case ItemType.MultiShot:
-                        item = new MultiShotItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, srcRect);
-                        break;
-                    case ItemType.RapidFire:
-                        item = new RapidFireItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Orange, srcRect);
                         break;
                     case ItemType.LowGravity:
                         item = new LowGravityItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Purple, srcRect);

@@ -107,12 +107,12 @@ internal class PauseScene : IScene
             // Restart Level - reload with same loadout
             string levelName = _gameScene.GetLevelName();
             List<ItemType> currentItems = _gameScene.GetSelectedItems();
-            WeaponType currentWeapon = _gameScene.GetSelectedWeapon();
+            List<BlasterAttachmentType> currentAttachments = _gameScene.GetSelectedAttachments();
             
             _sceneManager.PopScene(this); // Pop pause scene
             _sceneManager.PopScene(_gameScene); // Pop game scene
             // Create fresh game scene with same settings
-            var newGameScene = new GameScene(_content, _sceneManager, _graphics, levelName, currentItems, currentWeapon);
+            var newGameScene = new GameScene(_content, _sceneManager, _graphics, levelName, currentItems, currentAttachments);
             _sceneManager.AddScene(newGameScene);
             InputManager.ResetClickCooldown();
         }

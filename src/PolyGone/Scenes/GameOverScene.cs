@@ -90,14 +90,14 @@ internal class GameOverScene : IScene
     {
         string levelName = gameScene.GetLevelName();
         List<ItemType> currentItems = gameScene.GetSelectedItems();
-        WeaponType currentWeapon = gameScene.GetSelectedWeapon();
+        List<BlasterAttachmentType> currentAttachments = gameScene.GetSelectedAttachments();
 
         switch (options[selectedIndex])
         {
             case "Restart Level":
                 sceneManager.PopScene(this);
                 sceneManager.PopScene(gameScene);
-                sceneManager.AddScene(new GameScene(content, sceneManager, graphics, levelName, currentItems, currentWeapon));
+                sceneManager.AddScene(new GameScene(content, sceneManager, graphics, levelName, currentItems, currentAttachments));
                 InputManager.ResetClickCooldown();
                 break;
 

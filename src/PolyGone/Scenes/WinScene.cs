@@ -15,7 +15,7 @@ public class WinScene : IScene
     private readonly GraphicsDeviceManager graphics;
     private readonly string currentLevel;
     private readonly List<ItemType> selectedItems;
-    private readonly WeaponType selectedWeapon;
+    private readonly List<BlasterAttachmentType> selectedAttachments;
     private SpriteFont font;
     private Texture2D pixel;
     private KeyboardState keyboardState;
@@ -24,14 +24,14 @@ public class WinScene : IScene
     private int selectedIndex;
     private static List<string>? levelOrder;
 
-    public WinScene(ContentManager contentManager, SceneManager sceneManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType> selectedItems = null, WeaponType selectedWeapon = WeaponType.Blaster)
+    public WinScene(ContentManager contentManager, SceneManager sceneManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType> selectedItems = null, List<BlasterAttachmentType> selectedAttachments = null)
     {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
         this.graphics = graphics;
         this.currentLevel = currentLevel;
         this.selectedItems = selectedItems ?? new List<ItemType>();
-        this.selectedWeapon = selectedWeapon;
+        this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
         
         // Build options list based on whether there's a next level
         string? nextLevel = GetNextLevel(currentLevel);
@@ -132,7 +132,7 @@ public class WinScene : IScene
             {
                 sceneManager.PopScene(this); // Remove WinScene
                 sceneManager.PopScene(sceneManager.GetCurrentScene()); // Remove old GameScene
-                sceneManager.AddScene(new GameScene(contentManager, sceneManager, graphics, nextLevel, selectedItems, selectedWeapon));
+                sceneManager.AddScene(new GameScene(contentManager, sceneManager, graphics, nextLevel, selectedItems, selectedAttachments));
                 InputManager.ResetClickCooldown();
             }
         }
