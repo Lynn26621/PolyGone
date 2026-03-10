@@ -20,12 +20,6 @@ namespace PolyGone.Weapons
         public int ExtraBulletsPerShot { get; set; } = 0;
         /// <summary>Multiplier applied to the reset cooldown after firing. Set by RapidFireItem.</summary>
         public float CooldownMultiplier { get; set; } = 1f;
-        /// <summary>Multiplier applied to bullet damage. Set by DamageBoostAttachment.</summary>
-        public float DamageMultiplier { get; set; } = 1f;
-        /// <summary>When true, all bullets pierce through enemies. Set by PiercingAttachment.</summary>
-        public bool IsPiercing { get; set; } = false;
-        /// <summary>When true, holding the mouse button fires continuously. Set by RapidFireItem.</summary>
-        public bool IsAutoFire { get; set; } = false;
         protected readonly Dictionary<Vector2, int> collisionMap;
         public Blaster(Texture2D texture, Vector2 position, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
             : base(texture, position, size, color, "Blaster", "Basic energy weapon", srcRect)
@@ -63,11 +57,9 @@ namespace PolyGone.Weapons
 
         public override void Use()
         {
-            // Handle shooting — hold-fire when auto, click otherwise
-            if ((IsAutoFire ? InputManager.IsLeftMouseButtonHeld() : InputManager.IsLeftMouseButtonClicked()) && cooldown <= 0f)
+            // Handle shooting with InputManager to prevent click carryover
+            if (InputManager.IsLeftMouseButtonClicked() && cooldown <= 0f)
             {
-                int baseDamage = (int)(40 * DamageMultiplier);
-
                 // Central / base bullet
                 bullets.Add(new Projectile(
                     texture: texture,
@@ -75,14 +67,13 @@ namespace PolyGone.Weapons
                     size: new int[2] { 10, 10 },
                     lifetime: 200f,
                     health: 1,
-                    damage: baseDamage,
-                    color: IsPiercing ? new Color(140, 0, 200) : Color.White,
+                    damage: 40,
+                    color: Color.White,
                     xSpeed: (float)(Math.Cos(rotation) * 750f),
                     ySpeed: (float)(Math.Sin(rotation) * 750f),
                     owner: Owner.Player,
                     srcRect: srcRect,
-                    collisionMap: collisionMap,
-                    isPiercing: IsPiercing
+                    collisionMap: collisionMap
                 ));
 
                 // Extra spread bullets added by MultiShotItem
@@ -100,20 +91,19 @@ namespace PolyGone.Weapons
                             size: new int[2] { 10, 10 },
                             lifetime: 200f,
                             health: 1,
-                            damage: baseDamage,
-                            color: IsPiercing ? new Color(140, 0, 200) : Color.White,
+                            damage: 40,
+                            color: Color.White,
                             xSpeed: (float)(Math.Cos(angle) * 750f),
                             ySpeed: (float)(Math.Sin(angle) * 750f),
                             owner: Owner.Player,
                             srcRect: srcRect,
-                            collisionMap: collisionMap,
-                            isPiercing: IsPiercing
+                            collisionMap: collisionMap
                         ));
                     }
                 }
 
                 cooldown = MaxCooldown * CooldownMultiplier;
-                if (!IsAutoFire) InputManager.ConsumeClick(); // Prevent multi-shot from same click press
+                InputManager.ConsumeClick(); // Prevent multiple shots from same click
             }
         }
 
