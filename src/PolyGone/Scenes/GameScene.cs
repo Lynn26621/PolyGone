@@ -33,6 +33,8 @@ public class GameScene : IScene
     private readonly List<TurretEnemy> turretEnemies = new(); // Stationary blaster enemies
     private readonly List<Projectile> orphanedTurretBullets = new(); // Bullets that outlive their turret
     private GoalTrigger goalTrigger; // Win condition trigger
+    private Gate gate; //  Gate object that can be opened/closed by triggers 
+    private readonly List<Gate> gates = new(); // List to support multiple gates in a level
     private bool levelComplete = false;
     private bool gameOver = false;
     private readonly List<ItemType> selectedItems;
@@ -53,7 +55,7 @@ public class GameScene : IScene
 
     // Public method to get the level name for restart functionality
     public string GetLevelName() => levelName;
-    
+
     // Public methods to get the current loadout for restart functionality
     public List<ItemType> GetSelectedItems() => new List<ItemType>(selectedItems);
     public List<BlasterAttachmentType> GetSelectedAttachments() => new List<BlasterAttachmentType>(selectedAttachments);
@@ -86,16 +88,16 @@ public class GameScene : IScene
         // Read and parse JSON file
         string jsonContent = File.ReadAllText(filepath);
         using JsonDocument doc = JsonDocument.Parse(jsonContent);
-        
+
         // Get root and layers
         JsonElement root = doc.RootElement;
         JsonElement layers = root.GetProperty("layers");
-        
+
         int width = root.GetProperty("width").GetInt32();
-        
+
         tileMap = new Dictionary<Vector2, int>();
         collisionMap = new Dictionary<Vector2, int>();
-        
+
         foreach (JsonElement layer in layers.EnumerateArray())
         {
             string? layerName = layer.GetProperty("name").GetString();
@@ -103,14 +105,14 @@ public class GameScene : IScene
             if (layerName != "Objects")
             {
                 JsonElement dataArray = layer.GetProperty("data");
-                
+
                 int index = 0;
                 foreach (JsonElement tile in dataArray.EnumerateArray())
                 {
                     int tileValue = tile.GetInt32();
                     int x = index % width;
                     int y = index / width;
-                    
+
                     if (tileValue > 0)
                     {
                         // Tiled's firstgid is 1, so we subtract 1 to convert to 0-based index.
@@ -124,7 +126,7 @@ public class GameScene : IScene
                             collisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
                         }
                     }
-                    
+
                     index++;
                 }
             }
@@ -167,13 +169,23 @@ public class GameScene : IScene
                             int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
                             goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight);
                             break;
+                        case "Gate":
+                            int gateWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                            int gateHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                            Vector2 gatePos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            gate = new Gate(gatePos, gateWidth, gateHeight);
+                            gates.Add(gate);
+                            break;
                         default:
                             break;
                     }
                 }
-            } 
+            }
         }
-        
+
         // Validate that a player spawn was found
         if (!playerSpawnFound)
         {
@@ -188,7 +200,7 @@ public class GameScene : IScene
     {
         // Reset input state to prevent carried over clicks from triggering actions
         InputManager.ResetClickCooldown();
-        
+
         // Load texture atlas and initialize camera
         texture = contentManager.Load<Texture2D>("PolyGoneTileMap");
         try
@@ -214,7 +226,7 @@ public class GameScene : IScene
             selectedAttachments: selectedAttachments,
             visualSize: new int[2] { 64, 64 }
         );
-        
+
         // Initialize GameUI
         gameUI = new GameUI(player, texture, textureStore[4], hudFont);
         // Initialize turret enemies
@@ -242,14 +254,14 @@ public class GameScene : IScene
             visualSize: new int[2] { 64, 64 }
         )));
     }
-    
+
     private void Reset()
     {
         // Reset player
         player.position = playerPos;
         player.health = 100;
         player.bullets.Clear();
-        
+
         // Reset turret enemies
         orphanedTurretBullets.Clear();
         turretEnemies.Clear();
@@ -277,7 +289,7 @@ public class GameScene : IScene
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 }
         )));
-        
+
         // Reset goal trigger and level completion
         if (goalTrigger != null)
         {
@@ -286,7 +298,7 @@ public class GameScene : IScene
         levelComplete = false;
         gameOver = false;
     }
-    
+
     public void Update(GameTime gameTime)
     {
         // Check if level is complete or game over
@@ -294,7 +306,7 @@ public class GameScene : IScene
         {
             return;
         }
-        
+
         // Update player and camera
         player.Update(gameTime, camera.position);
         camera.Follow(player.Rectangle, new Vector2(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight), new Vector2( tileMap.Keys.Max(k => k.X + 1) * 64, tileMap.Keys.Max(k => k.Y + 1) * 64));
@@ -302,7 +314,7 @@ public class GameScene : IScene
         // Check all entities for out-of-bounds
         float worldMaxY = tileMap.Keys.Max(k => k.Y + 1) * 64;
         float worldMaxX = tileMap.Keys.Max(k => k.X + 1) * 64;
-        
+
         // Check player bounds
         if (player.position.Y > worldMaxY)
         {
@@ -324,23 +336,31 @@ public class GameScene : IScene
             sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, graphics, this));
             return;
         }
-        
+
         // Check enemies for falling out of bounds
         foreach (var enemy in enemies)
         {
             if (enemy.position.Y > worldMaxY)
+            {
                 enemy.HandleDeath();
+            }
             else if (enemy.position.X < 0)
+            {
                 enemy.position.X = 0;
+            }
             else if (enemy.position.X + enemy.size[0] > worldMaxX)
+            {
                 enemy.position.X = worldMaxX - enemy.size[0];
+            }
         }
 
         // Update alive patrol enemies
         foreach (var enemy in enemies)
         {
             if (enemy.IsAlive)
+            {
                 enemy.Update(gameTime);
+            }
         }
 
         // Remove patrol enemies that died this frame
@@ -350,14 +370,18 @@ public class GameScene : IScene
         foreach (var turret in turretEnemies)
         {
             if (turret.position.Y > worldMaxY)
+            {
                 turret.HandleDeath();
+            }
         }
 
         // Update alive turret enemies
         foreach (var turret in turretEnemies)
         {
             if (turret.IsAlive)
+            {
                 turret.Update(gameTime);
+            }
         }
 
         // Before removing dead turrets, rescue any live bullets they still own
@@ -372,6 +396,15 @@ public class GameScene : IScene
         // Remove turret enemies that died this frame
         turretEnemies.RemoveAll(t => !t.IsAlive);
 
+        // Check if all enemies are defeated and open gates if so
+        if (enemies.Count == 0 && turretEnemies.Count == 0)
+        {
+            foreach (var gate in gates)
+            {
+                    gate.Open();
+            }
+        }
+
         // Advance and prune orphaned bullets
         for (int i = orphanedTurretBullets.Count - 1; i >= 0; i--)
         {
@@ -379,6 +412,25 @@ public class GameScene : IScene
             if (orphanedTurretBullets[i].lifetime <= 0)
             {
                 orphanedTurretBullets.RemoveAt(i);
+            }
+        }
+
+        // Handle gate collisions for all entities - gates act as solid walls when closed
+        List<Entity> gateBlockedEntities = [
+            player,
+            .. enemies,
+            .. turretEnemies,
+            .. player.bullets,
+            .. turretEnemies.SelectMany(t => t.Bullets),
+            .. orphanedTurretBullets
+        ];
+
+        foreach (var entity in gateBlockedEntities)
+        {
+            bool hitClosedGate = ResolveGateCollision(entity);
+            if (hitClosedGate && entity is Enemy enemy)
+            {
+                enemy.ReversePatrolDirection();
             }
         }
 
@@ -395,7 +447,7 @@ public class GameScene : IScene
         {
             turret.EntityCollisionUpdate(allEntities);
         }
-        
+
         // Check for goal trigger
         if (goalTrigger != null && !levelComplete)
         {
@@ -434,7 +486,7 @@ public class GameScene : IScene
             bullet.Draw(spriteBatch, camera.position);
         }
         player.Draw(spriteBatch, camera.position);
-        
+
         // Draw goal trigger (if it exists)
         if (goalTrigger != null)
         {
@@ -449,8 +501,87 @@ public class GameScene : IScene
             Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
             spriteBatch.Draw(texture, goalDest, textureStore[0], goalColor * 0.5f);
         }
-        
+        foreach (var gate in gates)
+        {
+            // Only draw gates when they are closed
+            if (!gate.IsOpen)
+            {
+                Rectangle gateRect = gate.GetBounds();
+                Rectangle gateDest = new Rectangle(
+                    (int)(gateRect.X - camera.position.X),
+                    (int)(gateRect.Y - camera.position.Y),
+                    gateRect.Width,
+                    gateRect.Height
+                );
+                // Draw closed gate with a red tint
+                spriteBatch.Draw(texture, gateDest, textureStore[0], Color.Red * 0.7f);
+            }
+        }
+
         // Draw new GameUI (health, cooldown, and active items)
         gameUI.Draw(spriteBatch);
+    }
+
+    private bool ResolveGateCollision(Entity entity)
+    {
+        bool hitClosedGate = false;
+
+        foreach (Gate currentGate in gates)
+        {
+            if (currentGate.IsOpen)
+            {
+                continue;
+            }
+
+            Rectangle gateRect = currentGate.GetBounds();
+            Rectangle entityRect = entity.Rectangle;
+
+            if (!gateRect.Intersects(entityRect))
+            {
+                continue;
+            }
+
+            hitClosedGate = true;
+
+            // Projectiles are blocked by closed gates and despawn on impact.
+            if (entity is Projectile projectile)
+            {
+                projectile.lifetime = 0f;
+                continue;
+            }
+
+            PushEntityOutOfGate(entity, entityRect, gateRect);
+        }
+
+        return hitClosedGate;
+    }
+
+    private static void PushEntityOutOfGate(Entity entity, Rectangle entityRect, Rectangle gateRect)
+    {
+        // Calculate overlap from each side.
+        int overlapLeft = entityRect.Right - gateRect.Left;
+        int overlapRight = gateRect.Right - entityRect.Left;
+        int overlapTop = entityRect.Bottom - gateRect.Top;
+        int overlapBottom = gateRect.Bottom - entityRect.Top;
+
+        // Find the minimum overlap to determine which side to push out from.
+        int minOverlap = Math.Min(Math.Min(overlapLeft, overlapRight), Math.Min(overlapTop, overlapBottom));
+
+        if (minOverlap == overlapLeft)
+        {
+            entity.position.X = gateRect.Left - entityRect.Width;
+        }
+        else if (minOverlap == overlapRight)
+        {
+            entity.position.X = gateRect.Right;
+        }
+        else if (minOverlap == overlapTop)
+        {
+            entity.position.Y = gateRect.Top - entityRect.Height;
+        }
+        else
+        {
+            entity.position.Y = gateRect.Bottom;
+        }
     }
 }
