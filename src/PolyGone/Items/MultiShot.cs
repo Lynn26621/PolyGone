@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using PolyGone.Weapons;
 
 namespace PolyGone.Items
 {

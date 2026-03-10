@@ -6,6 +6,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Numerics;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
+using PolyGone.Weapons;
 using PolyGone.Items;
 
 namespace PolyGone.Entities
