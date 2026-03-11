@@ -85,6 +85,13 @@ public class GameScene : IScene
     // Loads tile and collision maps from a JSON file exported from Tiled
     public void LoadMapFromJson(string filepath)
     {
+        playerSpawnFound = false;
+        playerPos = Vector2.Zero;
+        enemySpawns.Clear();
+        turretEnemySpawns.Clear();
+        gates.Clear();
+        goalTrigger = null!;
+
         // Read and parse JSON file
         string jsonContent = File.ReadAllText(filepath);
         using JsonDocument doc = JsonDocument.Parse(jsonContent);
@@ -92,97 +99,26 @@ public class GameScene : IScene
         // Get root and layers
         JsonElement root = doc.RootElement;
         JsonElement layers = root.GetProperty("layers");
-
-        int width = root.GetProperty("width").GetInt32();
+        int mapWidth = root.TryGetProperty("width", out JsonElement widthElement)
+            ? widthElement.GetInt32()
+            : 0;
 
         tileMap = new Dictionary<Vector2, int>();
         collisionMap = new Dictionary<Vector2, int>();
 
         foreach (JsonElement layer in layers.EnumerateArray())
         {
-            string? layerName = layer.GetProperty("name").GetString();
-            // Process tile and collision layers
-            if (layerName != "Objects")
+            string? layerType = layer.TryGetProperty("type", out JsonElement layerTypeElement)
+                ? layerTypeElement.GetString()
+                : null;
+
+            if (layerType == "tilelayer")
             {
-                JsonElement dataArray = layer.GetProperty("data");
-
-                int index = 0;
-                foreach (JsonElement tile in dataArray.EnumerateArray())
-                {
-                    int tileValue = tile.GetInt32();
-                    int x = index % width;
-                    int y = index / width;
-
-                    if (tileValue > 0)
-                    {
-                        // Tiled's firstgid is 1, so we subtract 1 to convert to 0-based index.
-                        // Wrap tileValue to fit within our texture store (assuming 16 tiles per layer in Tiled)
-                        if (layerName == "Tiles")
-                        {
-                            tileMap[new Vector2(x, y)] = tileValue % 16 - 1; 
-                        }
-                        else if (layerName == "Collisions")
-                        {
-                            collisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
-                        }
-                    }
-
-                    index++;
-                }
+                LoadTileLayer(layer, mapWidth);
             }
-            // Process object layer for entity spawns and other objects
-            else
+            else if (layerType == "objectgroup")
             {
-                List<JsonElement> objects = layer.GetProperty("objects").EnumerateArray().ToList();
-                foreach (JsonElement obj in objects)
-                {
-                    string? objType = obj.GetProperty("type").GetString();
-                    switch (objType)
-                    {
-                        case "Player":
-                            playerPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            playerSpawnFound = true;
-                            break;
-                        case "Enemy":
-                            Vector2 enemyPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            enemySpawns.Add(enemyPos);
-                            break;
-                        case "TurretEnemy":
-                            Vector2 turretPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            turretEnemySpawns.Add(turretPos);
-                            break;
-                        case "Goal":
-                            Vector2 goalPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            int goalWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
-                            int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                            goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight);
-                            break;
-                        case "Gate":
-                            int gateWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
-                            int gateHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                            Vector2 gatePos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            gate = new Gate(gatePos, gateWidth, gateHeight);
-                            gates.Add(gate);
-                            break;
-                        default:
-                            break;
-                    }
-                }
+                LoadObjectLayer(layer);
             }
         }
 
@@ -190,9 +126,134 @@ public class GameScene : IScene
         if (!playerSpawnFound)
         {
             throw new InvalidOperationException(
-                $"Map file '{filepath}' is missing a required PlayerSpawn object in the Objects layer. " +
-                "Please ensure the map contains exactly one object with type='PlayerSpawn'."
+                $"Map file '{filepath}' is missing a required Player object in an object layer. " +
+                "Please ensure the map contains exactly one object with type='Player'."
             );
+        }
+    }
+
+    private void LoadTileLayer(JsonElement layer, int fallbackWidth)
+    {
+        string? layerName = layer.TryGetProperty("name", out JsonElement layerNameElement)
+            ? layerNameElement.GetString()
+            : null;
+
+        Dictionary<Vector2, int>? targetMap = layerName switch
+        {
+            "Tiles" => tileMap,
+            "Collisions" => collisionMap,
+            _ => null
+        };
+
+        if (targetMap == null)
+        {
+            return;
+        }
+
+        if (layer.TryGetProperty("data", out JsonElement dataArray))
+        {
+            ProcessTileData(dataArray, fallbackWidth, 0, 0, targetMap);
+            return;
+        }
+
+        if (layer.TryGetProperty("chunks", out JsonElement chunksArray))
+        {
+            foreach (JsonElement chunk in chunksArray.EnumerateArray())
+            {
+                JsonElement chunkData = chunk.GetProperty("data");
+                int chunkWidth = chunk.GetProperty("width").GetInt32();
+                int chunkX = chunk.GetProperty("x").GetInt32();
+                int chunkY = chunk.GetProperty("y").GetInt32();
+                ProcessTileData(chunkData, chunkWidth, chunkX, chunkY, targetMap);
+            }
+
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Tile layer '{layerName ?? "<unnamed>"}' does not contain either a data array or chunk data."
+        );
+    }
+
+    private void ProcessTileData(JsonElement dataArray, int width, int startX, int startY, Dictionary<Vector2, int> targetMap)
+    {
+        if (width <= 0)
+        {
+            throw new InvalidOperationException("Tile layer width must be greater than zero.");
+        }
+
+        int index = 0;
+        foreach (JsonElement tile in dataArray.EnumerateArray())
+        {
+            int tileValue = tile.GetInt32();
+            int x = startX + index % width;
+            int y = startY + index / width;
+
+            if (tileValue > 0)
+            {
+                // Tiled's firstgid is 1, so convert to a 0-based atlas index.
+                targetMap[new Vector2(x, y)] = (tileValue - 1) % 16;
+            }
+
+            index++;
+        }
+    }
+
+    private void LoadObjectLayer(JsonElement layer)
+    {
+        if (!layer.TryGetProperty("objects", out JsonElement objectsArray))
+        {
+            return;
+        }
+
+        foreach (JsonElement obj in objectsArray.EnumerateArray())
+        {
+            string? objType = obj.TryGetProperty("type", out JsonElement objTypeElement)
+                ? objTypeElement.GetString()
+                : null;
+
+            if (objType == null ||
+                !obj.TryGetProperty("x", out JsonElement xElement) ||
+                !obj.TryGetProperty("y", out JsonElement yElement))
+            {
+                continue;
+            }
+
+            switch (objType)
+            {
+                case "Player":
+                    playerPos = AdjustCoordinates(xElement.GetSingle(), yElement.GetSingle());
+                    playerSpawnFound = true;
+                    break;
+                case "Enemy":
+                    enemySpawns.Add(AdjustCoordinates(xElement.GetSingle(), yElement.GetSingle()));
+                    break;
+                case "TurretEnemy":
+                    turretEnemySpawns.Add(AdjustCoordinates(xElement.GetSingle(), yElement.GetSingle()));
+                    break;
+                case "Goal":
+                    if (obj.TryGetProperty("width", out JsonElement goalWidthElement) &&
+                        obj.TryGetProperty("height", out JsonElement goalHeightElement))
+                    {
+                        Vector2 goalPos = AdjustCoordinates(xElement.GetSingle(), yElement.GetSingle());
+                        int goalWidth = (int)(goalWidthElement.GetSingle() * 2);
+                        int goalHeight = (int)(goalHeightElement.GetSingle() * 2);
+                        GoalConditionType goalConditions = ParseGoalConditions(obj);
+                        goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight, goalConditions);
+                    }
+                    break;
+                case "Gate":
+                    if (obj.TryGetProperty("width", out JsonElement gateWidthElement) &&
+                        obj.TryGetProperty("height", out JsonElement gateHeightElement))
+                    {
+                        int gateWidth = (int)(gateWidthElement.GetSingle() * 2);
+                        int gateHeight = (int)(gateHeightElement.GetSingle() * 2);
+                        Vector2 gatePos = AdjustCoordinates(xElement.GetSingle(), yElement.GetSingle());
+                        gate = new Gate(gatePos, gateWidth, gateHeight);
+                        gates.Add(gate);
+                    }
+                    break;
+            }
         }
     }
 
@@ -397,7 +458,7 @@ public class GameScene : IScene
         turretEnemies.RemoveAll(t => !t.IsAlive);
 
         // Check if all enemies are defeated and open gates if so
-        if (enemies.Count == 0 && turretEnemies.Count == 0)
+        if (AreAllEnemiesDefeated())
         {
             foreach (var gate in gates)
             {
@@ -451,7 +512,11 @@ public class GameScene : IScene
         // Check for goal trigger
         if (goalTrigger != null && !levelComplete)
         {
-            goalTrigger.CheckTrigger(player.Rectangle);
+            if (goalTrigger.CanTrigger(IsGoalConditionMet))
+            {
+                goalTrigger.CheckTrigger(player.Rectangle);
+            }
+
             if (goalTrigger.IsTriggered)
             {
                 levelComplete = true;
@@ -460,6 +525,73 @@ public class GameScene : IScene
             }
         }
     }
+
+    private bool AreAllEnemiesDefeated()
+    {
+        return enemies.Count == 0 && turretEnemies.Count == 0;
+    }
+
+    private bool IsGoalConditionMet(GoalConditionType condition)
+    {
+        return condition switch
+        {
+            GoalConditionType.AllEnemiesDefeated => AreAllEnemiesDefeated(),
+            _ => true
+        };
+    }
+
+    private static GoalConditionType ParseGoalConditions(JsonElement goalObject)
+    {
+        if (!goalObject.TryGetProperty("properties", out JsonElement propertiesElement))
+        {
+            return GoalConditionType.None;
+        }
+
+        GoalConditionType conditions = GoalConditionType.None;
+
+        foreach (JsonElement property in propertiesElement.EnumerateArray())
+        {
+            if (!property.TryGetProperty("name", out JsonElement nameElement))
+            {
+                continue;
+            }
+
+            string? propertyName = nameElement.GetString();
+            if (string.IsNullOrWhiteSpace(propertyName))
+            {
+                continue;
+            }
+
+            if (string.Equals(propertyName, "conditions", StringComparison.OrdinalIgnoreCase) &&
+                property.TryGetProperty("value", out JsonElement conditionsValue) &&
+                conditionsValue.ValueKind == JsonValueKind.String)
+            {
+                string[] configuredConditions = conditionsValue.GetString()!
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                foreach (string configuredCondition in configuredConditions)
+                {
+                    if (Enum.TryParse(configuredCondition, ignoreCase: true, out GoalConditionType parsedCondition))
+                    {
+                        conditions |= parsedCondition;
+                    }
+                }
+
+                continue;
+            }
+
+            if (string.Equals(propertyName, "requireAllEnemiesDefeated", StringComparison.OrdinalIgnoreCase) &&
+                property.TryGetProperty("value", out JsonElement boolValue) &&
+                boolValue.ValueKind is JsonValueKind.True or JsonValueKind.False &&
+                boolValue.GetBoolean())
+            {
+                conditions |= GoalConditionType.AllEnemiesDefeated;
+            }
+        }
+
+        return conditions;
+    }
+
     public void Draw(SpriteBatch spriteBatch)
     {
         foreach (var tile in tileMap)
