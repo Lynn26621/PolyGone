@@ -151,8 +151,11 @@ internal class PauseScene : IScene
 
         // Use the already-begun SpriteBatch from Game1.Draw and scale the overlay
         var viewport = spriteBatch.GraphicsDevice.Viewport;
-        spriteBatch.Draw(_pixel, new Rectangle(viewport.Width/4, viewport.Height/4, viewport.Width/2, viewport.Height/2), Color.Black);
-        
+        _sceneManager.GetPreviousScene().Draw(spriteBatch);
+        spriteBatch.Draw(_pixel, new Rectangle(viewport.Width / 4, viewport.Height / 4, viewport.Width / 2, viewport.Height / 2), Color.Black);
+
+
+
 
         if (_font != null)
         {
