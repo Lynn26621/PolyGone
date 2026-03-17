@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
@@ -8,6 +8,7 @@ using System.Numerics;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using PolyGone.Weapons;
 using PolyGone.Items;
+using PolyGone.Core;
 
 namespace PolyGone.Entities
 {
@@ -194,6 +195,7 @@ namespace PolyGone.Entities
             if ((isOnGround || coyoteTime > 0f) && spacePressed)
             {
                 changeY = JumpStrength;
+                Audio.PlaySfx("chiptune-sfx-jump"); //Added By Dylan                     
                 coyoteTime = 0f; // Reset coyote time after jumping
                 GetActiveDoubleJumpItem()?.Reset(); // Allow double jump in the new air phase
             }

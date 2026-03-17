@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PolyGone.Core;
 
 namespace PolyGone;
 public class Game1 : Game
@@ -11,6 +12,7 @@ public class Game1 : Game
     private SpriteBatch _spriteBatch;
     private SceneManager sceneManager;
     private KeyboardState _previousKeyboardState;
+    private Audio audio; //Added By Dylan
 
     public Game1()
     {
@@ -59,6 +61,7 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
+        audio = new Audio(Content); //Added By Dylan
 
         // Load purchase tracker before any scene that might need it
         PurchaseTracker.Load();

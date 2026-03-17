@@ -13,6 +13,19 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Audio/chiptune-sfx-jump.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/chiptune-sfx-jump.wav
+
+#begin DefaultFont.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:DefaultFont.spritefont
+
 #begin Fonts/PauseMenu.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
@@ -31,11 +44,4 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:PolyGoneTileMap.png
-
-#begin DefaultFont.spritefont
-/importer:FontDescriptionImporter
-/processor:FontDescriptionProcessor
-/processorParam:PremultiplyAlpha=True
-/processorParam:TextureFormat=Compressed
-/build:DefaultFont.spritefont
 
