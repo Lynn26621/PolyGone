@@ -14,8 +14,7 @@ using System;
 using System.Threading;
 
 namespace PolyGone;
-// To add:
-// - While in the pause menu, the paused game is displayed in the background
+
 internal class PauseScene : IScene
 {
     private Texture2D _pixel;
