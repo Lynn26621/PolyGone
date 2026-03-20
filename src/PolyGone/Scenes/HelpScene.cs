@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Intrinsics.X86;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
@@ -38,7 +39,7 @@ namespace PolyGone
             {
                 try
                 {
-                    _font = _content.Load<SpriteFont>("Fonts/PauseMenu");
+                    _font = _content.Load<SpriteFont>("Fonts/HelpMenu");
                 }
                 catch
                 {
@@ -65,11 +66,23 @@ namespace PolyGone
             }
             // Draw background
             spriteBatch.Draw(_pixel, new Rectangle(0, 0, spriteBatch.GraphicsDevice.Viewport.Width, spriteBatch.GraphicsDevice.Viewport.Height), Color.Gray);
-
             if (_font != null)
             {
                 var viewport = _graphics.GraphicsDevice.Viewport;
-                var helpText = "Use WASD or Arrow Keys to move.\nPress Space to jump.\nPress Escape to return to the menu.";
+                var helpText = "Use WASD or Arrow Keys to move, and press Space to jump." +
+                    "\nLeft Click to use your weapon" +
+                    "\n" +
+                    "\nBefore entering a level, select an item and your weapon of choice. " +
+                    "\nTo beat a level, touch the gray box at the end." +
+                    "\n" +
+                    "\nThere are 2 types of enemies, roamers and turrets." +
+                    "\nRoamers are red squares and deal damage when you collide with them." +
+                    "\nTurrets are stationary enemies that shoot bullets at you." +
+                    "\n" +
+                    "\nGood Luck!" +
+                    "\n" +
+                    "\n" +
+                    "\nPress Escape to return to the main menu.";
                 var textSize = _font.MeasureString(helpText);
                 var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, viewport.Height / 2f - textSize.Y / 2f);
                 spriteBatch.DrawString(_font, helpText, position, Color.White);
