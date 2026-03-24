@@ -12,6 +12,8 @@ namespace PolyGone
         private SpriteFont? _font;
         private KeyboardState keyboardState;
         private KeyboardState previousKeyboardState;
+        private GamePadState gamePadState;
+        private GamePadState previousGamePadState;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
         private readonly GraphicsDeviceManager _graphics;
@@ -26,6 +28,7 @@ namespace PolyGone
             _sceneManager = sceneManager;
             _graphics = graphics;
             previousKeyboardState = Keyboard.GetState();
+            previousGamePadState = GamePad.GetState(PlayerIndex.One);
             _selectedIndex = 0;
         }
 
@@ -47,6 +50,7 @@ namespace PolyGone
         public void Update(GameTime gameTime)
         {
             keyboardState = Keyboard.GetState();
+            gamePadState = GamePad.GetState(PlayerIndex.One);
 
             // Mouse navigation
             if (_font != null)
@@ -80,33 +84,35 @@ namespace PolyGone
             }
 
             // Keyboard navigation
-            if (IsKeyPressed(Keys.Up))
+            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))
             {
                 int next = (_selectedIndex - 1 + _levelNames.Length) % _levelNames.Length;
                 // Skip locked level entries
                 while (next != _selectedIndex)
                 {
                     string? lf = _levelFiles[next];
-                    if (lf == null || UnlockTracker.IsLevelUnlocked(lf)) break;
+                    if (lf == null || UnlockTracker.IsLevelUnlocked(lf))
+                        break;
                     next = (next - 1 + _levelNames.Length) % _levelNames.Length;
                 }
                 _selectedIndex = next;
             }
 
-            if (IsKeyPressed(Keys.Down))
+            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown))
             {
                 int next = (_selectedIndex + 1) % _levelNames.Length;
                 // Skip locked level entries
                 while (next != _selectedIndex)
                 {
                     string? lf = _levelFiles[next];
-                    if (lf == null || UnlockTracker.IsLevelUnlocked(lf)) break;
+                    if (lf == null || UnlockTracker.IsLevelUnlocked(lf))
+                        break;
                     next = (next + 1) % _levelNames.Length;
                 }
                 _selectedIndex = next;
             }
 
-            if (IsKeyPressed(Keys.Enter))
+            if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))
             {
                 string? lf = _levelFiles[_selectedIndex];
                 if (lf == null || UnlockTracker.IsLevelUnlocked(lf))
@@ -120,6 +126,7 @@ namespace PolyGone
             }
 
             previousKeyboardState = keyboardState;
+            previousGamePadState = gamePadState;
         }
 
         private void ExecuteSelection()
@@ -132,7 +139,8 @@ namespace PolyGone
             else
             {
                 string? levelFile = _levelFiles[_selectedIndex];
-                if (levelFile == null) return;
+                if (levelFile == null)
+                    return;
 
                 // Require Formbar login before accessing any level
                 if (!FormbarSession.IsLoggedIn)
@@ -168,7 +176,7 @@ namespace PolyGone
             if (_font != null)
             {
                 var viewport = spriteBatch.GraphicsDevice.Viewport;
-                
+
                 // Draw title
                 string title = "Select a Level";
                 var titleSize = _font.MeasureString(title);
@@ -214,6 +222,10 @@ namespace PolyGone
         private bool IsKeyPressed(Keys key)
         {
             return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
+        }
+        private bool IsButtonPressed(Buttons button)
+        {
+            return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
         }
     }
 }

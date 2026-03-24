@@ -26,6 +26,8 @@ namespace PolyGone
         private SpriteFont _font;
         private KeyboardState keyboardState;
         private KeyboardState previousKeyboardState;
+        private GamePadState gamePadState;
+        private GamePadState previousGamePadState;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
         private readonly GraphicsDeviceManager _graphics;
@@ -43,6 +45,7 @@ namespace PolyGone
             _sceneManager = sceneManager;
             _graphics = graphics;
             previousKeyboardState = Keyboard.GetState();
+            previousGamePadState = GamePad.GetState(PlayerIndex.One);
             _selectedIndex = 0;
         }
 
@@ -62,17 +65,18 @@ namespace PolyGone
         public void Update(GameTime gameTime)
         {
             keyboardState = Keyboard.GetState();
+            gamePadState = GamePad.GetState(PlayerIndex.One);
 
             if (_confirmingAction)
             {
                 // Left/Right or A/D to switch between Yes and No
-                if (IsKeyPressed(Keys.Left) || IsKeyPressed(Keys.A))
+                if (IsKeyPressed(Keys.Left) || IsKeyPressed(Keys.A) || IsButtonPressed(Buttons.DPadLeft))
                     _confirmSelectedIndex = 0;
-                if (IsKeyPressed(Keys.Right) || IsKeyPressed(Keys.D))
+                if (IsKeyPressed(Keys.Right) || IsKeyPressed(Keys.D) || IsButtonPressed(Buttons.DPadRight))
                     _confirmSelectedIndex = 1;
 
                 // Enter or Y to confirm
-                if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Y))
+                if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Y) || IsButtonPressed(Buttons.A))
                 {
                     if (_confirmSelectedIndex == 0)
                         _confirmedAction?.Invoke();
@@ -81,7 +85,7 @@ namespace PolyGone
                 }
 
                 // Escape or N to cancel
-                if (IsKeyPressed(Keys.Escape) || IsKeyPressed(Keys.N))
+                if (IsKeyPressed(Keys.Escape) || IsKeyPressed(Keys.N) || IsButtonPressed(Buttons.B))
                     _confirmingAction = false;
 
                 // Mouse support for confirmation buttons
@@ -119,6 +123,7 @@ namespace PolyGone
                 }
 
                 previousKeyboardState = keyboardState;
+                previousGamePadState = gamePadState;
                 return;
             }
 
@@ -150,22 +155,23 @@ namespace PolyGone
             }
 
             // Keyboard navigation
-            if (IsKeyPressed(Keys.Up))
+            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))
             {
                 _selectedIndex = (_selectedIndex - 1 + _options.Length) % _options.Length;
             }
 
-            if (IsKeyPressed(Keys.Down))
+            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown))
             {
                 _selectedIndex = (_selectedIndex + 1) % _options.Length;
             }
 
-            if (IsKeyPressed(Keys.Enter))
+            if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))
             {
                 ExecuteSelection();
             }
 
             previousKeyboardState = keyboardState;
+            previousGamePadState = gamePadState;
         }
 
         private void ExecuteSelection()
@@ -275,6 +281,10 @@ namespace PolyGone
         private bool IsKeyPressed(Keys key)
         {
             return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
+        }
+        private bool IsButtonPressed(Buttons button)
+        {
+            return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
         }
 
 

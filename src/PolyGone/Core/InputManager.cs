@@ -40,6 +40,8 @@ public static class InputManager
     private static MouseState _previousMouseState;
     private static KeyboardState _currentKeyboardState;
     private static KeyboardState _previousKeyboardState;
+    private static GamePadState _currentGamepadState;
+    private static GamePadState _previousGamepadState;
     private static float _mouseClickCooldown = 0f;
     private static float _escapeKeyCooldown = 0f;
     private const float CLICK_COOLDOWN = 0.01f; // 10ms between clicks
@@ -58,36 +60,45 @@ public static class InputManager
         
         _previousKeyboardState = _currentKeyboardState;
         _currentKeyboardState = Keyboard.GetState();
-        
+
+        _previousGamepadState = _currentGamepadState;
+        _currentGamepadState = GamePad.GetState(PlayerIndex.One);
+
         // Update click cooldown
         if (_mouseClickCooldown > 0f)
             _mouseClickCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            
-        // Update escape key cooldown
+
+        // Update escape key cooldown 
         if (_escapeKeyCooldown > 0f)
             _escapeKeyCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
     }
-    
+
     /// <summary>
     /// Checks if the left mouse button was just clicked (pressed and released since last frame)
-    /// and the cooldown has expired. This prevents double-clicks and scene transition issues.
+    /// and the cooldown has expired. This prevents double-clicks and scene transition issues. Also used for A button in gamepad mode for navigation and selection.
     /// </summary>
     public static bool IsLeftMouseButtonClicked()
     {
-        return _currentMouseState.LeftButton == ButtonState.Pressed 
-            && _previousMouseState.LeftButton == ButtonState.Released 
-            && _mouseClickCooldown <= 0f;
+        bool mouseClicked = _currentMouseState.LeftButton == ButtonState.Pressed 
+                            && _previousMouseState.LeftButton == ButtonState.Released 
+                            && _mouseClickCooldown <= 0f;
+        
+        bool gamepadClicked = _currentGamepadState.Buttons.A == ButtonState.Pressed 
+                              && _previousGamepadState.Buttons.A == ButtonState.Released 
+                              && _mouseClickCooldown <= 0f;
+        return mouseClicked || gamepadClicked;
     }
 
     /// <summary>
     /// Checks if the left mouse button is currently held down (any frame, no cooldown check).
-    /// Use this for automatic weapons that fire while the button is held.
+    /// Use this for automatic weapons that fire while the button is held. Also checks for gamepad right trigger as that is used for firing in gamepad mode.
     /// </summary>
-    public static bool IsLeftMouseButtonHeld()
+    public static bool IsLeftMouseButtonDown()
     {
-        return _currentMouseState.LeftButton == ButtonState.Pressed;
+        return _currentMouseState.LeftButton == ButtonState.Pressed 
+               || _currentGamepadState.Triggers.Right > 0.1f; // Consider trigger pressed if beyond 10%
     }
-    
+
     /// <summary>
     /// Consumes the click by starting the cooldown timer.
     /// Call this after handling a click to prevent it from triggering multiple actions.
@@ -96,26 +107,33 @@ public static class InputManager
     {
         _mouseClickCooldown = CLICK_COOLDOWN;
     }
-    
+
     /// <summary>
     /// Forces a reset of the click cooldown. Useful when transitioning between scenes
-    /// to ensure old clicks don't carry over.
+    /// to ensure old clicks don't carry over. 
     /// </summary>
     public static void ResetClickCooldown()
     {
         _mouseClickCooldown = CLICK_COOLDOWN;
     }
-    
+
     /// <summary>
     /// Checks if the Escape key was just pressed (down now, up before).
-    /// This prevents the key press from being processed by multiple scenes by tracking state globally.
+    /// This prevents the key press from being processed by multiple scenes by tracking state globally. Also used for the start button and B button on gamepad in gamepad mode.
     /// </summary>
     public static bool IsEscapeKeyPressed()
     {
-        return _currentKeyboardState.IsKeyDown(Keys.Escape) 
-            && !_previousKeyboardState.IsKeyDown(Keys.Escape);
+        bool escapePressed = _currentKeyboardState.IsKeyDown(Keys.Escape) 
+                             && _previousKeyboardState.IsKeyUp(Keys.Escape) 
+                             && _escapeKeyCooldown <= 0f;
+        
+        bool gamepadStartPressed = _currentGamepadState.Buttons.Start == ButtonState.Pressed 
+                                   && _previousGamepadState.Buttons.Start == ButtonState.Released 
+                                   && _escapeKeyCooldown <= 0f;
+        
+        return escapePressed || gamepadStartPressed;
     }
-    
+
     /// <summary>
     /// Gets the current mouse position.
     /// </summary>

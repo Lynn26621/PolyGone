@@ -12,6 +12,8 @@ internal class DevMenuScene : IScene
     private SpriteFont? _font;
     private KeyboardState _keyboardState;
     private KeyboardState _previousKeyboardState;
+    private GamePadState _gamePadState;
+    private GamePadState _previousGamePadState;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
@@ -29,6 +31,7 @@ internal class DevMenuScene : IScene
         _sceneManager          = sceneManager;
         _graphics              = graphics;
         _previousKeyboardState = Keyboard.GetState();
+        _previousGamePadState   = GamePad.GetState(PlayerIndex.One);
     }
 
     public void Load()
@@ -43,6 +46,7 @@ internal class DevMenuScene : IScene
     public void Update(GameTime gameTime)
     {
         _keyboardState = Keyboard.GetState();
+        _gamePadState   = GamePad.GetState(PlayerIndex.One);
 
         if (_font != null)
         {
@@ -85,12 +89,13 @@ internal class DevMenuScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up))   _cursor = (_cursor - 1 + EntryCount) % EntryCount;
-        if (IsKeyPressed(Keys.Down)) _cursor = (_cursor + 1) % EntryCount;
-        if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space)) ExecuteAction(_cursor);
-        if (InputManager.IsEscapeKeyPressed()) _sceneManager.PopScene(this);
+        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp)) _cursor = (_cursor - 1 + EntryCount) % EntryCount;
+        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown)) _cursor = (_cursor + 1) % EntryCount;
+        if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space) || IsButtonPressed(Buttons.A)) ExecuteAction(_cursor);
+        if (InputManager.IsEscapeKeyPressed() || IsButtonPressed(Buttons.B)) _sceneManager.PopScene(this);
 
         _previousKeyboardState = _keyboardState;
+        _previousGamePadState = _gamePadState;
     }
 
     private void ExecuteAction(int index)
@@ -192,5 +197,7 @@ internal class DevMenuScene : IScene
 
     private bool IsKeyPressed(Keys key) =>
         _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
+    private bool IsButtonPressed(Buttons button) =>
+        _gamePadState.IsButtonDown(button) && !_previousGamePadState.IsButtonDown(button);
 }
 #endif

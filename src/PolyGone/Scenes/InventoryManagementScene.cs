@@ -39,6 +39,8 @@ namespace PolyGone
         private SpriteFont? _font;
         private KeyboardState keyboardState;
         private KeyboardState previousKeyboardState;
+        private GamePadState gamePadState;
+        private GamePadState previousGamePadState;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
         private readonly GraphicsDeviceManager _graphics;
@@ -126,7 +128,8 @@ namespace PolyGone
             _graphics = graphics;
             _levelFile = levelFile;
             previousKeyboardState = Keyboard.GetState();
-            
+            previousGamePadState = GamePad.GetState(PlayerIndex.One);
+
             // Initialize with last selected values, filtering out any that are now locked
             _selectedItems = new List<ItemType>(_lastSelectedItems.FindAll(UnlockTracker.IsItemUnlocked));
             _selectedWeapon = _lastSelectedWeapon;
@@ -150,13 +153,15 @@ namespace PolyGone
         public void Update(GameTime gameTime)
         {
             keyboardState = Keyboard.GetState();
+            gamePadState = GamePad.GetState(PlayerIndex.One);
 
             // Check for Control key to skip inventory and start with current selections
-            if (keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl))
+            if (keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl) || IsButtonPressed(Buttons.Back))
             {
                 // Start game with current selections (which were loaded from last time)
                 StartGame();
                 previousKeyboardState = keyboardState;
+                previousGamePadState= gamePadState;
                 return;
             }
 
@@ -165,6 +170,7 @@ namespace PolyGone
             {
                 _sceneManager.PopScene(this);
                 previousKeyboardState = keyboardState;
+                previousGamePadState= gamePadState;
                 return;
             }
 
@@ -185,6 +191,7 @@ namespace PolyGone
             }
 
             previousKeyboardState = keyboardState;
+            previousGamePadState = gamePadState;
         }
 
         private void HandleMouseNavigation()
@@ -289,17 +296,17 @@ namespace PolyGone
 
         private void UpdateItemSelection()
         {
-            if (IsKeyPressed(Keys.Up))
+            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))
             {
                 _itemCursor = (_itemCursor - 1 + _itemNames.Length) % _itemNames.Length;
             }
 
-            if (IsKeyPressed(Keys.Down))
+            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown))
             {
                 _itemCursor = (_itemCursor + 1) % _itemNames.Length;
             }
 
-            if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space))
+            if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space) || IsButtonPressed(Buttons.A))
             {
                 ItemType selectedItem = _itemTypes[_itemCursor];
 
@@ -327,7 +334,7 @@ namespace PolyGone
 #endif
             }
 
-            if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) && !keyboardState.IsKeyDown(Keys.LeftShift)))
+            if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) || (IsButtonPressed(Buttons.DPadRight) && !keyboardState.IsKeyDown(Keys.LeftShift) || IsButtonPressed(Buttons.Y))))
             {
                 // Move to weapon selection
                 _currentMode = SelectionMode.Weapon;
@@ -336,29 +343,29 @@ namespace PolyGone
 
         private void UpdateWeaponSelection()
         {
-            if (IsKeyPressed(Keys.Up))
+            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))
             {
                 _weaponCursor = (_weaponCursor - 1 + _weaponNames.Length) % _weaponNames.Length;
             }
 
-            if (IsKeyPressed(Keys.Down))
+            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown))
             {
                 _weaponCursor = (_weaponCursor + 1) % _weaponNames.Length;
             }
 
-            if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space))
+            if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space) || IsButtonPressed(Buttons.A))
             {
                 // Select weapon
                 _selectedWeapon = _weaponTypes[_weaponCursor];
             }
 
-            if (IsKeyPressed(Keys.Left) || (IsKeyPressed(Keys.Tab) && keyboardState.IsKeyDown(Keys.LeftShift)))
+            if (IsKeyPressed(Keys.Left) || (IsKeyPressed(Keys.Tab) || (IsButtonPressed(Buttons.DPadLeft)) && keyboardState.IsKeyDown(Keys.LeftShift) || IsButtonPressed(Buttons.Y)))
             {
                 // Move back to item selection
                 _currentMode = SelectionMode.Items;
             }
 
-            if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) && !keyboardState.IsKeyDown(Keys.LeftShift)))
+            if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) || (IsButtonPressed(Buttons.DPadRight)) && !keyboardState.IsKeyDown(Keys.LeftShift) || IsButtonPressed(Buttons.Y)))
             {
                 // Move to confirm
                 _currentMode = SelectionMode.Confirm;
@@ -367,12 +374,12 @@ namespace PolyGone
 
         private void UpdateConfirmSelection()
         {
-            if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Down))
+            if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadDown))
             {
                 _confirmCursor = (_confirmCursor + 1) % 2;
             }
 
-            if (IsKeyPressed(Keys.Enter))
+            if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))
             {
                 if (_confirmCursor == 0)
                 {
@@ -386,7 +393,7 @@ namespace PolyGone
                 }
             }
 
-            if (IsKeyPressed(Keys.Left) || (IsKeyPressed(Keys.Tab) && keyboardState.IsKeyDown(Keys.LeftShift)))
+            if (IsKeyPressed(Keys.Left) || (IsKeyPressed(Keys.Tab) || (IsButtonPressed(Buttons.DPadLeft)) && keyboardState.IsKeyDown(Keys.LeftShift) || IsButtonPressed(Buttons.Y)))
             {
                 // Move back to weapon selection
                 _currentMode = SelectionMode.Weapon;
@@ -568,6 +575,11 @@ namespace PolyGone
         private bool IsKeyPressed(Keys key)
         {
             return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
+        }
+
+        private bool IsButtonPressed(Buttons button)
+        {
+            return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
         }
 
         private static void SaveLoadout()
