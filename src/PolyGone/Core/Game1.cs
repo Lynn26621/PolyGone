@@ -12,7 +12,7 @@ public class Game1 : Game
     private SpriteBatch _spriteBatch;
     private SceneManager sceneManager;
     private KeyboardState _previousKeyboardState;
-    private AudioManager audioManager; //Added By Dylan
+    private AudioManager audioManager;
 
     public Game1()
     {
@@ -61,7 +61,7 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-        audioManager = new AudioManager(Content); //Added By Dylan
+        audioManager = new AudioManager(Content); // Creates instance of AudioManager
 
         // Load purchase tracker before any scene that might need it
         PurchaseTracker.Load();

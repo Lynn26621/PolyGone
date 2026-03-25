@@ -126,7 +126,7 @@ internal class GameOverScene : IScene
                     sceneManager.AddScene(new LevelSelect(content, sceneManager, audioManager, graphics));
                 }
                 InputManager.ResetClickCooldown();
-                audioManager.PlayAudio("null", false, "menuSong", true);
+                audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
                 break;
 
             case "Main Menu":
@@ -141,7 +141,7 @@ internal class GameOverScene : IScene
                     sceneManager.AddScene(new MenuScene(content, sceneManager, audioManager, graphics));
                 }
                 InputManager.ResetClickCooldown();
-                audioManager.PlayAudio("null", false, "menuSong", true);
+                audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
                 break;
         }
     }

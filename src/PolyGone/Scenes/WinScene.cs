@@ -151,7 +151,7 @@ public class WinScene : IScene
             }
             
             InputManager.ResetClickCooldown();
-            audioManager.PlayAudio("null", false, "menuSong", true);
+            audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
         }
         else if (selectedOption == "Main Menu")
         {
@@ -164,7 +164,7 @@ public class WinScene : IScene
             }
             
             InputManager.ResetClickCooldown();
-            audioManager.PlayAudio("null", false, "menuSong", true);
+            audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
         }
     }
     

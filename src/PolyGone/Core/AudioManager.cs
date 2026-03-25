@@ -14,23 +14,34 @@ namespace PolyGone.Core
 {
     public class AudioManager
     {
+        // Setup for content manager to load audio assets
         private ContentManager content;
+
+        // Setup for sound effects
         private SoundEffect jumpSfx;
         private SoundEffect shootSfx;
         private SoundEffect collisionSfx;
         private SoundEffect deathSfx;
+
+        // Setup for songs
         private Song menuSong;
         private Song level1Song;
         private Song level2Song;
         private Song level3Song;
         private Song gameOverSong;
         private Song goalAchievedSong;
+
+        // Variable to track currently playing song
         private string currentSong;
+
+        // Constructor, gives access to content manager and calls method to load audio assets
         public AudioManager(ContentManager content)
         {
             this.content = content;
             LoadAudio();
         }
+
+        // Method to play audio, plays different type/audio asset based on parameters
         public void PlayAudio(string sfx, bool playEffect, string song, bool playSong)
         {
             if (sfx != null && playEffect)
@@ -39,12 +50,15 @@ namespace PolyGone.Core
             }
             if (song != null && playSong)
             {
+                //Checks if song is already playing to avoid restarting it
                 if (song != currentSong)
                 {
                     PlaySong(song);
                 }
             }
         }
+
+        // Loads audio assets
         public void LoadAudio()
         {
             jumpSfx = content.Load<SoundEffect>("Audio/jumpSfx");
@@ -58,12 +72,17 @@ namespace PolyGone.Core
             gameOverSong = content.Load<Song>("Audio/gameOverSong");
             goalAchievedSong = content.Load<Song>("Audio/goalAchievedSong");
         }
+
+        //Method to play songs
         public void PlaySong(string song)
         {
+            // Stops previous song before playing new one
             if(MediaPlayer.State == MediaState.Playing)
             {
                 MediaPlayer.Stop();
             }
+
+            // Stores current song
             currentSong = song;
             switch (song)
             {
@@ -95,6 +114,8 @@ namespace PolyGone.Core
                     break;
             }
         }
+
+        // Method to play sound effects
         public void PlaySfx(string sfx)
         {
             switch (sfx)

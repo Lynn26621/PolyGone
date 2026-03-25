@@ -21,7 +21,7 @@ namespace PolyGone.Entities
         
         private KeyboardState keyboardState;
         private KeyboardState previousKeyboardState;
-        private AudioManager audioManager; //Added By Dylan
+        private AudioManager audioManager;
         private Item? currentWeapon; // Single selected weapon
         private readonly List<Item> itemInventory = new List<Item>(); // Pre-selected items (max 2)
         public readonly List<Projectile> bullets = new List<Projectile>(); // Shared projectile list for all weapons
@@ -198,7 +198,6 @@ namespace PolyGone.Entities
             if ((isOnGround || coyoteTime > 0f) && spacePressed)
             {
                 changeY = JumpStrength;
-                //audio = new AudioManager("jumpSfx", true);
                 audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect                 
                 coyoteTime = 0f; // Reset coyote time after jumping
                 GetActiveDoubleJumpItem()?.Reset(); // Allow double jump in the new air phase
