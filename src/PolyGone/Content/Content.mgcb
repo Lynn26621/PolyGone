@@ -13,11 +13,65 @@
 
 #---------------------------------- Content ---------------------------------#
 
-#begin Audio/chiptune-sfx-jump.wav
+#begin Audio/collisionSfx.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
-/build:Audio/chiptune-sfx-jump.wav
+/build:Audio/collisionSfx.wav
+
+#begin Audio/deathSfx.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/deathSfx.wav
+
+#begin Audio/gameOverSong.wav
+/importer:WavImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/gameOverSong.wav
+
+#begin Audio/goalAchievedSong.wav
+/importer:WavImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/goalAchievedSong.wav
+
+#begin Audio/jumpSfx.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/jumpSfx.wav
+
+#begin Audio/level1Song.wav
+/importer:WavImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/level1Song.wav
+
+#begin Audio/level2Song.wav
+/importer:WavImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/level2Song.wav
+
+#begin Audio/level3Song.wav
+/importer:WavImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/level3Song.wav
+
+#begin Audio/menuSong.wav
+/importer:WavImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/menuSong.wav
+
+#begin Audio/shootSfx.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/shootSfx.wav
 
 #begin DefaultFont.spritefont
 /importer:FontDescriptionImporter

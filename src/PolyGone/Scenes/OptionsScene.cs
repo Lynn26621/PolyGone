@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.IO;
+using PolyGone.Core;
 
 namespace PolyGone;
 
@@ -15,6 +16,7 @@ internal class OptionsScene : IScene
     private KeyboardState _previousKeyboardState;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
+    private readonly AudioManager _audioManager;
     private readonly GraphicsDeviceManager _graphics;
     private int _selectedIndex;
     private readonly (int Width, int Height)[] _availableResolutions;
@@ -66,10 +68,11 @@ internal class OptionsScene : IScene
         "Back",
     ];
 
-    public OptionsScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
+    public OptionsScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)
     {
         _content = content;
         _sceneManager = sceneManager;
+        _audioManager = audioManager;
         _graphics = graphics;
         _previousKeyboardState = Keyboard.GetState();
         _selectedIndex = 0;
@@ -395,7 +398,7 @@ internal class OptionsScene : IScene
             _resetConfirmStep          = 0;
             _resetConfirmSelectedIndex = 1;
             _sceneManager.PopScene(this);
-            _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _graphics));
+            _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _audioManager, _graphics));
         }
     }
 

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PolyGone.Items;
 using PolyGone.Entities;
+using PolyGone.Core;
 
 namespace PolyGone.Weapons
 {
@@ -14,6 +15,7 @@ namespace PolyGone.Weapons
         public float rotation = 0f;
         protected readonly List<Projectile> bullets; // Reference to shared bullets list
         protected float cooldown;
+        private AudioManager audioManager;
         public float Cooldown => cooldown;
         public virtual float MaxCooldown => 12f; // Default blaster cooldown
         /// <summary>Extra bullets fired per shot (in addition to the base bullet). Set by MultiShotItem.</summary>
@@ -27,12 +29,13 @@ namespace PolyGone.Weapons
         /// <summary>When true, holding the mouse button fires continuously. Set by RapidFireItem.</summary>
         public bool IsAutoFire { get; set; } = false;
         protected readonly Dictionary<Vector2, int> collisionMap;
-        public Blaster(Texture2D texture, Vector2 position, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
+        public Blaster(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
             : base(texture, position, size, color, "Blaster", "Basic energy weapon", srcRect)
         {
             this.bullets = sharedBullets; // Use shared bullets list
             this.cooldown = 0f;
             this.collisionMap = collisionMap;
+            this.audioManager = audioManager;
         }
 
         public void Follow(Rectangle target, Vector2 cameraOffset)
@@ -72,6 +75,7 @@ namespace PolyGone.Weapons
                 bullets.Add(new Projectile(
                     texture: texture,
                     position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
+                    audioManager: audioManager,
                     size: new int[2] { 10, 10 },
                     lifetime: 200f,
                     health: 1,
@@ -85,6 +89,8 @@ namespace PolyGone.Weapons
                     isPiercing: IsPiercing
                 ));
 
+                audioManager.PlayAudio("shootSfx", true, "null", false); //Play shoot sound effect
+
                 // Extra spread bullets added by MultiShotItem
                 if (ExtraBulletsPerShot > 0)
                 {
@@ -97,6 +103,7 @@ namespace PolyGone.Weapons
                         bullets.Add(new Projectile(
                             texture: texture,
                             position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
+                            audioManager: audioManager,
                             size: new int[2] { 10, 10 },
                             lifetime: 200f,
                             health: 1,

@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using PolyGone.Core;
 using System.Collections.Generic;
 
 namespace PolyGone;
@@ -8,6 +9,7 @@ class Enemy : Entity
 {
     private readonly float patrolSpeed;
     private float patrolDirection = 1f; // 1 for right, -1 for left
+    private AudioManager audioManager;
     
     // Multi-hit damage system
     private float damageWindow = 0f; // Frames remaining in damage window
@@ -15,11 +17,12 @@ class Enemy : Entity
     private readonly List<Projectile> hitProjectiles = new List<Projectile>(); // Track projectiles that hit during window
     private const float DAMAGE_WINDOW_DURATION = 2f; // 2 frames to accumulate damage
     
-    public Enemy(Texture2D texture, Vector2 position, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, float patrolSpeed = 1f, int[]? visualSize = null)
-        : base(texture, position, size, health, color, srcRect, collisionMap, visualSize)
+    public Enemy(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, float patrolSpeed = 1f, int[]? visualSize = null)
+        : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, visualSize)
     {
         this.friction = 0.9f; // Enemy has default friction
         this.patrolSpeed = patrolSpeed;
+        this.audioManager = audioManager;
     }
 
     protected override void OnEntityCollision(Entity other)
@@ -45,6 +48,8 @@ class Enemy : Entity
             accumulatedDamage = 0;
             hitProjectiles.Clear();
         }
+
+        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 
         // Add this projectile's damage to accumulated damage
         accumulatedDamage += projectile.damage;

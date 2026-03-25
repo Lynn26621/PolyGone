@@ -9,12 +9,14 @@ using System.Linq;
 using System;
 using PolyGone.Entities;
 using PolyGone.Graphics;
+using PolyGone.Core;
 
 namespace PolyGone;
 
 public class GameScene : IScene
 {
     private ContentManager contentManager;
+    private AudioManager audioManager;
     private Texture2D texture;
     private SpriteFont hudFont;
     private SceneManager sceneManager;
@@ -39,10 +41,11 @@ public class GameScene : IScene
     private readonly List<BlasterAttachmentType> selectedAttachments;
     private readonly string levelName;
 
-    public GameScene(ContentManager contentManager, SceneManager sceneManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
+    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
     {       
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
+        this.audioManager = audioManager;
         this.graphics = graphics;
         this.selectedItems = selectedItems ?? new List<ItemType>();
         this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
@@ -188,6 +191,25 @@ public class GameScene : IScene
     {
         // Reset input state to prevent carried over clicks from triggering actions
         InputManager.ResetClickCooldown();
+
+        //Play level music
+        if (levelName != null)
+        {
+            switch (levelName)
+            {
+                case "TestLevel":
+                    audioManager.PlayAudio("null", false, "level1Song", true);
+                    break;
+                case "TestLevel2":
+                    audioManager.PlayAudio("null", false, "level2Song", true);
+                    break;
+                case "TestLevel3":
+                    audioManager.PlayAudio("null", false, "level3Song", true);
+                    break;
+                default:
+                    break;
+            }
+        }
         
         // Load texture atlas and initialize camera
         texture = contentManager.Load<Texture2D>("PolyGoneTileMap");
@@ -212,6 +234,7 @@ public class GameScene : IScene
             blasterTexture: texture,
             selectedItems: selectedItems,
             selectedAttachments: selectedAttachments,
+            audioManager: audioManager,
             visualSize: new int[2] { 64, 64 }
         );
         
@@ -221,6 +244,7 @@ public class GameScene : IScene
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
             texture: texture,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 80,
@@ -233,6 +257,7 @@ public class GameScene : IScene
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
             texture: texture,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             health: 50,
             color: Color.White,
@@ -256,6 +281,7 @@ public class GameScene : IScene
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
             texture: texture,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 80,
@@ -269,6 +295,7 @@ public class GameScene : IScene
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
             texture: texture,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             health: 50,
             color: Color.White,
@@ -321,7 +348,7 @@ public class GameScene : IScene
         if (!player.IsAlive && !gameOver)
         {
             gameOver = true;
-            sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, graphics, this));
+            sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, audioManager, graphics, this));
             return;
         }
         
@@ -404,7 +431,7 @@ public class GameScene : IScene
             {
                 levelComplete = true;
                 // Transition to win scene with current loadout
-                sceneManager.AddScene(new WinScene(contentManager, sceneManager, graphics, levelName, selectedItems, selectedAttachments));
+                sceneManager.AddScene(new WinScene(contentManager, sceneManager, audioManager, graphics, levelName, selectedItems, selectedAttachments));
             }
         }
     }

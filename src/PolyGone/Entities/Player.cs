@@ -21,6 +21,7 @@ namespace PolyGone.Entities
         
         private KeyboardState keyboardState;
         private KeyboardState previousKeyboardState;
+        private AudioManager audioManager; //Added By Dylan
         private Item? currentWeapon; // Single selected weapon
         private readonly List<Item> itemInventory = new List<Item>(); // Pre-selected items (max 2)
         public readonly List<Projectile> bullets = new List<Projectile>(); // Shared projectile list for all weapons
@@ -49,13 +50,14 @@ namespace PolyGone.Entities
             Dictionary<Vector2, int> collisionMap, 
             Texture2D blasterTexture, 
             List<ItemType> selectedItems, 
-            List<BlasterAttachmentType> selectedAttachments, 
+            List<BlasterAttachmentType> selectedAttachments,
+            AudioManager audioManager,
             int[]? visualSize = null
         )
-            : base(texture, position, size, health, color, srcRect, collisionMap, visualSize)
+            : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, visualSize)
         {
             // Always use the Blaster as the base weapon
-            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.White, collisionMap, bullets, srcRect);
+            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, audioManager, new int[] { 32, 32 }, Color.White, collisionMap, bullets, srcRect);
 
             // Apply blaster attachments to the freshly created blaster
             foreach (var attachmentType in selectedAttachments)
@@ -128,6 +130,7 @@ namespace PolyGone.Entities
             }
             
             this.friction = 0.8f; // Player has more friction for tighter control
+            this.audioManager = audioManager; // Store reference to AudioManager for playing audio
         }
 
         protected override void HandleVerticalCollision(ref bool onGround, ref float deltaY, List<(Rectangle, CollisionType)> collisions)
@@ -195,7 +198,8 @@ namespace PolyGone.Entities
             if ((isOnGround || coyoteTime > 0f) && spacePressed)
             {
                 changeY = JumpStrength;
-                Audio.PlaySfx("chiptune-sfx-jump"); //Added By Dylan                     
+                //audio = new AudioManager("jumpSfx", true);
+                audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect                 
                 coyoteTime = 0f; // Reset coyote time after jumping
                 GetActiveDoubleJumpItem()?.Reset(); // Allow double jump in the new air phase
             }
@@ -206,11 +210,13 @@ namespace PolyGone.Entities
                 if (doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, spacePressed, wasOnGroundLastFrame))
                 {
                     changeY = JumpStrength; // Same jump strength for double jump
+                    audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #if DEBUG
                 else if (GetDevModeItem()?.IsActive == true && spaceJustPressed)
                 {
                     changeY = JumpStrength; // DEV: infinite jumps
+                    audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #endif
             }
@@ -228,6 +234,8 @@ namespace PolyGone.Entities
                     {
 #if DEBUG
                         if (GetDevModeItem()?.IsActive == true) break;
+
+                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 #endif
                         health -= projectile.damage;
                         if (health <= 0)
@@ -256,6 +264,8 @@ namespace PolyGone.Entities
                     {
 #if DEBUG
                         if (GetDevModeItem()?.IsActive == true) break;
+
+                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 #endif
                         // Take 40 damage
                         health -= 40;

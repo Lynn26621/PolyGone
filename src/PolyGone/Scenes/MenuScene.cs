@@ -17,6 +17,8 @@ using System.IO;
 using System.Text.Json;
 using System.Linq;
 using System;
+using PolyGone.Core;
+using System.Diagnostics;
 
 namespace PolyGone
 {
@@ -28,6 +30,7 @@ namespace PolyGone
         private KeyboardState previousKeyboardState;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
+        private readonly AudioManager _audioManager;
         private readonly GraphicsDeviceManager _graphics;
         private readonly string[] _options = { "Level Select", "Options", "Log Out", "Exit to Desktop" };
         private int _selectedIndex;
@@ -36,11 +39,12 @@ namespace PolyGone
         private Action _confirmedAction;
         private int _confirmSelectedIndex; // 0 = Yes, 1 = No
 
-        public MenuScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
+        public MenuScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)
         {
             _pixel = null;
             _content = content;
             _sceneManager = sceneManager;
+            _audioManager = audioManager;
             _graphics = graphics;
             previousKeyboardState = Keyboard.GetState();
             _selectedIndex = 0;
@@ -57,6 +61,8 @@ namespace PolyGone
                     _font = _content.Load<SpriteFont>("Fonts/PauseMenu");
                 }
             }
+            _audioManager.PlayAudio("null", false, "menuSong", true);
+            Debug.WriteLine("Menu Scene Loaded");
         }
 
         public void Update(GameTime gameTime)
@@ -173,12 +179,12 @@ namespace PolyGone
             if (_selectedIndex == 0)
             {
                 // Level Select
-                _sceneManager.AddScene(new LevelSelect(_content, _sceneManager, _graphics));
+                _sceneManager.AddScene(new LevelSelect(_content, _sceneManager, _audioManager, _graphics));
             }
             else if (_selectedIndex == 1)
             {
                 // Options
-                _sceneManager.AddScene(new OptionsScene(_content, _sceneManager, _graphics));
+                _sceneManager.AddScene(new OptionsScene(_content, _sceneManager, _audioManager, _graphics));
             }
             else if (_selectedIndex == 2)
             {
@@ -189,7 +195,7 @@ namespace PolyGone
                     {
                         _confirmingAction = false;
                         FormbarSession.Clear();
-                        _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _graphics));
+                        _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _audioManager, _graphics));
                     });
             }
             else if (_selectedIndex == 3)

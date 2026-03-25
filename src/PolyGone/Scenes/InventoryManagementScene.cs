@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PolyGone.Core;
 
 namespace PolyGone
 {
@@ -50,6 +51,7 @@ namespace PolyGone
         private KeyboardState previousKeyboardState;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
+        private readonly AudioManager _audioManager;
         private readonly GraphicsDeviceManager _graphics;
         private readonly string _levelFile;
 
@@ -151,10 +153,11 @@ namespace PolyGone
         private readonly List<ItemType> _selectedPlayerItems;
         private readonly List<BlasterAttachmentType> _selectedAttachments;
 
-        public InventoryManagement(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics, string levelFile)
+        public InventoryManagement(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelFile)
         {
             _content = content;
             _sceneManager = sceneManager;
+            _audioManager = audioManager;
             _graphics = graphics;
             _levelFile = levelFile;
             previousKeyboardState = Keyboard.GetState();
@@ -173,6 +176,7 @@ namespace PolyGone
                 try { _font = _content.Load<SpriteFont>("Fonts/PauseMenu"); }
                 catch { }
             }
+            _audioManager.PlayAudio("null", false, "menuSong", true);
         }
 
         // -----------------------------------------------------------------------
@@ -411,7 +415,7 @@ namespace PolyGone
             SaveLoadout();
 
             _sceneManager.PopScene(this);
-            _sceneManager.AddScene(new GameScene(_content, _sceneManager, _graphics, _levelFile,
+            _sceneManager.AddScene(new GameScene(_content, _sceneManager, _audioManager, _graphics, _levelFile,
                 _selectedPlayerItems, _selectedAttachments));
             InputManager.ResetClickCooldown();
         }
