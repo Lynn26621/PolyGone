@@ -24,7 +24,7 @@ namespace PolyGone.Weapons
         public override void Use()
         {
             // Fires while mouse button is held - no ConsumeClick needed (hold-fire weapon)
-            if (InputManager.IsLeftMouseButtonHeld() && cooldown <= 0f)
+            if (InputManager.IsLeftMouseButtonDown() && cooldown <= 0f)
             {
                 bullets.Add(new Projectile(
                     texture: texture,

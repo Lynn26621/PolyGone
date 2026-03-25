@@ -19,6 +19,8 @@ internal class PauseScene : IScene
     private SpriteFont _font;
     private KeyboardState keyboardState;
     private KeyboardState previousKeyboardState;
+    private GamePadState gamePadState;
+    private GamePadState previousGamePadState;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
@@ -34,6 +36,7 @@ internal class PauseScene : IScene
         _graphics = graphics;
         _gameScene = gameScene;
         previousKeyboardState = Keyboard.GetState();
+        previousGamePadState = GamePad.GetState(PlayerIndex.One);
         _selectedIndex = 0;
     }
 
@@ -48,6 +51,7 @@ internal class PauseScene : IScene
     public void Update(GameTime gameTime)
     {
         keyboardState = Keyboard.GetState();
+        gamePadState = GamePad.GetState(PlayerIndex.One);
 
         // Mouse navigation
         if (_font != null)
@@ -77,22 +81,23 @@ internal class PauseScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up))
+        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))
         {
             _selectedIndex = (_selectedIndex - 1 + _options.Length) % _options.Length;
         }
 
-        if (IsKeyPressed(Keys.Down))
+        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown))
         {
             _selectedIndex = (_selectedIndex + 1) % _options.Length;
         }
 
-        if (IsKeyPressed(Keys.Enter))
+        if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))
         {
             ExecuteSelection();
         }
 
         previousKeyboardState = keyboardState;
+        previousGamePadState = gamePadState;
     }
 
     private void ExecuteSelection()
@@ -169,6 +174,10 @@ internal class PauseScene : IScene
     private bool IsKeyPressed(Keys key)
     {
         return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
+    }
+    private bool IsButtonPressed(Buttons button)
+    {
+        return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
     }
 
 

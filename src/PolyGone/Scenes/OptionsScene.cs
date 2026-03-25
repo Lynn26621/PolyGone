@@ -13,6 +13,8 @@ internal class OptionsScene : IScene
     private SpriteFont? _font;
     private KeyboardState _keyboardState;
     private KeyboardState _previousKeyboardState;
+    private GamePadState _gamePadState;
+    private GamePadState _previousGamePadState;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
@@ -72,6 +74,7 @@ internal class OptionsScene : IScene
         _sceneManager = sceneManager;
         _graphics = graphics;
         _previousKeyboardState = Keyboard.GetState();
+        _previousGamePadState = GamePad.GetState(PlayerIndex.One);
         _selectedIndex = 0;
         _availableResolutions = DisplaySettings.GetAvailableResolutions();
         var currentRes = (DisplaySettings.WindowedWidth, DisplaySettings.WindowedHeight);
@@ -112,6 +115,7 @@ internal class OptionsScene : IScene
         }
 
         _keyboardState = Keyboard.GetState();
+        _gamePadState = GamePad.GetState(PlayerIndex.One);
 
         // Handle the confirm-discard overlay independently
         if (_confirmingDiscard)
@@ -137,23 +141,24 @@ internal class OptionsScene : IScene
                     }
                 }
             }
-            if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Left))
+            if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadLeft))
             {
                 _confirmSelectedIndex = (_confirmSelectedIndex - 1 + 2) % 2;
             }
-            if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right))
+            if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadDown) || IsButtonPressed(Buttons.DPadRight))
             {
                 _confirmSelectedIndex = (_confirmSelectedIndex + 1) % 2;
             }
-            if (IsKeyPressed(Keys.Enter))
+            if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))
             {
                 ExecuteConfirm();
             }
-            if (IsKeyPressed(Keys.Escape))
+            if (IsKeyPressed(Keys.Escape) || IsButtonPressed(Buttons.B))
             {
                 _confirmingDiscard = false;
             }
             _previousKeyboardState = _keyboardState;
+            _previousGamePadState = _gamePadState;
             return;
         }
 
@@ -161,6 +166,7 @@ internal class OptionsScene : IScene
         {
             HandleResetConfirmInput();
             _previousKeyboardState = _keyboardState;
+            _previousGamePadState = _gamePadState;
             return;
         }
 
@@ -168,6 +174,7 @@ internal class OptionsScene : IScene
         {
             HandleResetProgressConfirmInput();
             _previousKeyboardState = _keyboardState;
+            _previousGamePadState = _gamePadState;
             return;
         }
 
@@ -224,30 +231,31 @@ internal class OptionsScene : IScene
 
         // Keyboard navigation
         int rowCount = GetRowLabels().Length;
-        if (IsKeyPressed(Keys.Up))   { _selectedIndex = (_selectedIndex - 1 + rowCount) % rowCount; }
-        if (IsKeyPressed(Keys.Down)) { _selectedIndex = (_selectedIndex + 1) % rowCount; }
+        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))   { _selectedIndex = (_selectedIndex - 1 + rowCount) % rowCount; }
+        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown)) { _selectedIndex = (_selectedIndex + 1) % rowCount; }
 
         if (_selectedIndex == 1 && !_pendingIsFullScreen)
         {
-            if (IsKeyPressed(Keys.Left))  { CycleResolution(-1); }
-            if (IsKeyPressed(Keys.Right)) { CycleResolution(1); }
+            if (IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadLeft))  { CycleResolution(-1); }
+            if (IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadRight)) { CycleResolution(1); }
         }
 
         if (_selectedIndex == 2)
         {
-            if (IsKeyPressed(Keys.Left))  { _buttonIndex = 0; }
-            if (IsKeyPressed(Keys.Right)) { _buttonIndex = 1; }
+            if (IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadLeft))  { _buttonIndex = 0; }
+            if (IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadRight)) { _buttonIndex = 1; }
         }
 
-        if (IsKeyPressed(Keys.Enter)) { ExecuteSelection(); }
+        if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A)) { ExecuteSelection(); }
 
-        if (IsKeyPressed(Keys.Escape))
+        if (IsKeyPressed(Keys.Escape) || IsButtonPressed(Buttons.B))
         {
             if (HasPendingChanges) { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
             else { _sceneManager.PopScene(this); }
         }
 
         _previousKeyboardState = _keyboardState;
+        _previousGamePadState = _gamePadState;
     }
 
     // Only updates the pending index — does not touch graphics until Apply is pressed
@@ -369,10 +377,10 @@ internal class OptionsScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left))  { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex - 1 + 2) % 2; }
-        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right)) { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex + 1) % 2; }
-        if (IsKeyPressed(Keys.Enter))  { ExecuteResetConfirm(); }
-        if (IsKeyPressed(Keys.Escape)) { _resetConfirmStep = 0; _resetConfirmSelectedIndex = 1; }
+        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadLeft))  { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex - 1 + 2) % 2; }
+        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadDown) || IsButtonPressed(Buttons.DPadRight)) { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex + 1) % 2; }
+        if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))  { ExecuteResetConfirm(); }
+        if (IsKeyPressed(Keys.Escape) || IsButtonPressed(Buttons.B)) { _resetConfirmStep = 0; _resetConfirmSelectedIndex = 1; }
     }
 
     private void ExecuteResetConfirm()
@@ -593,10 +601,10 @@ internal class OptionsScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left))  { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex - 1 + 2) % 2; }
-        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right)) { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex + 1) % 2; }
-        if (IsKeyPressed(Keys.Enter))  { ExecuteResetProgressConfirm(); }
-        if (IsKeyPressed(Keys.Escape)) { _resetProgressConfirmStep = 0; _resetProgressConfirmSelectedIndex = 1; }
+        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadLeft))  { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex - 1 + 2) % 2; }
+        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadDown) || IsButtonPressed(Buttons.DPadRight)) { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex + 1) % 2; }
+        if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))  { ExecuteResetProgressConfirm(); }
+        if (IsKeyPressed(Keys.Escape) || IsButtonPressed(Buttons.B)) { _resetProgressConfirmStep = 0; _resetProgressConfirmSelectedIndex = 1; }
     }
 
     private void ExecuteResetProgressConfirm()
@@ -624,5 +632,9 @@ internal class OptionsScene : IScene
     private bool IsKeyPressed(Keys key)
     {
         return _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
+    }
+    private bool IsButtonPressed(Buttons button)
+    {
+        return _gamePadState.IsButtonDown(button) && !_previousGamePadState.IsButtonDown(button);
     }
 }

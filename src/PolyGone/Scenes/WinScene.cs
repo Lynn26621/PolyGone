@@ -20,6 +20,8 @@ public class WinScene : IScene
     private Texture2D pixel;
     private KeyboardState keyboardState;
     private KeyboardState previousKeyboardState;
+    private GamePadState gamePadState;
+    private GamePadState previousGamePadState;
     private readonly string[] options;
     private int selectedIndex;
     private static List<string>? levelOrder;
@@ -45,6 +47,7 @@ public class WinScene : IScene
         }
         
         previousKeyboardState = Keyboard.GetState();
+        previousGamePadState = GamePad.GetState(PlayerIndex.One);
         selectedIndex = 0;
 
         // Record this level as completed so locked items can be unlocked
@@ -69,6 +72,7 @@ public class WinScene : IScene
     public void Update(GameTime gameTime)
     {
         keyboardState = Keyboard.GetState();
+        gamePadState = GamePad.GetState(PlayerIndex.One);
 
         // Mouse navigation
         if (font != null)
@@ -98,29 +102,34 @@ public class WinScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up))
+        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))
         {
             selectedIndex = (selectedIndex - 1 + options.Length) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Down))
+        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown))
         {
             selectedIndex = (selectedIndex + 1) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Enter))
+        if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))
         {
             ExecuteSelection();
         }
 
         previousKeyboardState = keyboardState;
+        previousGamePadState = gamePadState;
     }
     
     private bool IsKeyPressed(Keys key)
     {
         return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
     }
-    
+    private bool IsButtonPressed(Buttons button)
+    {
+        return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
+    }
+
     private void ExecuteSelection()
     {
         string selectedOption = options[selectedIndex];
