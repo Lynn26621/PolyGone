@@ -14,6 +14,8 @@ internal class DevMenuScene : IScene
     private KeyboardState _previousKeyboardState;
     private GamePadState _gamePadState;
     private GamePadState _previousGamePadState;
+    private float thumbstickX;
+    private float thumbstickY;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
@@ -47,6 +49,8 @@ internal class DevMenuScene : IScene
     {
         _keyboardState = Keyboard.GetState();
         _gamePadState   = GamePad.GetState(PlayerIndex.One);
+        thumbstickX = _gamePadState.ThumbSticks.Left.X;
+        thumbstickY = _gamePadState.ThumbSticks.Left.Y;
 
         if (_font != null)
         {
@@ -89,8 +93,8 @@ internal class DevMenuScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp)) _cursor = (_cursor - 1 + EntryCount) % EntryCount;
-        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown)) _cursor = (_cursor + 1) % EntryCount;
+        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp) || IsThumbstickUp()) _cursor = (_cursor - 1 + EntryCount) % EntryCount;
+        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickDown()) _cursor = (_cursor + 1) % EntryCount;
         if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space) || IsButtonPressed(Buttons.A)) ExecuteAction(_cursor);
         if (InputManager.IsEscapeKeyPressed() || IsButtonPressed(Buttons.B)) _sceneManager.PopScene(this);
 
@@ -199,5 +203,20 @@ internal class DevMenuScene : IScene
         _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
     private bool IsButtonPressed(Buttons button) =>
         _gamePadState.IsButtonDown(button) && !_previousGamePadState.IsButtonDown(button);
+    private float _previousThumbstickY = 0f;
+    private bool IsThumbstickUp()
+    {
+        bool wasUp = _previousThumbstickY > 0.5f;
+        bool isUp = thumbstickY > 0.5f;
+        _previousThumbstickY = thumbstickY;
+        return isUp && !wasUp;
+    }
+    private bool IsThumbstickDown()
+    {
+        bool wasDown = _previousThumbstickY < -0.5f;
+        bool isDown = thumbstickY < -0.5f;
+        return isDown && !wasDown;
+    }
+
 }
 #endif

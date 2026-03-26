@@ -15,6 +15,8 @@ internal class OptionsScene : IScene
     private KeyboardState _previousKeyboardState;
     private GamePadState _gamePadState;
     private GamePadState _previousGamePadState;
+    private float _thumbstickX;
+    private float _thumbstickY;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
@@ -116,6 +118,8 @@ internal class OptionsScene : IScene
 
         _keyboardState = Keyboard.GetState();
         _gamePadState = GamePad.GetState(PlayerIndex.One);
+        _thumbstickX = _gamePadState.ThumbSticks.Left.X;
+        _thumbstickY = _gamePadState.ThumbSticks.Left.Y;
 
         // Handle the confirm-discard overlay independently
         if (_confirmingDiscard)
@@ -141,11 +145,11 @@ internal class OptionsScene : IScene
                     }
                 }
             }
-            if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadLeft))
+            if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadLeft) || IsThumbstickUp() || IsThumbstickLeft())
             {
                 _confirmSelectedIndex = (_confirmSelectedIndex - 1 + 2) % 2;
             }
-            if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadDown) || IsButtonPressed(Buttons.DPadRight))
+            if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadDown) || IsButtonPressed(Buttons.DPadRight) || IsThumbstickDown() || IsThumbstickRight())
             {
                 _confirmSelectedIndex = (_confirmSelectedIndex + 1) % 2;
             }
@@ -231,19 +235,19 @@ internal class OptionsScene : IScene
 
         // Keyboard navigation
         int rowCount = GetRowLabels().Length;
-        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))   { _selectedIndex = (_selectedIndex - 1 + rowCount) % rowCount; }
-        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown)) { _selectedIndex = (_selectedIndex + 1) % rowCount; }
+        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp) || IsThumbstickUp())   { _selectedIndex = (_selectedIndex - 1 + rowCount) % rowCount; }
+        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickDown()) { _selectedIndex = (_selectedIndex + 1) % rowCount; }
 
         if (_selectedIndex == 1 && !_pendingIsFullScreen)
         {
-            if (IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadLeft))  { CycleResolution(-1); }
-            if (IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadRight)) { CycleResolution(1); }
+            if (IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadLeft) || IsThumbstickLeft())  { CycleResolution(-1); }
+            if (IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadRight) || IsThumbstickRight()) { CycleResolution(1); }
         }
 
         if (_selectedIndex == 2)
         {
-            if (IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadLeft))  { _buttonIndex = 0; }
-            if (IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadRight)) { _buttonIndex = 1; }
+            if (IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadLeft) || IsThumbstickLeft())  { _buttonIndex = 0; }
+            if (IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadRight) || IsThumbstickRight()) { _buttonIndex = 1; }
         }
 
         if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A)) { ExecuteSelection(); }
@@ -377,8 +381,8 @@ internal class OptionsScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadLeft))  { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex - 1 + 2) % 2; }
-        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadDown) || IsButtonPressed(Buttons.DPadRight)) { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex + 1) % 2; }
+        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadLeft) || IsThumbstickUp() || IsThumbstickLeft())  { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex - 1 + 2) % 2; }
+        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadDown) || IsButtonPressed(Buttons.DPadRight) || IsThumbstickDown() || IsThumbstickRight()) { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex + 1) % 2; }
         if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))  { ExecuteResetConfirm(); }
         if (IsKeyPressed(Keys.Escape) || IsButtonPressed(Buttons.B)) { _resetConfirmStep = 0; _resetConfirmSelectedIndex = 1; }
     }
@@ -601,8 +605,8 @@ internal class OptionsScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadLeft))  { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex - 1 + 2) % 2; }
-        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadDown) || IsButtonPressed(Buttons.DPadRight)) { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex + 1) % 2; }
+        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadLeft) || IsThumbstickUp() || IsThumbstickLeft())  { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex - 1 + 2) % 2; }
+        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right) || IsButtonPressed(Buttons.DPadDown) || IsButtonPressed(Buttons.DPadRight) || IsThumbstickDown() || IsThumbstickRight()) { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex + 1) % 2; }
         if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))  { ExecuteResetProgressConfirm(); }
         if (IsKeyPressed(Keys.Escape) || IsButtonPressed(Buttons.B)) { _resetProgressConfirmStep = 0; _resetProgressConfirmSelectedIndex = 1; }
     }
@@ -636,5 +640,31 @@ internal class OptionsScene : IScene
     private bool IsButtonPressed(Buttons button)
     {
         return _gamePadState.IsButtonDown(button) && !_previousGamePadState.IsButtonDown(button);
+    }
+    private float _previousThumbstickY = 0f;
+    private bool IsThumbstickUp()
+    {
+        bool wasUp = _previousThumbstickY > 0.5f;
+        bool isUp = _thumbstickY > 0.5f;
+        _previousThumbstickY = _thumbstickY;
+        return isUp && !wasUp;
+    }
+    private bool IsThumbstickDown()
+    {
+        bool wasDown = _previousThumbstickY < -0.5f;
+        bool isDown = _thumbstickY < -0.5f;
+        return isDown && !wasDown;
+    }
+    private bool IsThumbstickLeft()
+    {
+        bool wasLeft = _thumbstickX < -0.5f;
+        bool isLeft = _thumbstickX < -0.5f;
+        return isLeft && !wasLeft;
+    }
+    private bool IsThumbstickRight()
+    {
+        bool wasRight = _thumbstickX > 0.5f;
+        bool isRight = _thumbstickX > 0.5f;
+        return isRight && !wasRight;
     }
 }

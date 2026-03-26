@@ -14,6 +14,8 @@ namespace PolyGone
         private KeyboardState previousKeyboardState;
         private GamePadState gamePadState;
         private GamePadState previousGamePadState;
+        private float thumbstickX;
+        private float thumbstickY;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
         private readonly GraphicsDeviceManager _graphics;
@@ -51,6 +53,8 @@ namespace PolyGone
         {
             keyboardState = Keyboard.GetState();
             gamePadState = GamePad.GetState(PlayerIndex.One);
+            thumbstickX = gamePadState.ThumbSticks.Left.X;
+            thumbstickY = gamePadState.ThumbSticks.Left.Y;
 
             // Mouse navigation
             if (_font != null)
@@ -84,7 +88,7 @@ namespace PolyGone
             }
 
             // Keyboard navigation
-            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))
+            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp) || IsThumbstickUp())
             {
                 int next = (_selectedIndex - 1 + _levelNames.Length) % _levelNames.Length;
                 // Skip locked level entries
@@ -98,7 +102,7 @@ namespace PolyGone
                 _selectedIndex = next;
             }
 
-            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown))
+            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickDown())
             {
                 int next = (_selectedIndex + 1) % _levelNames.Length;
                 // Skip locked level entries
@@ -226,6 +230,20 @@ namespace PolyGone
         private bool IsButtonPressed(Buttons button)
         {
             return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
+        }
+        private float previousThumbstickY = 0f;
+        private bool IsThumbstickUp()
+        {
+            bool wasUp = previousThumbstickY > 0.5f;
+            bool isUp = thumbstickY > 0.5f;
+            previousThumbstickY = thumbstickY;
+            return isUp && !wasUp;
+        }
+        private bool IsThumbstickDown()
+        {
+            bool wasDown = previousThumbstickY < -0.5f;
+            bool isDown = thumbstickY < -0.5f;
+            return isDown && !wasDown;
         }
     }
 }

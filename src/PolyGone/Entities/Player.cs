@@ -22,6 +22,10 @@ namespace PolyGone.Entities
         private KeyboardState previousKeyboardState;
         private GamePadState gamePadState;
         private GamePadState previousGamePadState;
+        private float thumbstickX;
+        private float thumbstickY;
+        private bool usingController = false;
+        private Vector2 rightThumbstick;
         private Item? currentWeapon; // Single selected weapon
         private readonly List<Item> itemInventory = new List<Item>(); // Pre-selected items (max 2)
         public readonly List<Projectile> bullets = new List<Projectile>(); // Shared projectile list for all weapons
@@ -140,7 +144,7 @@ namespace PolyGone.Entities
                     deltaY = 0;
                     break;
                 case CollisionType.SemiSolid:
-                    if (keyboardState.IsKeyDown(Keys.S) || gamePadState.DPad.Down.Equals(Buttons.DPadDown))
+                    if (keyboardState.IsKeyDown(Keys.S) || (thumbstickY < -0.5f))
                     {
                         // Drop through platform
                         position.Y += deltaY;
@@ -167,11 +171,18 @@ namespace PolyGone.Entities
             keyboardState = Keyboard.GetState();
             previousGamePadState = gamePadState;
             gamePadState = GamePad.GetState(PlayerIndex.One);
+            thumbstickX = gamePadState.ThumbSticks.Left.X;
+            thumbstickY = gamePadState.ThumbSticks.Left.Y;
+            rightThumbstick = new Vector2(gamePadState.ThumbSticks.Right.X, -gamePadState.ThumbSticks.Right.Y);
+            if (Math.Abs(rightThumbstick.X) > 0.3f || Math.Abs(rightThumbstick.Y) > 0.3f || Math.Abs(thumbstickX) > 0.1f)
+            {
+                usingController = true;
+            }
             int moveDirection = 0;
 
             // Horizontal movement with speed boost consideration
-            if (keyboardState.IsKeyDown(Keys.A) && !keyboardState.IsKeyDown(Keys.D) || gamePadState.DPad.Left.Equals(Buttons.DPadLeft) && !gamePadState.DPad.Right.Equals(Buttons.DPadRight)) moveDirection = -1;
-            else if (keyboardState.IsKeyDown(Keys.D) && !keyboardState.IsKeyDown(Keys.A) || gamePadState.DPad.Right.Equals(Buttons.DPadRight) && !gamePadState.DPad.Left.Equals(Buttons.DPadLeft)) moveDirection = 1; 
+            if ((keyboardState.IsKeyDown(Keys.A) && !keyboardState.IsKeyDown(Keys.D)) || (thumbstickX < -0.3f)) moveDirection = -1;
+            else if ((keyboardState.IsKeyDown(Keys.D) && !keyboardState.IsKeyDown(Keys.A)) || (thumbstickX > 0.3f)) moveDirection = 1; 
             
             // Apply acceleration with speed boost
             float speedMultiplier = GetSpeedBoostMultiplier();
@@ -179,8 +190,8 @@ namespace PolyGone.Entities
             changeX = MathHelper.Clamp(changeX, -5f * speedMultiplier, 5f * speedMultiplier);
 
             // Jumping with coyote time and double jump
-            bool spacePressed = keyboardState.IsKeyDown(Keys.Space) || gamePadState.Buttons.A.Equals(Buttons.A);
-            bool spaceJustPressed = spacePressed && !previousKeyboardState.IsKeyDown(Keys.Space) || !previousGamePadState.Buttons.A.Equals(Buttons.A);
+            bool spacePressed = keyboardState.IsKeyDown(Keys.Space) || gamePadState.Buttons.A == ButtonState.Pressed;
+            bool spaceJustPressed = spacePressed && !previousKeyboardState.IsKeyDown(Keys.Space) || previousGamePadState.Buttons.A != ButtonState.Pressed;
             bool wasOnGroundLastFrame = isOnGround;
             
             if ((isOnGround || coyoteTime > 0f) && spacePressed)
@@ -293,7 +304,7 @@ namespace PolyGone.Entities
         protected override void OnHorizontalMovementComplete(float deltaTime)
         {
             // Gap funneling: when walking over a 1-tile gap and pressing S, funnel down through it
-            if (isOnGround && keyboardState.IsKeyDown(Keys.S) || gamePadState.DPad.Down.Equals(Buttons.DPadDown) && collisionMap != null)
+            if ((isOnGround && keyboardState.IsKeyDown(Keys.S)) || (thumbstickY < -0.5f && collisionMap != null))
             {
                 int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
                 int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);

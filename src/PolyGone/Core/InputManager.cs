@@ -1,7 +1,8 @@
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace PolyGone;
 
@@ -42,6 +43,10 @@ public static class InputManager
     private static KeyboardState _previousKeyboardState;
     private static GamePadState _currentGamepadState;
     private static GamePadState _previousGamepadState;
+    private static bool _usingController = false;
+    private static Vector2 _rightThumbstick;
+    public static bool UsingController => _usingController;
+    public static Vector2 RightThumbstick => _rightThumbstick;
     private static float _mouseClickCooldown = 0f;
     private static float _escapeKeyCooldown = 0f;
     private const float CLICK_COOLDOWN = 0.01f; // 10ms between clicks
@@ -63,6 +68,23 @@ public static class InputManager
 
         _previousGamepadState = _currentGamepadState;
         _currentGamepadState = GamePad.GetState(PlayerIndex.One);
+
+        _rightThumbstick = new Vector2(_currentGamepadState.ThumbSticks.Right.X, -_currentGamepadState.ThumbSticks.Right.Y);
+
+        // Detect input mode switching
+        bool controllerInput = Math.Abs(_rightThumbstick.X) > 0.3f || Math.Abs(_rightThumbstick.Y) > 0.3f ||
+                              Math.Abs(_currentGamepadState.ThumbSticks.Left.X) > 0.1f ||
+                              Math.Abs(_currentGamepadState.ThumbSticks.Left.Y) > 0.1f ||
+                              _currentGamepadState.Buttons.A == ButtonState.Pressed ||
+                              _currentGamepadState.Triggers.Right > 0.1f;
+
+        bool mouseInput = _currentMouseState.Position != _previousMouseState.Position ||
+                         _currentMouseState.LeftButton == ButtonState.Pressed;
+
+        if (controllerInput && !mouseInput)
+            _usingController = true;
+        else if (mouseInput)
+            _usingController = false;
 
         // Update click cooldown
         if (_mouseClickCooldown > 0f)

@@ -28,6 +28,8 @@ namespace PolyGone
         private KeyboardState previousKeyboardState;
         private GamePadState gamePadState;
         private GamePadState previousGamePadState;
+        private float thumbstickX;
+        private float thumbstickY;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
         private readonly GraphicsDeviceManager _graphics;
@@ -66,13 +68,15 @@ namespace PolyGone
         {
             keyboardState = Keyboard.GetState();
             gamePadState = GamePad.GetState(PlayerIndex.One);
+            thumbstickX = gamePadState.ThumbSticks.Left.X;
+            thumbstickY = gamePadState.ThumbSticks.Left.Y;
 
             if (_confirmingAction)
             {
                 // Left/Right or A/D to switch between Yes and No
-                if (IsKeyPressed(Keys.Left) || IsKeyPressed(Keys.A) || IsButtonPressed(Buttons.DPadLeft))
+                if (IsKeyPressed(Keys.Left) || IsKeyPressed(Keys.A) || IsButtonPressed(Buttons.DPadLeft) || IsThumbstickLeft())
                     _confirmSelectedIndex = 0;
-                if (IsKeyPressed(Keys.Right) || IsKeyPressed(Keys.D) || IsButtonPressed(Buttons.DPadRight))
+                if (IsKeyPressed(Keys.Right) || IsKeyPressed(Keys.D) || IsButtonPressed(Buttons.DPadRight) || IsThumbstickRight())
                     _confirmSelectedIndex = 1;
 
                 // Enter or Y to confirm
@@ -155,12 +159,12 @@ namespace PolyGone
             }
 
             // Keyboard navigation
-            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))
+            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp) || IsThumbstickUp())
             {
                 _selectedIndex = (_selectedIndex - 1 + _options.Length) % _options.Length;
             }
 
-            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown))
+            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickDown())
             {
                 _selectedIndex = (_selectedIndex + 1) % _options.Length;
             }
@@ -285,6 +289,32 @@ namespace PolyGone
         private bool IsButtonPressed(Buttons button)
         {
             return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
+        }
+        private float previousThumbstickY = 0f;
+        private bool IsThumbstickUp()
+        {
+            bool wasUp = previousThumbstickY > 0.5f;
+            bool isUp = thumbstickY > 0.5f;
+            previousThumbstickY = thumbstickY;
+            return isUp && !wasUp;
+        }
+        private bool IsThumbstickDown()
+        {
+            bool wasDown = previousThumbstickY < -0.5f;
+            bool isDown = thumbstickY < -0.5f;
+            return isDown && !wasDown;
+        }
+        private bool IsThumbstickRight()
+        {
+            bool wasRight = thumbstickX > 0.5f;
+            bool isRight = thumbstickX > 0.5f;
+            return isRight && !wasRight;
+        }
+        private bool IsThumbstickLeft()
+        {
+            bool wasLeft = thumbstickX < -0.5f;
+            bool isLeft = thumbstickX < -0.5f;
+            return isLeft && !wasLeft;
         }
 
 
