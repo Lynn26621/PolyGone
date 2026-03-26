@@ -62,7 +62,6 @@ namespace PolyGone
                 }
             }
             _audioManager.PlayAudio("null", false, "menuSong", true);
-            Debug.WriteLine("Menu Scene Loaded");
         }
 
         public void Update(GameTime gameTime)
@@ -97,12 +96,12 @@ namespace PolyGone
                     var centerX = viewport.Width / 2f;
                     var centerY = viewport.Height / 2f;
                     var yesSize = _font.MeasureString("Yes");
-                    var noSize  = _font.MeasureString("No");
-                    var yesPos  = new Vector2(centerX - 80f - yesSize.X / 2f, centerY + 20f);
-                    var noPos   = new Vector2(centerX + 80f - noSize.X  / 2f, centerY + 20f);
+                    var noSize = _font.MeasureString("No");
+                    var yesPos = new Vector2(centerX - 80f - yesSize.X / 2f, centerY + 20f);
+                    var noPos = new Vector2(centerX + 80f - noSize.X / 2f, centerY + 20f);
 
                     var yesBounds = new Rectangle((int)yesPos.X, (int)yesPos.Y, (int)yesSize.X, (int)yesSize.Y);
-                    var noBounds  = new Rectangle((int)noPos.X,  (int)noPos.Y,  (int)noSize.X,  (int)noSize.Y);
+                    var noBounds = new Rectangle((int)noPos.X, (int)noPos.Y, (int)noSize.X, (int)noSize.Y);
 
                     if (yesBounds.Contains(InputManager.GetMousePosition()))
                     {
@@ -144,7 +143,7 @@ namespace PolyGone
                     if (bounds.Contains(InputManager.GetMousePosition()))
                     {
                         _selectedIndex = i;
-                        
+
                         // Mouse click with InputManager
                         if (InputManager.IsLeftMouseButtonClicked())
                         {
@@ -269,12 +268,12 @@ namespace PolyGone
 
                 // Yes / No buttons
                 var yesSize = _font.MeasureString("Yes");
-                var noSize  = _font.MeasureString("No");
-                var yesPos  = new Vector2(centerX - 80f - yesSize.X / 2f, centerY + 20f);
-                var noPos   = new Vector2(centerX + 80f - noSize.X  / 2f, centerY + 20f);
+                var noSize = _font.MeasureString("No");
+                var yesPos = new Vector2(centerX - 80f - yesSize.X / 2f, centerY + 20f);
+                var noPos = new Vector2(centerX + 80f - noSize.X / 2f, centerY + 20f);
 
                 spriteBatch.DrawString(_font, "Yes", yesPos, _confirmSelectedIndex == 0 ? Color.Yellow : Color.White);
-                spriteBatch.DrawString(_font, "No",  noPos,  _confirmSelectedIndex == 1 ? Color.Yellow : Color.White);
+                spriteBatch.DrawString(_font, "No", noPos, _confirmSelectedIndex == 1 ? Color.Yellow : Color.White);
             }
         }
 
