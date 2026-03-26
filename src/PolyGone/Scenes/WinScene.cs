@@ -17,7 +17,7 @@ public class WinScene : IScene
     private readonly GraphicsDeviceManager graphics;
     private readonly string currentLevel;
     private readonly List<ItemType> selectedItems;
-    private readonly WeaponType selectedWeapon;
+    private readonly List<BlasterAttachmentType> selectedAttachments;
     private SpriteFont font;
     private Texture2D pixel;
     private KeyboardState keyboardState;
@@ -34,7 +34,7 @@ public class WinScene : IScene
         this.graphics = graphics;
         this.currentLevel = currentLevel;
         this.selectedItems = selectedItems ?? new List<ItemType>();
-        this.selectedWeapon = selectedWeapon;
+        this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
         
         // Build options list based on whether there's a next level
         string? nextLevel = GetNextLevel(currentLevel);

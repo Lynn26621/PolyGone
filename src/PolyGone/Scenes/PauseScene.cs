@@ -14,7 +14,6 @@ using System;
 using PolyGone.Core;
 
 namespace PolyGone;
-
 internal class PauseScene : IScene
 {
     private Texture2D _pixel;
@@ -111,7 +110,7 @@ internal class PauseScene : IScene
             // Restart Level - reload with same loadout
             string levelName = _gameScene.GetLevelName();
             List<ItemType> currentItems = _gameScene.GetSelectedItems();
-            WeaponType currentWeapon = _gameScene.GetSelectedWeapon();
+            List<BlasterAttachmentType> currentAttachments = _gameScene.GetSelectedAttachments();
             
             _sceneManager.PopScene(this); // Pop pause scene
             _sceneManager.PopScene(_gameScene); // Pop game scene
@@ -150,16 +149,12 @@ internal class PauseScene : IScene
             _pixel.SetData(new[] { Color.White });
         }
 
-        // Use the already-begun SpriteBatch from Game1.Draw and scale the overlay
-        var viewport = spriteBatch.GraphicsDevice.Viewport;
-        _sceneManager.GetPreviousScene().Draw(spriteBatch);
-        spriteBatch.Draw(_pixel, new Rectangle(viewport.Width / 4, viewport.Height / 4, viewport.Width / 2, viewport.Height / 2), Color.Black);
-
-
-
+        // Use the already-begun SpriteBatch from Game1.Draw
+        spriteBatch.Draw(_pixel, new Rectangle(0, 0, spriteBatch.GraphicsDevice.Viewport.Width, spriteBatch.GraphicsDevice.Viewport.Height), Color.Gray);
 
         if (_font != null)
         {
+            var viewport = spriteBatch.GraphicsDevice.Viewport;
             var startY = viewport.Height / 2f - (_options.Length * 40f) / 2f;
 
             for (var i = 0; i < _options.Length; i++)

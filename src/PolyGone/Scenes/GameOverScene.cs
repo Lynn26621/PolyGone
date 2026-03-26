@@ -94,7 +94,7 @@ internal class GameOverScene : IScene
     {
         string levelName = gameScene.GetLevelName();
         List<ItemType> currentItems = gameScene.GetSelectedItems();
-        WeaponType currentWeapon = gameScene.GetSelectedWeapon();
+        List<BlasterAttachmentType> currentAttachments = gameScene.GetSelectedAttachments();
 
         switch (options[selectedIndex])
         {

@@ -32,7 +32,7 @@ namespace PolyGone
         private readonly SceneManager _sceneManager;
         private readonly AudioManager _audioManager;
         private readonly GraphicsDeviceManager _graphics;
-        private readonly string[] _options = { "Level Select", "Options", "How to Play", "Log Out", "Exit to Desktop" };
+        private readonly string[] _options = { "Level Select", "Options", "Log Out", "Exit to Desktop" };
         private int _selectedIndex;
         private bool _confirmingAction;
         private string _confirmMessage;
@@ -188,11 +188,6 @@ namespace PolyGone
             }
             else if (_selectedIndex == 2)
             {
-                // How to Play (HelpScene.cs)
-                _sceneManager.AddScene(new HelpScene(_content, _sceneManager, _graphics));
-            }
-            else if (_selectedIndex == 3)
-            {
                 // Log Out — ask for confirmation
                 BeginConfirmation(
                     "Are you sure you want to log out?",
@@ -203,7 +198,7 @@ namespace PolyGone
                         _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _audioManager, _graphics));
                     });
             }
-            else if (_selectedIndex == 4)
+            else if (_selectedIndex == 3)
             {
                 // Exit to Desktop — ask for confirmation
                 BeginConfirmation(

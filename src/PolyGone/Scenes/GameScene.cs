@@ -38,7 +38,7 @@ public class GameScene : IScene
     private bool levelComplete = false;
     private bool gameOver = false;
     private readonly List<ItemType> selectedItems;
-    private readonly WeaponType selectedWeapon;
+    private readonly List<BlasterAttachmentType> selectedAttachments;
     private readonly string levelName;
 
     public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
@@ -47,8 +47,8 @@ public class GameScene : IScene
         this.sceneManager = sceneManager;
         this.audioManager = audioManager;
         this.graphics = graphics;
-        this.selectedItems = selectedItems ?? new List<ItemType>(); // Default to empty list
-        this.selectedWeapon = selectedWeapon;
+        this.selectedItems = selectedItems ?? new List<ItemType>();
+        this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
         this.levelName = levelName;
         LoadMapFromJson("Maps/" + levelName + ".json");
         textureStore = GetTextureStore(32, new int[2] { 4, 4 });
@@ -59,7 +59,7 @@ public class GameScene : IScene
     
     // Public methods to get the current loadout for restart functionality
     public List<ItemType> GetSelectedItems() => new List<ItemType>(selectedItems);
-    public WeaponType GetSelectedWeapon() => selectedWeapon;
+    public List<BlasterAttachmentType> GetSelectedAttachments() => new List<BlasterAttachmentType>(selectedAttachments);
 
     // Generates a list of rectangles representing individual textures in a texture atlas
     public List<Rectangle> GetTextureStore(int textureSize, int[] gridSize)

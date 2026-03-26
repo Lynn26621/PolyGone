@@ -11,13 +11,14 @@ using PolyGone.Core;
 
 namespace PolyGone
 {
+    // ---------------------------------------------------------------------------
+    // Player-item types (movement / survival / abilities)
+    // ---------------------------------------------------------------------------
     public enum ItemType
     {
         DoubleJump,
         SpeedBoost,
         HealingGlow,
-        MultiShot,
-        RapidFire,
         LowGravity,
         IronWill,
 #if DEBUG
@@ -25,15 +26,23 @@ namespace PolyGone
 #endif
     }
 
-    public enum WeaponType
+    // ---------------------------------------------------------------------------
+    // Blaster attachment types (weapon modifications)
+    // ---------------------------------------------------------------------------
+    public enum BlasterAttachmentType
     {
-        Blaster,
-        Shotgun,
-        Rifle,
-        Automatic,
-        VoidLance
+        MultiShot,
+        RapidFire,
+        Piercing,
+        DamageBoost,
+#if DEBUG
+        DevBlaster
+#endif
     }
 
+    // ---------------------------------------------------------------------------
+    // Inventory management scene
+    // ---------------------------------------------------------------------------
     internal class InventoryManagement : IScene
     {
         private Texture2D? _pixel;
@@ -46,60 +55,82 @@ namespace PolyGone
         private readonly GraphicsDeviceManager _graphics;
         private readonly string _levelFile;
 
-        // Available items and weapons
-        private readonly string[] _itemNames = 
+        // -----------------------------------------------------------------------
+        // Player item definitions
+        // -----------------------------------------------------------------------
+        private readonly string[] _playerItemNames =
         {
             "Double Jump",
             "Speed Boost",
             "Healing Glow",
-            "Multi-Shot",
-            "Rapid Fire",
             "Low Gravity",
             "Iron Will",
 #if DEBUG
             "Dev Mode"
 #endif
         };
-        private readonly ItemType[] _itemTypes = 
+        private readonly ItemType[] _playerItemTypes =
         {
             ItemType.DoubleJump,
             ItemType.SpeedBoost,
             ItemType.HealingGlow,
-            ItemType.MultiShot,
-            ItemType.RapidFire,
             ItemType.LowGravity,
             ItemType.IronWill,
 #if DEBUG
             ItemType.DevMode
 #endif
         };
-        private readonly string[] _itemDescriptions =
+        private readonly string[] _playerItemDescriptions =
         {
             "One additional jump while airborne",
             "Move 50% faster",
             "Regenerate 10 HP every 2 seconds",
-            "Adds 2 extra spread bullets per shot to all weapons",
-            "Reduces weapon cooldown to 1/3",
             "40% gravity - rises and falls slowly, same jump height",
             "Once per 20s, survive a killing blow and stay at 1 HP",
 #if DEBUG
             "[DEV] Invincibility + instant kills + infinite jumps"
 #endif
         };
-        private readonly string[] _weaponNames = { "Blaster", "Shotgun", "Rifle", "Automatic", "Void Lance" };
-        private readonly WeaponType[] _weaponTypes = { WeaponType.Blaster, WeaponType.Shotgun, WeaponType.Rifle, WeaponType.Automatic, WeaponType.VoidLance };
-        private readonly string[] _weaponDescriptions =
+
+        // -----------------------------------------------------------------------
+        // Blaster attachment definitions
+        // -----------------------------------------------------------------------
+        private readonly string[] _attachmentNames =
         {
-            "40 dmg per shot - click to fire, 0.2s cooldown",
-            "5x15 dmg spread - short range, 0.5s cooldown",
-            "120 dmg - very fast projectile, 1s cooldown",
-            "15 dmg - hold to spray, 4-frame cooldown",
-            "40 dmg - piercing shots pass through all enemies, ~0.8s cooldown"
+            "Multi-Shot",
+            "Rapid Fire",
+            "Piercing Rounds",
+            "Damage Amp",
+#if DEBUG
+            "Dev Blaster"
+#endif
+        };
+        private readonly BlasterAttachmentType[] _attachmentTypes =
+        {
+            BlasterAttachmentType.MultiShot,
+            BlasterAttachmentType.RapidFire,
+            BlasterAttachmentType.Piercing,
+            BlasterAttachmentType.DamageBoost,
+#if DEBUG
+            BlasterAttachmentType.DevBlaster
+#endif
+        };
+        private readonly string[] _attachmentDescriptions =
+        {
+            "Adds 2 extra spread bullets per shot",
+            "Reduces weapon cooldown to 1/3",
+            "Bullets pass through all enemies",
+            "+50% bullet damage on every shot",
+#if DEBUG
+            "[DEV] All attachment effects combined"
+#endif
         };
 
-        // Static fields to remember last selection across instances
-        private static List<ItemType> _lastSelectedItems = new List<ItemType> { ItemType.DoubleJump, ItemType.SpeedBoost };
-        private static WeaponType _lastSelectedWeapon = WeaponType.Blaster;
+        // -----------------------------------------------------------------------
+        // Persistent last-selection state
+        // -----------------------------------------------------------------------
+        private static List<ItemType> _lastSelectedPlayerItems = new List<ItemType> { ItemType.DoubleJump };
+        private static List<BlasterAttachmentType> _lastSelectedAttachments = new List<BlasterAttachmentType> { BlasterAttachmentType.MultiShot };
 
         private static readonly string _loadoutSavePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -110,61 +141,59 @@ namespace PolyGone
             TryLoadLoadout();
         }
 
-        // Selection state
-        private enum SelectionMode { Items, Weapon, Confirm }
-        private SelectionMode _currentMode = SelectionMode.Items;
-        private int _itemCursor = 0;
-        private int _weaponCursor = 0;
+        // -----------------------------------------------------------------------
+        // Navigation state
+        // -----------------------------------------------------------------------
+        private enum SelectionMode { PlayerItems, Attachments, Confirm }
+        private SelectionMode _currentMode = SelectionMode.PlayerItems;
+        private int _playerItemCursor = 0;
+        private int _attachmentCursor = 0;
         private int _confirmCursor = 0; // 0 = Start Game, 1 = Back
-        
-        private readonly List<ItemType> _selectedItems;
-        private WeaponType _selectedWeapon;
+
+        private readonly List<ItemType> _selectedPlayerItems;
+        private readonly List<BlasterAttachmentType> _selectedAttachments;
 
         public InventoryManagement(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelFile)
         {
-            _pixel = null;
             _content = content;
             _sceneManager = sceneManager;
             _audioManager = audioManager;
             _graphics = graphics;
             _levelFile = levelFile;
             previousKeyboardState = Keyboard.GetState();
-            
-            // Initialize with last selected values, filtering out any that are now locked
-            _selectedItems = new List<ItemType>(_lastSelectedItems.FindAll(UnlockTracker.IsItemUnlocked));
-            _selectedWeapon = _lastSelectedWeapon;
+
+            // Initialise with last selections, filtering any that became locked
+            _selectedPlayerItems = new List<ItemType>(
+                _lastSelectedPlayerItems.FindAll(UnlockTracker.IsItemUnlocked));
+            _selectedAttachments = new List<BlasterAttachmentType>(
+                _lastSelectedAttachments.FindAll(UnlockTracker.IsAttachmentUnlocked));
         }
 
         public void Load()
         {
             if (_font == null)
             {
-                try
-                {
-                    _font = _content.Load<SpriteFont>("Fonts/PauseMenu");
-                }
-                catch
-                {
-                    // Font not available
-                }
+                try { _font = _content.Load<SpriteFont>("Fonts/PauseMenu"); }
+                catch { }
             }
             _audioManager.PlayAudio("null", false, "menuSong", true);
         }
 
+        // -----------------------------------------------------------------------
+        // Update
+        // -----------------------------------------------------------------------
         public void Update(GameTime gameTime)
         {
             keyboardState = Keyboard.GetState();
 
-            // Check for Control key to skip inventory and start with current selections
+            // Ctrl = skip screen, keep current selections
             if (keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl))
             {
-                // Start game with current selections (which were loaded from last time)
                 StartGame();
                 previousKeyboardState = keyboardState;
                 return;
             }
 
-            // Check for Escape key to go back to previous screen
             if (InputManager.IsEscapeKeyPressed())
             {
                 _sceneManager.PopScene(this);
@@ -172,252 +201,228 @@ namespace PolyGone
                 return;
             }
 
-            // Mouse navigation for items
             HandleMouseNavigation();
 
             switch (_currentMode)
             {
-                case SelectionMode.Items:
-                    UpdateItemSelection();
-                    break;
-                case SelectionMode.Weapon:
-                    UpdateWeaponSelection();
-                    break;
-                case SelectionMode.Confirm:
-                    UpdateConfirmSelection();
-                    break;
+                case SelectionMode.PlayerItems:  UpdatePlayerItemSelection();  break;
+                case SelectionMode.Attachments:  UpdateAttachmentSelection();  break;
+                case SelectionMode.Confirm:      UpdateConfirmSelection();     break;
             }
 
             previousKeyboardState = keyboardState;
         }
 
+        // -----------------------------------------------------------------------
+        // Mouse navigation
+        // -----------------------------------------------------------------------
         private void HandleMouseNavigation()
         {
             if (_font == null) return;
 
             var viewport = _graphics.GraphicsDevice.Viewport;
+            int leftX  = 60;
+            int rightX = viewport.Width / 2 + 20;
+            int listY  = 200;
 
-            // Check items section
-            int itemsStartX = 100;
-            int itemsStartY = 200;
-            for (int i = 0; i < _itemNames.Length; i++)
+            // --- Player items column ---
+            for (int i = 0; i < _playerItemNames.Length; i++)
             {
-                var itemText = (_selectedItems.Contains(_itemTypes[i]) ? "[X] " : "[ ] ") + _itemNames[i];
-                var textSize = _font.MeasureString(itemText);
-                var bounds = new Rectangle(itemsStartX, itemsStartY + i * 40, (int)textSize.X, (int)textSize.Y);
+                var text   = GetPlayerItemPrefix(i) + _playerItemNames[i];
+                var sz     = _font.MeasureString(text);
+                var bounds = new Rectangle(leftX, listY + i * 40, (int)sz.X, (int)sz.Y);
 
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
-                    _currentMode = SelectionMode.Items;
-                    _itemCursor = i;
+                    _currentMode      = SelectionMode.PlayerItems;
+                    _playerItemCursor = i;
 
                     if (InputManager.IsLeftMouseButtonClicked())
                     {
-                        ItemType selectedItem = _itemTypes[_itemCursor];
-                        if (UnlockTracker.IsItemUnlocked(selectedItem))
-                        {
-                            if (_selectedItems.Contains(selectedItem))
-                            {
-                                _selectedItems.Remove(selectedItem);
-                            }
-#if DEBUG
-                            else
-                            {
-                                // DEV: no item limit
-                                _selectedItems.Add(selectedItem);
-                            }
-#else
-                            else if (_selectedItems.Count < 2)
-                            {
-                                _selectedItems.Add(selectedItem);
-                            }
-#endif
-                        }
+                        TogglePlayerItem(_playerItemTypes[i]);
                         InputManager.ConsumeClick();
                     }
                 }
             }
 
-            // Check weapons section
-            int weaponsStartX = viewport.Width / 2;
-            int weaponsStartY = 200;
-            for (int i = 0; i < _weaponNames.Length; i++)
+            // --- Attachments column ---
+            for (int i = 0; i < _attachmentNames.Length; i++)
             {
-                var weaponText = (_weaponTypes[i] == _selectedWeapon ? "(O) " : "( ) ") + _weaponNames[i];
-                var textSize = _font.MeasureString(weaponText);
-                var bounds = new Rectangle(weaponsStartX, weaponsStartY + i * 40, (int)textSize.X, (int)textSize.Y);
+                var text   = GetAttachmentPrefix(i) + _attachmentNames[i];
+                var sz     = _font.MeasureString(text);
+                var bounds = new Rectangle(rightX, listY + i * 40, (int)sz.X, (int)sz.Y);
 
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
-                    _currentMode = SelectionMode.Weapon;
-                    _weaponCursor = i;
+                    _currentMode      = SelectionMode.Attachments;
+                    _attachmentCursor = i;
 
                     if (InputManager.IsLeftMouseButtonClicked())
                     {
-                        _selectedWeapon = _weaponTypes[_weaponCursor];
+                        ToggleAttachment(_attachmentTypes[i]);
                         InputManager.ConsumeClick();
                     }
                 }
             }
 
-            // Check confirm section
-            int confirmStartY = viewport.Height - 150;
-            string[] confirmOptions = { "Start Game", "Back" };
-            for (int i = 0; i < confirmOptions.Length; i++)
+            // --- Confirm section ---
+            int confirmStartY    = viewport.Height - 150;
+            string[] confirmOpts = { "Start Game", "Back" };
+            for (int i = 0; i < confirmOpts.Length; i++)
             {
-                var optionText = (i == _confirmCursor && _currentMode == SelectionMode.Confirm ? "> " : "  ") + confirmOptions[i];
-                var textSize = _font.MeasureString(optionText);
-                var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 40);
-                var bounds = new Rectangle((int)position.X, (int)position.Y, (int)textSize.X, (int)textSize.Y);
+                var prefix = (i == _confirmCursor && _currentMode == SelectionMode.Confirm) ? "> " : "  ";
+                var text   = prefix + confirmOpts[i];
+                var sz     = _font.MeasureString(text);
+                var pos    = new Vector2(viewport.Width / 2f - sz.X / 2f, confirmStartY + i * 40);
+                var bounds = new Rectangle((int)pos.X, (int)pos.Y, (int)sz.X, (int)sz.Y);
 
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
-                    _currentMode = SelectionMode.Confirm;
+                    _currentMode   = SelectionMode.Confirm;
                     _confirmCursor = i;
 
                     if (InputManager.IsLeftMouseButtonClicked())
                     {
-                        if (_confirmCursor == 0)
-                        {
-                            StartGame();
-                        }
-                        else
-                        {
-                            _sceneManager.PopScene(this);
-                        }
+                        if (_confirmCursor == 0) StartGame();
+                        else _sceneManager.PopScene(this);
                         InputManager.ConsumeClick();
                     }
                 }
             }
         }
 
-        private void UpdateItemSelection()
+        // -----------------------------------------------------------------------
+        // Keyboard navigation per mode
+        // -----------------------------------------------------------------------
+        private void UpdatePlayerItemSelection()
         {
             if (IsKeyPressed(Keys.Up))
-            {
-                _itemCursor = (_itemCursor - 1 + _itemNames.Length) % _itemNames.Length;
-            }
-
+                _playerItemCursor = (_playerItemCursor - 1 + _playerItemNames.Length) % _playerItemNames.Length;
             if (IsKeyPressed(Keys.Down))
-            {
-                _itemCursor = (_itemCursor + 1) % _itemNames.Length;
-            }
+                _playerItemCursor = (_playerItemCursor + 1) % _playerItemNames.Length;
 
             if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space))
-            {
-                ItemType selectedItem = _itemTypes[_itemCursor];
-
-                if (!UnlockTracker.IsItemUnlocked(selectedItem))
-                {
-                    // Item is locked — do nothing
-                }
-                else if (_selectedItems.Contains(selectedItem))
-                {
-                    // Deselect item
-                    _selectedItems.Remove(selectedItem);
-                }
-#if DEBUG
-                else
-                {
-                    // DEV: no item limit
-                    _selectedItems.Add(selectedItem);
-                }
-#else
-                else if (_selectedItems.Count < 2)
-                {
-                    // Select item (max 2)
-                    _selectedItems.Add(selectedItem);
-                }
-#endif
-            }
+                TogglePlayerItem(_playerItemTypes[_playerItemCursor]);
 
             if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) && !keyboardState.IsKeyDown(Keys.LeftShift)))
-            {
-                // Move to weapon selection
-                _currentMode = SelectionMode.Weapon;
-            }
+                _currentMode = SelectionMode.Attachments;
         }
 
-        private void UpdateWeaponSelection()
+        private void UpdateAttachmentSelection()
         {
             if (IsKeyPressed(Keys.Up))
-            {
-                _weaponCursor = (_weaponCursor - 1 + _weaponNames.Length) % _weaponNames.Length;
-            }
-
+                _attachmentCursor = (_attachmentCursor - 1 + _attachmentNames.Length) % _attachmentNames.Length;
             if (IsKeyPressed(Keys.Down))
-            {
-                _weaponCursor = (_weaponCursor + 1) % _weaponNames.Length;
-            }
+                _attachmentCursor = (_attachmentCursor + 1) % _attachmentNames.Length;
 
             if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space))
-            {
-                // Select weapon
-                _selectedWeapon = _weaponTypes[_weaponCursor];
-            }
+                ToggleAttachment(_attachmentTypes[_attachmentCursor]);
 
             if (IsKeyPressed(Keys.Left) || (IsKeyPressed(Keys.Tab) && keyboardState.IsKeyDown(Keys.LeftShift)))
-            {
-                // Move back to item selection
-                _currentMode = SelectionMode.Items;
-            }
-
+                _currentMode = SelectionMode.PlayerItems;
             if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) && !keyboardState.IsKeyDown(Keys.LeftShift)))
-            {
-                // Move to confirm
                 _currentMode = SelectionMode.Confirm;
-            }
         }
 
         private void UpdateConfirmSelection()
         {
             if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Down))
-            {
                 _confirmCursor = (_confirmCursor + 1) % 2;
-            }
 
             if (IsKeyPressed(Keys.Enter))
             {
-                if (_confirmCursor == 0)
-                {
-                    // Start Game
-                    StartGame();
-                }
-                else
-                {
-                    // Back
-                    _sceneManager.PopScene(this);
-                }
+                if (_confirmCursor == 0) StartGame();
+                else _sceneManager.PopScene(this);
             }
 
             if (IsKeyPressed(Keys.Left) || (IsKeyPressed(Keys.Tab) && keyboardState.IsKeyDown(Keys.LeftShift)))
+                _currentMode = SelectionMode.Attachments;
+        }
+
+        // -----------------------------------------------------------------------
+        // Toggle helpers (enforce slot limits)
+        // -----------------------------------------------------------------------
+        private void TogglePlayerItem(ItemType item)
+        {
+            if (!UnlockTracker.IsItemUnlocked(item)) return;
+
+            if (_selectedPlayerItems.Contains(item))
             {
-                // Move back to weapon selection
-                _currentMode = SelectionMode.Weapon;
+                _selectedPlayerItems.Remove(item);
+            }
+            else
+            {
+#if DEBUG
+                _selectedPlayerItems.Add(item);
+#else
+                int maxSlots = UnlockTracker.GetPlayerItemSlotCount();
+                if (_selectedPlayerItems.Count < maxSlots)
+                    _selectedPlayerItems.Add(item);
+#endif
             }
         }
 
-        /// <summary>Clears the saved loadout so the next inventory screen starts fresh.</summary>
+        private void ToggleAttachment(BlasterAttachmentType attachment)
+        {
+            if (!UnlockTracker.IsAttachmentUnlocked(attachment)) return;
+
+            if (_selectedAttachments.Contains(attachment))
+            {
+                _selectedAttachments.Remove(attachment);
+            }
+            else
+            {
+#if DEBUG
+                _selectedAttachments.Add(attachment);
+#else
+                int maxSlots = UnlockTracker.GetBlasterSlotCount();
+                if (_selectedAttachments.Count < maxSlots)
+                    _selectedAttachments.Add(attachment);
+#endif
+            }
+        }
+
+        // -----------------------------------------------------------------------
+        // Prefix helpers
+        // -----------------------------------------------------------------------
+        private string GetPlayerItemPrefix(int index)
+        {
+            bool unlocked = UnlockTracker.IsItemUnlocked(_playerItemTypes[index]);
+            if (!unlocked) return "[LOCKED] ";
+            return _selectedPlayerItems.Contains(_playerItemTypes[index]) ? "[X] " : "[ ] ";
+        }
+
+        private string GetAttachmentPrefix(int index)
+        {
+            bool unlocked = UnlockTracker.IsAttachmentUnlocked(_attachmentTypes[index]);
+            if (!unlocked) return "[LOCKED] ";
+            return _selectedAttachments.Contains(_attachmentTypes[index]) ? "[X] " : "[ ] ";
+        }
+
+        // -----------------------------------------------------------------------
+        // Start game / reset
+        // -----------------------------------------------------------------------
         public static void ResetSavedLoadout()
         {
-            _lastSelectedItems = new List<ItemType> { ItemType.DoubleJump, ItemType.SpeedBoost };
-            _lastSelectedWeapon = WeaponType.Blaster;
+            _lastSelectedPlayerItems = new List<ItemType> { ItemType.DoubleJump };
+            _lastSelectedAttachments = new List<BlasterAttachmentType> { BlasterAttachmentType.MultiShot };
         }
 
         private void StartGame()
         {
-            // Save current selections for next time (in memory and on disk)
-            _lastSelectedItems = new List<ItemType>(_selectedItems);
-            _lastSelectedWeapon = _selectedWeapon;
+            _lastSelectedPlayerItems = new List<ItemType>(_selectedPlayerItems);
+            _lastSelectedAttachments = new List<BlasterAttachmentType>(_selectedAttachments);
             SaveLoadout();
-            
-            // Pop this inventory management scene
+
             _sceneManager.PopScene(this);
             _sceneManager.AddScene(new GameScene(_content, _sceneManager, _audioManager, _graphics, _levelFile,
                 _selectedPlayerItems, _selectedAttachments));
             InputManager.ResetClickCooldown();
         }
 
+        // -----------------------------------------------------------------------
+        // Draw
+        // -----------------------------------------------------------------------
         public void Draw(SpriteBatch spriteBatch)
         {
             if (_pixel == null)
@@ -426,152 +431,161 @@ namespace PolyGone
                 _pixel.SetData(new[] { Color.White });
             }
 
-            // Draw background
-            spriteBatch.Draw(_pixel, new Rectangle(0, 0, spriteBatch.GraphicsDevice.Viewport.Width, spriteBatch.GraphicsDevice.Viewport.Height), Color.DarkBlue);
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0,
+                spriteBatch.GraphicsDevice.Viewport.Width,
+                spriteBatch.GraphicsDevice.Viewport.Height), Color.DarkBlue);
 
-            if (_font != null)
-            {
-                var viewport = spriteBatch.GraphicsDevice.Viewport;
-                
-                // Draw title
-                string title = "Select Your Loadout";
-                var titleSize = _font.MeasureString(title);
-                var titlePos = new Vector2(viewport.Width / 2f - titleSize.X / 2f, 50);
-                spriteBatch.DrawString(_font, title, titlePos, Color.White);
+            if (_font == null) return;
 
-                // Draw instructions
+            var viewport = spriteBatch.GraphicsDevice.Viewport;
+
+            // Title
+            DrawCentered(spriteBatch, "Select Your Loadout", 50, Color.White);
+
+            // Instructions
 #if DEBUG
-                string instructions = "[DEV] Select Items | Select 1 Weapon | Press Ctrl to skip";
+            string hint = "[DEV] Unlimited slots | Press Ctrl to skip";
 #else
-                string instructions = "Select up to 2 Items | Select 1 Weapon | Press Ctrl to skip";
+            string hint = "Fill your slots | Press Ctrl to skip";
 #endif
-                var instructionsSize = _font.MeasureString(instructions);
-                var instructionsPos = new Vector2(viewport.Width / 2f - instructionsSize.X / 2f, 90);
-                spriteBatch.DrawString(_font, instructions, instructionsPos, Color.Gray);
+            DrawCentered(spriteBatch, hint, 90, Color.Gray);
 
-                // Draw items section
-                DrawItemsSection(spriteBatch, viewport);
-
-                // Draw weapons section
-                DrawWeaponsSection(spriteBatch, viewport);
-
-                // Draw confirm section
-                DrawConfirmSection(spriteBatch, viewport);
-            }
+            DrawPlayerItemsSection(spriteBatch, viewport);
+            DrawAttachmentsSection(spriteBatch, viewport);
+            DrawConfirmSection(spriteBatch, viewport);
         }
 
-        private void DrawItemsSection(SpriteBatch spriteBatch, Viewport viewport)
+        private void DrawPlayerItemsSection(SpriteBatch spriteBatch, Viewport viewport)
         {
-            int startX = 100;
-            int startY = 200;
-            
-            // Section title
-            Color sectionColor = _currentMode == SelectionMode.Items ? Color.Yellow : Color.White;
-#if DEBUG
-            spriteBatch.DrawString(_font, "Items (DEV - all):", new Vector2(startX, startY - 40), sectionColor);
-#else
-            spriteBatch.DrawString(_font, "Items (choose 2):", new Vector2(startX, startY - 40), sectionColor);
-#endif
+            int x = 60, y = 200;
 
-            for (int i = 0; i < _itemNames.Length; i++)
+            int playerSlots = UnlockTracker.GetPlayerItemSlotCount();
+#if DEBUG
+            string sectionTitle = "Player Items (DEV - all):";
+#else
+            string sectionTitle = $"Player Items ({_selectedPlayerItems.Count}/{playerSlots} slots):";
+#endif
+            Color titleColor = _currentMode == SelectionMode.PlayerItems ? Color.Yellow : Color.White;
+            spriteBatch.DrawString(_font, sectionTitle, new Vector2(x, y - 40), titleColor);
+
+            for (int i = 0; i < _playerItemNames.Length; i++)
             {
-                string itemName = _itemNames[i];
-                bool isUnlocked = UnlockTracker.IsItemUnlocked(_itemTypes[i]);
-                bool isSelected = isUnlocked && _selectedItems.Contains(_itemTypes[i]);
-                bool isCursor = i == _itemCursor && _currentMode == SelectionMode.Items;
+                bool unlocked = UnlockTracker.IsItemUnlocked(_playerItemTypes[i]);
+                bool selected = unlocked && _selectedPlayerItems.Contains(_playerItemTypes[i]);
+                bool cursor   = i == _playerItemCursor && _currentMode == SelectionMode.PlayerItems;
 
                 Color color;
                 string prefix;
-                if (!isUnlocked)
+                if (!unlocked)
                 {
-                    color = isCursor ? Color.Orange : Color.DarkGray;
+                    color  = cursor ? Color.Orange : Color.DarkGray;
                     prefix = "[LOCKED] ";
                 }
                 else
                 {
-                    color = isCursor ? Color.Yellow : (isSelected ? Color.Green : Color.White);
-                    prefix = isSelected ? "[X] " : "[ ] ";
+                    color  = cursor ? Color.Yellow : (selected ? Color.LimeGreen : Color.White);
+                    prefix = selected ? "[X] " : "[ ] ";
                 }
 
-                spriteBatch.DrawString(_font, prefix + itemName, new Vector2(startX, startY + i * 40), color);
+                spriteBatch.DrawString(_font, prefix + _playerItemNames[i], new Vector2(x, y + i * 40), color);
             }
 
-            // Draw description (or unlock hint) for the currently highlighted item
-            int descY = startY + _itemNames.Length * 40 + 10;
-            if (_currentMode == SelectionMode.Items)
+            // Description below list
+            if (_currentMode == SelectionMode.PlayerItems)
             {
-                bool cursorUnlocked = UnlockTracker.IsItemUnlocked(_itemTypes[_itemCursor]);
-                string activeItemDesc = cursorUnlocked
-                    ? _itemDescriptions[_itemCursor]
-                    : (UnlockTracker.GetUnlockHint(_itemTypes[_itemCursor]) ?? "");
-                if (activeItemDesc.Length > 0)
-                {
-                    Color descColor = cursorUnlocked ? Color.LightGray : Color.Orange;
-                    spriteBatch.DrawString(_font, activeItemDesc, new Vector2(startX, descY), descColor);
-                }
+                int descY = y + _playerItemNames.Length * 40 + 10;
+                bool cursorUnlocked = UnlockTracker.IsItemUnlocked(_playerItemTypes[_playerItemCursor]);
+                string desc = cursorUnlocked
+                    ? _playerItemDescriptions[_playerItemCursor]
+                    : (UnlockTracker.GetUnlockHint(_playerItemTypes[_playerItemCursor]) ?? "");
+                if (desc.Length > 0)
+                    spriteBatch.DrawString(_font, desc, new Vector2(x, descY),
+                        cursorUnlocked ? Color.LightGray : Color.Orange);
             }
         }
 
-        private void DrawWeaponsSection(SpriteBatch spriteBatch, Viewport viewport)
+        private void DrawAttachmentsSection(SpriteBatch spriteBatch, Viewport viewport)
         {
-            int startX = viewport.Width / 2;
-            int startY = 200;
-            
-            // Section title
-            Color sectionColor = _currentMode == SelectionMode.Weapon ? Color.Yellow : Color.White;
-            spriteBatch.DrawString(_font, "Weapon:", new Vector2(startX, startY - 40), sectionColor);
+            int x = viewport.Width / 2 + 20, y = 200;
 
-            for (int i = 0; i < _weaponNames.Length; i++)
+            int blasterSlots = UnlockTracker.GetBlasterSlotCount();
+#if DEBUG
+            string sectionTitle = "Blaster Attachments (DEV - all):";
+#else
+            string sectionTitle = $"Blaster Attachments ({_selectedAttachments.Count}/{blasterSlots} slots):";
+#endif
+            Color titleColor = _currentMode == SelectionMode.Attachments ? Color.Yellow : Color.White;
+            spriteBatch.DrawString(_font, sectionTitle, new Vector2(x, y - 40), titleColor);
+
+            for (int i = 0; i < _attachmentNames.Length; i++)
             {
-                string weaponName = _weaponNames[i];
-                bool isSelected = _weaponTypes[i] == _selectedWeapon;
-                bool isCursor = i == _weaponCursor && _currentMode == SelectionMode.Weapon;
+                bool unlocked = UnlockTracker.IsAttachmentUnlocked(_attachmentTypes[i]);
+                bool selected = unlocked && _selectedAttachments.Contains(_attachmentTypes[i]);
+                bool cursor   = i == _attachmentCursor && _currentMode == SelectionMode.Attachments;
 
-                Color color = isCursor ? Color.Yellow : (isSelected ? Color.Green : Color.White);
-                string prefix = isSelected ? "(O) " : "( ) ";
+                Color color;
+                string prefix;
+                if (!unlocked)
+                {
+                    color  = cursor ? Color.Orange : Color.DarkGray;
+                    prefix = "[LOCKED] ";
+                }
+                else
+                {
+                    color  = cursor ? Color.Yellow : (selected ? Color.LimeGreen : Color.White);
+                    prefix = selected ? "[X] " : "[ ] ";
+                }
 
-                spriteBatch.DrawString(_font, prefix + weaponName, new Vector2(startX, startY + i * 40), color);
+                spriteBatch.DrawString(_font, prefix + _attachmentNames[i], new Vector2(x, y + i * 40), color);
             }
 
-            // Draw description for the currently highlighted weapon below the list
-            int descY = startY + _weaponNames.Length * 40 + 10;
-            string activeDesc = _currentMode == SelectionMode.Weapon ? _weaponDescriptions[_weaponCursor] : "";
-            if (activeDesc.Length > 0)
+            // Description below list
+            if (_currentMode == SelectionMode.Attachments)
             {
-                spriteBatch.DrawString(_font, activeDesc, new Vector2(startX, descY), Color.LightGray);
+                int descY = y + _attachmentNames.Length * 40 + 10;
+                bool cursorUnlocked = UnlockTracker.IsAttachmentUnlocked(_attachmentTypes[_attachmentCursor]);
+                string desc = cursorUnlocked
+                    ? _attachmentDescriptions[_attachmentCursor]
+                    : (UnlockTracker.GetAttachmentUnlockHint(_attachmentTypes[_attachmentCursor]) ?? "");
+                if (desc.Length > 0)
+                    spriteBatch.DrawString(_font, desc, new Vector2(x, descY),
+                        cursorUnlocked ? Color.LightGray : Color.Orange);
             }
         }
 
         private void DrawConfirmSection(SpriteBatch spriteBatch, Viewport viewport)
         {
-            if (_font == null) return;
-            
             int startY = viewport.Height - 150;
-            
-            // Section title
-            Color sectionColor = _currentMode == SelectionMode.Confirm ? Color.Yellow : Color.White;
-            string sectionTitle = _currentMode == SelectionMode.Confirm ? "> Ready?" : "  Ready?";
-            var sectionSize = _font.MeasureString(sectionTitle);
-            spriteBatch.DrawString(_font, sectionTitle, new Vector2(viewport.Width / 2f - sectionSize.X / 2f, startY - 40), sectionColor);
 
-            string[] confirmOptions = { "Start Game", "Back" };
-            for (int i = 0; i < confirmOptions.Length; i++)
+            Color sectionColor  = _currentMode == SelectionMode.Confirm ? Color.Yellow : Color.White;
+            string sectionTitle = _currentMode == SelectionMode.Confirm ? "> Ready?" : "  Ready?";
+            DrawCentered(spriteBatch, sectionTitle, startY - 40, sectionColor);
+
+            string[] opts = { "Start Game", "Back" };
+            for (int i = 0; i < opts.Length; i++)
             {
                 bool isCursor = i == _confirmCursor && _currentMode == SelectionMode.Confirm;
-                Color color = isCursor ? Color.Yellow : Color.White;
-                string prefix = isCursor ? "> " : "  ";
-                
-                var optionText = prefix + confirmOptions[i];
-                var optionSize = _font.MeasureString(optionText);
-                spriteBatch.DrawString(_font, optionText, new Vector2(viewport.Width / 2f - optionSize.X / 2f, startY + i * 40), color);
+                var text = (isCursor ? "> " : "  ") + opts[i];
+                DrawCentered(spriteBatch, text, startY + i * 40, isCursor ? Color.Yellow : Color.White);
             }
         }
 
-        private bool IsKeyPressed(Keys key)
+        // -----------------------------------------------------------------------
+        // Utilities
+        // -----------------------------------------------------------------------
+        private void DrawCentered(SpriteBatch spriteBatch, string text, int y, Color color)
         {
-            return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
+            var sz  = _font!.MeasureString(text);
+            var pos = new Vector2(_graphics.GraphicsDevice.Viewport.Width / 2f - sz.X / 2f, y);
+            spriteBatch.DrawString(_font, text, pos, color);
         }
 
+        private bool IsKeyPressed(Keys key)
+            => keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
+
+        // -----------------------------------------------------------------------
+        // Save / load
+        // -----------------------------------------------------------------------
         private static void SaveLoadout()
         {
             try
@@ -582,8 +596,8 @@ namespace PolyGone
 
                 var data = new
                 {
-                    Items = _lastSelectedItems.Select(i => (int)i).ToList(),
-                    Weapon = (int)_lastSelectedWeapon
+                    PlayerItems = _lastSelectedPlayerItems.Select(i => (int)i).ToList(),
+                    Attachments = _lastSelectedAttachments.Select(a => (int)a).ToList()
                 };
                 File.WriteAllText(_loadoutSavePath, JsonSerializer.Serialize(data));
             }
@@ -600,22 +614,26 @@ namespace PolyGone
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
-                if (root.TryGetProperty("Items", out var itemsEl))
+                if (root.TryGetProperty("PlayerItems", out var itemsEl))
                 {
-                    _lastSelectedItems.Clear();
+                    _lastSelectedPlayerItems.Clear();
                     foreach (var item in itemsEl.EnumerateArray())
                     {
                         int val = item.GetInt32();
                         if (Enum.IsDefined(typeof(ItemType), val))
-                            _lastSelectedItems.Add((ItemType)val);
+                            _lastSelectedPlayerItems.Add((ItemType)val);
                     }
                 }
 
-                if (root.TryGetProperty("Weapon", out var weaponEl))
+                if (root.TryGetProperty("Attachments", out var attachEl))
                 {
-                    int val = weaponEl.GetInt32();
-                    if (Enum.IsDefined(typeof(WeaponType), val))
-                        _lastSelectedWeapon = (WeaponType)val;
+                    _lastSelectedAttachments.Clear();
+                    foreach (var att in attachEl.EnumerateArray())
+                    {
+                        int val = att.GetInt32();
+                        if (Enum.IsDefined(typeof(BlasterAttachmentType), val))
+                            _lastSelectedAttachments.Add((BlasterAttachmentType)val);
+                    }
                 }
             }
             catch { }
