@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PolyGone.Core;
 
 namespace PolyGone;
 
@@ -25,6 +26,7 @@ internal class FormbarLoginScene : IScene
     private Texture2D? _pixel;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
+    private readonly AudioManager _audioManager;
     private readonly GraphicsDeviceManager _graphics;
 
     private LoginState _state = LoginState.Idle;
@@ -42,10 +44,11 @@ internal class FormbarLoginScene : IScene
     // Vertical spacing between UI rows (pixels)
     private const float RowGap = 70f;
 
-    public FormbarLoginScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
+    public FormbarLoginScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)
     {
         _content = content;
         _sceneManager = sceneManager;
+        _audioManager = audioManager;
         _graphics = graphics;
         _previousKeyboardState = Keyboard.GetState();
     }
@@ -151,7 +154,7 @@ internal class FormbarLoginScene : IScene
                     _sceneManager.PopScene(this);
 
                     if (!PurchaseTracker.HasPurchased(FormbarSession.UserId, FormbarSession.AllLevelsKey))
-                        _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _graphics));
+                        _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _audioManager, _graphics));
 
                     return;
                 }

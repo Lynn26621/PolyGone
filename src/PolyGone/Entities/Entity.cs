@@ -1,9 +1,10 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Linq;
-using System.Collections.Generic;
+using PolyGone.Core;
 using PolyGone.Items;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace PolyGone;
 
@@ -11,6 +12,7 @@ public class Entity : Sprite
 {
 
     protected readonly Dictionary<Vector2, int>? collisionMap;
+    private AudioManager audioManager;
     protected float changeX;
     protected float changeY;
     protected bool isOnGround;
@@ -30,7 +32,7 @@ public class Entity : Sprite
     protected const int TILE_HALF_SIZE = TILE_SIZE / 2;
 
 
-    public Entity(Texture2D texture, Vector2 position, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, int[]? visualSize = null)
+    public Entity(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, int[]? visualSize = null)
         : base(texture, position, size, color, srcRect)
     {
         this.collisionMap = collisionMap;
@@ -47,6 +49,7 @@ public class Entity : Sprite
             (this.visualSize[0] - size[0]) / 2f, // Center horizontally
             this.visualSize[1] - size[1] // Align bottom edges
         );
+        this.audioManager = audioManager;
     }
 
     protected virtual List<(Rectangle, CollisionType)> GetIntersectingTiles(Rectangle target)
@@ -150,6 +153,7 @@ public class Entity : Sprite
     {
         // Default implementation marks entity as not alive
         isAlive = false;
+        audioManager.PlayAudio("deathSfx", true, "null", false); //Play death sound effect
     }
 
     // Physics and collision update for non-player entities (no input)

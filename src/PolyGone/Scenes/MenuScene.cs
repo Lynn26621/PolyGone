@@ -17,6 +17,8 @@ using System.IO;
 using System.Text.Json;
 using System.Linq;
 using System;
+using PolyGone.Core;
+using System.Diagnostics;
 
 namespace PolyGone
 {
@@ -28,19 +30,21 @@ namespace PolyGone
         private KeyboardState previousKeyboardState;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
+        private readonly AudioManager _audioManager;
         private readonly GraphicsDeviceManager _graphics;
-        private readonly string[] _options = { "Level Select", "Options", "How to Play", "Log Out", "Exit to Desktop" };
+        private readonly string[] _options = { "Level Select", "Options", "Log Out", "Exit to Desktop" };
         private int _selectedIndex;
         private bool _confirmingAction;
         private string _confirmMessage;
         private Action _confirmedAction;
         private int _confirmSelectedIndex; // 0 = Yes, 1 = No
 
-        public MenuScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
+        public MenuScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)
         {
             _pixel = null;
             _content = content;
             _sceneManager = sceneManager;
+            _audioManager = audioManager;
             _graphics = graphics;
             previousKeyboardState = Keyboard.GetState();
             _selectedIndex = 0;
@@ -57,6 +61,7 @@ namespace PolyGone
                     _font = _content.Load<SpriteFont>("Fonts/PauseMenu");
                 }
             }
+            _audioManager.PlayAudio("null", false, "menuSong", true);
         }
 
         public void Update(GameTime gameTime)
@@ -91,12 +96,12 @@ namespace PolyGone
                     var centerX = viewport.Width / 2f;
                     var centerY = viewport.Height / 2f;
                     var yesSize = _font.MeasureString("Yes");
-                    var noSize  = _font.MeasureString("No");
-                    var yesPos  = new Vector2(centerX - 80f - yesSize.X / 2f, centerY + 20f);
-                    var noPos   = new Vector2(centerX + 80f - noSize.X  / 2f, centerY + 20f);
+                    var noSize = _font.MeasureString("No");
+                    var yesPos = new Vector2(centerX - 80f - yesSize.X / 2f, centerY + 20f);
+                    var noPos = new Vector2(centerX + 80f - noSize.X / 2f, centerY + 20f);
 
                     var yesBounds = new Rectangle((int)yesPos.X, (int)yesPos.Y, (int)yesSize.X, (int)yesSize.Y);
-                    var noBounds  = new Rectangle((int)noPos.X,  (int)noPos.Y,  (int)noSize.X,  (int)noSize.Y);
+                    var noBounds = new Rectangle((int)noPos.X, (int)noPos.Y, (int)noSize.X, (int)noSize.Y);
 
                     if (yesBounds.Contains(InputManager.GetMousePosition()))
                     {
@@ -138,7 +143,7 @@ namespace PolyGone
                     if (bounds.Contains(InputManager.GetMousePosition()))
                     {
                         _selectedIndex = i;
-                        
+
                         // Mouse click with InputManager
                         if (InputManager.IsLeftMouseButtonClicked())
                         {
@@ -173,19 +178,14 @@ namespace PolyGone
             if (_selectedIndex == 0)
             {
                 // Level Select
-                _sceneManager.AddScene(new LevelSelect(_content, _sceneManager, _graphics));
+                _sceneManager.AddScene(new LevelSelect(_content, _sceneManager, _audioManager, _graphics));
             }
             else if (_selectedIndex == 1)
             {
                 // Options
-                _sceneManager.AddScene(new OptionsScene(_content, _sceneManager, _graphics));
+                _sceneManager.AddScene(new OptionsScene(_content, _sceneManager, _audioManager, _graphics));
             }
             else if (_selectedIndex == 2)
-            {
-                // How to Play (HelpScene.cs)
-                _sceneManager.AddScene(new HelpScene(_content, _sceneManager, _graphics));
-            }
-            else if (_selectedIndex == 3)
             {
                 // Log Out — ask for confirmation
                 BeginConfirmation(
@@ -194,10 +194,10 @@ namespace PolyGone
                     {
                         _confirmingAction = false;
                         FormbarSession.Clear();
-                        _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _graphics));
+                        _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _audioManager, _graphics));
                     });
             }
-            else if (_selectedIndex == 4)
+            else if (_selectedIndex == 3)
             {
                 // Exit to Desktop — ask for confirmation
                 BeginConfirmation(
@@ -268,12 +268,12 @@ namespace PolyGone
 
                 // Yes / No buttons
                 var yesSize = _font.MeasureString("Yes");
-                var noSize  = _font.MeasureString("No");
-                var yesPos  = new Vector2(centerX - 80f - yesSize.X / 2f, centerY + 20f);
-                var noPos   = new Vector2(centerX + 80f - noSize.X  / 2f, centerY + 20f);
+                var noSize = _font.MeasureString("No");
+                var yesPos = new Vector2(centerX - 80f - yesSize.X / 2f, centerY + 20f);
+                var noPos = new Vector2(centerX + 80f - noSize.X / 2f, centerY + 20f);
 
                 spriteBatch.DrawString(_font, "Yes", yesPos, _confirmSelectedIndex == 0 ? Color.Yellow : Color.White);
-                spriteBatch.DrawString(_font, "No",  noPos,  _confirmSelectedIndex == 1 ? Color.Yellow : Color.White);
+                spriteBatch.DrawString(_font, "No", noPos, _confirmSelectedIndex == 1 ? Color.Yellow : Color.White);
             }
         }
 

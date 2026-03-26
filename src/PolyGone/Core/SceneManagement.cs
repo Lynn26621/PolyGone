@@ -32,12 +32,4 @@ public class SceneManager
 	{
 		return sceneStack.Peek();
 	}
-    public IScene GetPreviousScene()
-    {
-        if (sceneStack.Count < 2) { return null; }
-        var current = sceneStack.Pop();
-        var previous = sceneStack.Peek();
-        sceneStack.Push(current);
-        return previous;
-    }
 }
