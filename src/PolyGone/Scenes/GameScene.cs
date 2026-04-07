@@ -15,7 +15,10 @@ namespace PolyGone;
 public class GameScene : IScene
 {
     private ContentManager contentManager;
-    private Texture2D texture;
+    private Texture2D playerSheet;
+    private Texture2D enemySheet;
+    private Texture2D miscSheet;
+    private Texture2D splitTextureSheet;
     private SpriteFont hudFont;
     private SceneManager sceneManager;
     private Player player;
@@ -48,7 +51,7 @@ public class GameScene : IScene
         this.selectedWeapon = selectedWeapon;
         this.levelName = levelName;
         LoadMapFromJson("Maps/" + levelName + ".json");
-        textureStore = GetTextureStore(32, new int[2] { 4, 4 });
+        textureStore = GetTextureStore(32, new int[2] { 2, 2 });
     }
 
     // Public method to get the level name for restart functionality
@@ -190,7 +193,10 @@ public class GameScene : IScene
         InputManager.ResetClickCooldown();
         
         // Load texture atlas and initialize camera
-        texture = contentManager.Load<Texture2D>("PolyGoneTileMap");
+        playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
+        enemySheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneEnemySheet");
+        miscSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneMiscSpriteSheet");
+        splitTextureSheet = contentManager.Load<Texture2D>("PolyGoneTextureSheet");
         try
         {
             hudFont = contentManager.Load<SpriteFont>("Fonts/PauseMenu");
@@ -202,41 +208,41 @@ public class GameScene : IScene
         camera = new(new Vector2(0, 0));
         // Initialize player with selected items and weapon
         player = new Player(
-            texture: texture,
+            texture: playerSheet,
             position: playerPos,
             size: new int[2] { 60, 60 },
             health: 100,
             color: Color.White,
-            srcRect: textureStore[1],
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
-            blasterTexture: texture,
+            blasterTexture: playerSheet,
             selectedItems: selectedItems,
             selectedWeapon: selectedWeapon,
             visualSize: new int[2] { 64, 64 }
         );
         
         // Initialize GameUI
-        gameUI = new GameUI(player, texture, textureStore[4], hudFont);
+        gameUI = new GameUI(player, splitTextureSheet, textureStore[2], hudFont);
         // Initialize turret enemies
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
             size: new int[2] { 60, 60 },
             player: player,
             health: 80,
             color: Color.White,
-            srcRect: textureStore[6],
+            srcRect: textureStore[3],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Initialize patrol enemies from spawn positions
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
             size: new int[2] { 60, 60 },
             health: 50,
             color: Color.White,
-            srcRect: textureStore[2],
+            srcRect: textureStore[1],
             collisionMap: collisionMap,
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 }
@@ -254,25 +260,25 @@ public class GameScene : IScene
         orphanedTurretBullets.Clear();
         turretEnemies.Clear();
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
             size: new int[2] { 60, 60 },
             player: player,
             health: 80,
             color: Color.White,
-            srcRect: textureStore[6],
+            srcRect: textureStore[3],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Reset patrol enemies
         enemies.Clear();
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
             size: new int[2] { 60, 60 },
             health: 50,
             color: Color.White,
-            srcRect: textureStore[2],
+            srcRect: textureStore[1],
             collisionMap: collisionMap,
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 }
@@ -419,7 +425,7 @@ public class GameScene : IScene
                 64
             );
             Rectangle src = textureStore[tile.Value % textureStore.Count]; // Ensure we don't go out of bounds
-            spriteBatch.Draw(texture, dest, src, Color.White);
+            spriteBatch.Draw(splitTextureSheet, dest, src, Color.White);
         }
         foreach (var enemy in enemies)
         {
@@ -447,7 +453,7 @@ public class GameScene : IScene
             );
             // Draw goal with a green tint (using tile 0 or any appropriate texture)
             Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
-            spriteBatch.Draw(texture, goalDest, textureStore[0], goalColor * 0.5f);
+            spriteBatch.Draw(splitTextureSheet, goalDest, textureStore[0], goalColor * 0.5f);
         }
         
         // Draw new GameUI (health, cooldown, and active items)
