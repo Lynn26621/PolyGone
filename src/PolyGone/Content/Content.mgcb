@@ -116,5 +116,5 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Textures/Tiles/PolyGoneTextureSheet.png;Textures/Tiles/PolyGoneTileSheet.png
+/build:Textures/Tiles/PolyGoneTextureSheet.png;Textures/Tiles/PolyGoneMgSheet.png
 

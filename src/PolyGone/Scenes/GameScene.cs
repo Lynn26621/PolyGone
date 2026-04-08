@@ -199,7 +199,7 @@ public class GameScene : IScene
         playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
         enemySheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneEnemySheet");
         miscSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneMiscSpriteSheet");
-        textureSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneTextureSheet");
+        textureSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneMgSheet");
         foregroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneFgSheet");
         backgroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneBgSheet");
         collisionSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneCollisionSheet");
