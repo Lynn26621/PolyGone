@@ -18,7 +18,10 @@ public class GameScene : IScene
     private Texture2D playerSheet;
     private Texture2D enemySheet;
     private Texture2D miscSheet;
-    private Texture2D splitTextureSheet;
+    private Texture2D textureSheet;
+    private Texture2D foregroundSheet;
+    private Texture2D backgroundSheet;
+    private Texture2D collisionSheet;
     private SpriteFont hudFont;
     private SceneManager sceneManager;
     private Player player;
@@ -196,7 +199,10 @@ public class GameScene : IScene
         playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
         enemySheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneEnemySheet");
         miscSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneMiscSpriteSheet");
-        splitTextureSheet = contentManager.Load<Texture2D>("PolyGoneTextureSheet");
+        textureSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneTextureSheet");
+        foregroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneFgSheet");
+        backgroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneBgSheet");
+        collisionSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneCollisionSheet");
         try
         {
             hudFont = contentManager.Load<SpriteFont>("Fonts/PauseMenu");
@@ -222,7 +228,7 @@ public class GameScene : IScene
         );
         
         // Initialize GameUI
-        gameUI = new GameUI(player, splitTextureSheet, textureStore[2], hudFont);
+        gameUI = new GameUI(player, textureSheet, textureStore[2], hudFont);
         // Initialize turret enemies
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
             texture: enemySheet,
@@ -231,7 +237,7 @@ public class GameScene : IScene
             player: player,
             health: 80,
             color: Color.White,
-            srcRect: textureStore[3],
+            srcRect: textureStore[1],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
@@ -242,7 +248,7 @@ public class GameScene : IScene
             size: new int[2] { 60, 60 },
             health: 50,
             color: Color.White,
-            srcRect: textureStore[1],
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 }
@@ -266,7 +272,7 @@ public class GameScene : IScene
             player: player,
             health: 80,
             color: Color.White,
-            srcRect: textureStore[3],
+            srcRect: textureStore[1],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
@@ -278,7 +284,7 @@ public class GameScene : IScene
             size: new int[2] { 60, 60 },
             health: 50,
             color: Color.White,
-            srcRect: textureStore[1],
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 }
@@ -425,7 +431,7 @@ public class GameScene : IScene
                 64
             );
             Rectangle src = textureStore[tile.Value % textureStore.Count]; // Ensure we don't go out of bounds
-            spriteBatch.Draw(splitTextureSheet, dest, src, Color.White);
+            spriteBatch.Draw(textureSheet, dest, src, Color.White);
         }
         foreach (var enemy in enemies)
         {
@@ -453,7 +459,7 @@ public class GameScene : IScene
             );
             // Draw goal with a green tint (using tile 0 or any appropriate texture)
             Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
-            spriteBatch.Draw(splitTextureSheet, goalDest, textureStore[0], goalColor * 0.5f);
+            spriteBatch.Draw(textureSheet, goalDest, textureStore[0], goalColor * 0.5f);
         }
         
         // Draw new GameUI (health, cooldown, and active items)

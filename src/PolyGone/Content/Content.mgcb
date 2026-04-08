@@ -34,42 +34,6 @@
 /processorParam:TextureFormat=Compressed
 /build:Fonts/PauseMenu.spritefont
 
-#begin PolyGoneSpriteSheet.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:PolyGoneSpriteSheet.png
-
-#begin PolyGoneTextureSheet.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:PolyGoneTextureSheet.png
-
-#begin PolyGoneTileMap.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:PolyGoneTileMap.png
-
 #begin Textures/Sprites/PolyGoneEnemySheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -152,5 +116,5 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Textures/Tiles/PolyGoneTextureSheet.png
+/build:Textures/Tiles/PolyGoneTextureSheet.png;Textures/Tiles/PolyGoneTileSheet.png
 
