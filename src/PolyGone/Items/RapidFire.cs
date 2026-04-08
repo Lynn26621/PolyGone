@@ -16,14 +16,20 @@ namespace PolyGone.Items
         {
             base.Apply(player);
             if (player.GetBlaster() is Blaster b)
+            {
                 b.CooldownMultiplier *= CooldownMultiplier;
+                b.IsAutoFire = true;
+            }
         }
 
         public override void Remove(PolyGone.Entities.Player player)
         {
             base.Remove(player);
             if (player.GetBlaster() is Blaster b)
+            {
                 b.CooldownMultiplier /= CooldownMultiplier; // undo the reduction
+                b.IsAutoFire = false;
+            }
         }
 
         protected override Color GetActiveColor()   => new Color(255, 140, 0, 200);

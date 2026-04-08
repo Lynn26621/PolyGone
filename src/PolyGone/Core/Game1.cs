@@ -3,6 +3,7 @@ using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PolyGone.Core;
 
 namespace PolyGone;
 public class Game1 : Game
@@ -11,6 +12,7 @@ public class Game1 : Game
     private SpriteBatch _spriteBatch;
     private SceneManager sceneManager;
     private KeyboardState _previousKeyboardState;
+    private AudioManager audioManager;
 
     public Game1()
     {
@@ -59,14 +61,15 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
+        audioManager = new AudioManager(Content); // Creates instance of AudioManager
 
         // Load purchase tracker before any scene that might need it
         PurchaseTracker.Load();
         // Load item unlock data
         UnlockTracker.Load();
 
-        sceneManager.AddScene(new GameScene(Content, sceneManager, _graphics));
-        sceneManager.AddScene(new MenuScene(Content, sceneManager, _graphics));
+        sceneManager.AddScene(new GameScene(Content, sceneManager, audioManager, _graphics));
+        sceneManager.AddScene(new MenuScene(Content, sceneManager, audioManager, _graphics));
 
         // Try to restore a saved session (skips the login screen on subsequent launches)
         bool sessionRestored = FormbarSession.TryLoadSession();
@@ -74,12 +77,12 @@ public class Game1 : Game
         if (!sessionRestored)
         {
             // First launch or session expired: require login
-            sceneManager.AddScene(new FormbarLoginScene(Content, sceneManager, _graphics));
+            sceneManager.AddScene(new FormbarLoginScene(Content, sceneManager, audioManager, _graphics));
         }
         else if (!PurchaseTracker.HasPurchased(FormbarSession.UserId, FormbarSession.AllLevelsKey))
         {
             // Logged in but hasn't paid yet: require payment before accessing the menu
-            sceneManager.AddScene(new PaymentScene(Content, sceneManager, _graphics));
+            sceneManager.AddScene(new PaymentScene(Content, sceneManager, audioManager, _graphics));
         }
         // else: logged in and paid – menu is immediately accessible
     }
@@ -102,7 +105,7 @@ public class Game1 : Game
             }
             else if (sceneManager.GetCurrentScene() is GameScene gameScene)
             {
-                sceneManager.AddScene(new PauseScene(Content, sceneManager, _graphics, gameScene));
+                sceneManager.AddScene(new PauseScene(Content, sceneManager, audioManager, _graphics, gameScene));
                 // Reset click cooldown when opening pause menu
                 InputManager.ResetClickCooldown();
             }

@@ -9,6 +9,7 @@ using System.Linq;
 using System;
 using PolyGone.Entities;
 using PolyGone.Graphics;
+using PolyGone.Core;
 
 namespace PolyGone;
 
@@ -22,6 +23,7 @@ public class GameScene : IScene
     private Texture2D foregroundSheet;
     private Texture2D backgroundSheet;
     private Texture2D collisionSheet;
+    private AudioManager audioManager;
     private SpriteFont hudFont;
     private SceneManager sceneManager;
     private Player player;
@@ -42,16 +44,17 @@ public class GameScene : IScene
     private bool levelComplete = false;
     private bool gameOver = false;
     private readonly List<ItemType> selectedItems;
-    private readonly WeaponType selectedWeapon;
+    private readonly List<BlasterAttachmentType> selectedAttachments;
     private readonly string levelName;
 
-    public GameScene(ContentManager contentManager, SceneManager sceneManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, WeaponType selectedWeapon = WeaponType.Blaster)
+    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
     {       
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
+        this.audioManager = audioManager;
         this.graphics = graphics;
-        this.selectedItems = selectedItems ?? new List<ItemType>(); // Default to empty list
-        this.selectedWeapon = selectedWeapon;
+        this.selectedItems = selectedItems ?? new List<ItemType>();
+        this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
         this.levelName = levelName;
         LoadMapFromJson("Maps/" + levelName + ".json");
         textureStore = GetTextureStore(32, new int[2] { 2, 2 });
@@ -62,7 +65,7 @@ public class GameScene : IScene
     
     // Public methods to get the current loadout for restart functionality
     public List<ItemType> GetSelectedItems() => new List<ItemType>(selectedItems);
-    public WeaponType GetSelectedWeapon() => selectedWeapon;
+    public List<BlasterAttachmentType> GetSelectedAttachments() => new List<BlasterAttachmentType>(selectedAttachments);
 
     // Generates a list of rectangles representing individual textures in a texture atlas
     public List<Rectangle> GetTextureStore(int textureSize, int[] gridSize)
@@ -194,6 +197,25 @@ public class GameScene : IScene
     {
         // Reset input state to prevent carried over clicks from triggering actions
         InputManager.ResetClickCooldown();
+
+        //Play level music
+        if (levelName != null)
+        {
+            switch (levelName)
+            {
+                case "TestLevel":
+                    audioManager.PlayAudio("null", false, "level1Song", true);
+                    break;
+                case "TestLevel2":
+                    audioManager.PlayAudio("null", false, "level2Song", true);
+                    break;
+                case "TestLevel3":
+                    audioManager.PlayAudio("null", false, "level3Song", true);
+                    break;
+                default:
+                    break;
+            }
+        }
         
         // Load texture atlas and initialize camera
         playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
@@ -223,7 +245,8 @@ public class GameScene : IScene
             collisionMap: collisionMap,
             blasterTexture: playerSheet,
             selectedItems: selectedItems,
-            selectedWeapon: selectedWeapon,
+            selectedAttachments: selectedAttachments,
+            audioManager: audioManager,
             visualSize: new int[2] { 64, 64 }
         );
         
@@ -233,6 +256,7 @@ public class GameScene : IScene
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
             texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 80,
@@ -245,6 +269,7 @@ public class GameScene : IScene
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
             texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             health: 50,
             color: Color.White,
@@ -268,6 +293,7 @@ public class GameScene : IScene
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
             texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 80,
@@ -281,6 +307,7 @@ public class GameScene : IScene
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
             texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             health: 50,
             color: Color.White,
@@ -333,7 +360,7 @@ public class GameScene : IScene
         if (!player.IsAlive && !gameOver)
         {
             gameOver = true;
-            sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, graphics, this));
+            sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, audioManager, graphics, this));
             return;
         }
         
@@ -416,7 +443,7 @@ public class GameScene : IScene
             {
                 levelComplete = true;
                 // Transition to win scene with current loadout
-                sceneManager.AddScene(new WinScene(contentManager, sceneManager, graphics, levelName, selectedItems, selectedWeapon));
+                sceneManager.AddScene(new WinScene(contentManager, sceneManager, audioManager, graphics, levelName, selectedItems, selectedAttachments));
             }
         }
     }

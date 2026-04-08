@@ -11,10 +11,9 @@ using System.IO;
 using System.Text.Json;
 using System.Linq;
 using System;
-using System.Threading;
+using PolyGone.Core;
 
 namespace PolyGone;
-
 internal class PauseScene : IScene
 {
     private Texture2D _pixel;
@@ -23,16 +22,18 @@ internal class PauseScene : IScene
     private KeyboardState previousKeyboardState;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
+    private readonly AudioManager _audioManager;
     private readonly GraphicsDeviceManager _graphics;
     private readonly GameScene _gameScene;
     private readonly string[] _options = { "Continue", "Restart Level", "Change Loadout (Restarts Level)", "Exit to Menu" };
     private int _selectedIndex;
 
-    public PauseScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics, GameScene gameScene)
+    public PauseScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, GameScene gameScene)
     {
         _pixel = null;
         _content = content;
         _sceneManager = sceneManager;
+        _audioManager = audioManager;
         _graphics = graphics;
         _gameScene = gameScene;
         previousKeyboardState = Keyboard.GetState();
@@ -109,12 +110,12 @@ internal class PauseScene : IScene
             // Restart Level - reload with same loadout
             string levelName = _gameScene.GetLevelName();
             List<ItemType> currentItems = _gameScene.GetSelectedItems();
-            WeaponType currentWeapon = _gameScene.GetSelectedWeapon();
+            List<BlasterAttachmentType> currentAttachments = _gameScene.GetSelectedAttachments();
             
             _sceneManager.PopScene(this); // Pop pause scene
             _sceneManager.PopScene(_gameScene); // Pop game scene
             // Create fresh game scene with same settings
-            var newGameScene = new GameScene(_content, _sceneManager, _graphics, levelName, currentItems, currentWeapon);
+            var newGameScene = new GameScene(_content, _sceneManager, _audioManager, _graphics, levelName, currentItems, currentAttachments);
             _sceneManager.AddScene(newGameScene);
             InputManager.ResetClickCooldown();
         }
@@ -127,7 +128,7 @@ internal class PauseScene : IScene
             _sceneManager.PopScene(_gameScene); // Pop game scene
             // Stack is now: Menu → LevelSelect
             // Just add InventoryManagement on top
-            _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _graphics, levelName));
+            _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _audioManager, _graphics, levelName));
             InputManager.ResetClickCooldown();
         }
         else if (_selectedIndex == 3)
@@ -136,7 +137,7 @@ internal class PauseScene : IScene
             _sceneManager.PopScene(this);
             _sceneManager.PopScene(_gameScene);
             // Pop any remaining scenes to get to a clean menu
-            _sceneManager.AddScene(new MenuScene(_content, _sceneManager, _graphics));
+            _sceneManager.AddScene(new MenuScene(_content, _sceneManager, _audioManager, _graphics));
         }
     }
 
@@ -148,16 +149,12 @@ internal class PauseScene : IScene
             _pixel.SetData(new[] { Color.White });
         }
 
-        // Use the already-begun SpriteBatch from Game1.Draw and scale the overlay
-        var viewport = spriteBatch.GraphicsDevice.Viewport;
-        _sceneManager.GetPreviousScene().Draw(spriteBatch);
-        spriteBatch.Draw(_pixel, new Rectangle(viewport.Width / 4, viewport.Height / 4, viewport.Width / 2, viewport.Height / 2), Color.Black);
-
-
-
+        // Use the already-begun SpriteBatch from Game1.Draw
+        spriteBatch.Draw(_pixel, new Rectangle(0, 0, spriteBatch.GraphicsDevice.Viewport.Width, spriteBatch.GraphicsDevice.Viewport.Height), Color.Gray);
 
         if (_font != null)
         {
+            var viewport = spriteBatch.GraphicsDevice.Viewport;
             var startY = viewport.Height / 2f - (_options.Length * 40f) / 2f;
 
             for (var i = 0; i < _options.Length; i++)

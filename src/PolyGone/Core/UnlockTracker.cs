@@ -19,16 +19,25 @@ public static class UnlockTracker
     private static HashSet<string> _completedLevels = new();
 
     /// <summary>
-    /// Maps each locked item to the level name that must be completed to unlock it.
+    /// Maps each locked player item to the level name that must be completed to unlock it.
     /// Items not listed here are always unlocked.
     /// </summary>
     private static readonly Dictionary<ItemType, string> _itemUnlockRequirements = new()
     {
         { ItemType.HealingGlow, "TestLevel"  },
-        { ItemType.MultiShot,   "TestLevel"  },
-        { ItemType.RapidFire,   "TestLevel2" },
         { ItemType.LowGravity,  "TestLevel2" },
         { ItemType.IronWill,    "TestLevel3" },
+    };
+
+    /// <summary>
+    /// Maps each locked blaster attachment to the level name required to unlock it.
+    /// Attachments not listed here are always unlocked.
+    /// </summary>
+    private static readonly Dictionary<BlasterAttachmentType, string> _attachmentUnlockRequirements = new()
+    {
+        { BlasterAttachmentType.RapidFire,   "TestLevel"  },
+        { BlasterAttachmentType.Piercing,    "TestLevel2" },
+        { BlasterAttachmentType.DamageBoost, "TestLevel3" },
     };
 
     /// <summary>
@@ -76,10 +85,53 @@ public static class UnlockTracker
         return $"Complete {GetLevelDisplayName(level)} to unlock";
     }
 
-    /// <summary>Returns the level name required to unlock this item, or null if always unlocked.</summary>
+    /// <summary>Returns the unlock requirement level for this item, or null if always unlocked.</summary>
     public static string? GetUnlockRequirement(ItemType item)
     {
         return _itemUnlockRequirements.TryGetValue(item, out var level) ? level : null;
+    }
+
+    /// <summary>Returns true if the blaster attachment is available for selection.</summary>
+    public static bool IsAttachmentUnlocked(BlasterAttachmentType attachment)
+    {
+#if DEBUG
+        return true; // All attachments available in dev builds
+#endif
+        if (!_attachmentUnlockRequirements.TryGetValue(attachment, out var requiredLevel))
+            return true;
+        return _completedLevels.Contains(requiredLevel);
+    }
+
+    /// <summary>Returns a human-readable hint describing how to unlock the attachment, or null if always unlocked.</summary>
+    public static string? GetAttachmentUnlockHint(BlasterAttachmentType attachment)
+    {
+        if (!_attachmentUnlockRequirements.TryGetValue(attachment, out var level))
+            return null;
+        return $"Complete {GetLevelDisplayName(level)} to unlock";
+    }
+
+    /// <summary>
+    /// Returns the number of player item slots available.
+    /// Starts at 1; completing TestLevel adds a 2nd slot; completing TestLevel3 adds a 3rd.
+    /// </summary>
+    public static int GetPlayerItemSlotCount()
+    {
+        int slots = 1;
+        if (_completedLevels.Contains("TestLevel"))  slots++;
+        if (_completedLevels.Contains("TestLevel3")) slots++;
+        return slots; // Max 3
+    }
+
+    /// <summary>
+    /// Returns the number of blaster attachment slots available.
+    /// Starts at 1; completing TestLevel2 adds a 2nd slot; completing TestLevel3 adds a 3rd.
+    /// </summary>
+    public static int GetBlasterSlotCount()
+    {
+        int slots = 1;
+        if (_completedLevels.Contains("TestLevel2")) slots++;
+        if (_completedLevels.Contains("TestLevel3")) slots++;
+        return slots; // Max 3
     }
 
     /// <summary>Converts an internal level file name to a display name.</summary>
