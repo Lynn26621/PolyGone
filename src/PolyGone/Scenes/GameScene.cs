@@ -35,6 +35,7 @@ public class GameScene : IScene
     private readonly List<TurretEnemy> turretEnemies = new(); // Stationary blaster enemies
     private readonly List<Projectile> orphanedTurretBullets = new(); // Bullets that outlive their turret
     private GoalTrigger goalTrigger; // Win condition trigger
+    private List<LevelDoor> levelDoors = new(); // Doors connecting levels to hub
     private bool levelComplete = false;
     private bool gameOver = false;
     private readonly List<ItemType> selectedItems;
@@ -169,6 +170,16 @@ public class GameScene : IScene
                             int goalWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
                             int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
                             goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight);
+                            break;
+                        case "Door": // Add to hub map in Tiled
+                            Vector2 doorPos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            int doorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                            int doorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                            string connectedLevel = obj.GetProperty("level").GetString() ?? "Hub";
+                            levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, connectedLevel));
                             break;
                         default:
                             break;
