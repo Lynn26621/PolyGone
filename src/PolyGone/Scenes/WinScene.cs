@@ -22,6 +22,8 @@ public class WinScene : IScene
     private KeyboardState previousKeyboardState;
     private GamePadState gamePadState;
     private GamePadState previousGamePadState;
+    private float thumbstickX;
+    private float thumbstickY;
     private readonly string[] options;
     private int selectedIndex;
     private static List<string>? levelOrder;
@@ -102,12 +104,12 @@ public class WinScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))
+        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp) || IsThumbstickUp())
         {
             selectedIndex = (selectedIndex - 1 + options.Length) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown))
+        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickDown())
         {
             selectedIndex = (selectedIndex + 1) % options.Length;
         }
@@ -128,6 +130,20 @@ public class WinScene : IScene
     private bool IsButtonPressed(Buttons button)
     {
         return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
+    }
+    private float previousThumbstickY = 0f;
+    private bool IsThumbstickUp()
+    {
+        bool wasUp = previousThumbstickY > 0.5f;
+        bool isUp = thumbstickY > 0.5f;
+        previousThumbstickY = thumbstickY;
+        return isUp && !wasUp;
+    }
+    private bool IsThumbstickDown()
+    {
+        bool wasDown = previousThumbstickY < -0.5f;
+        bool isDown = thumbstickY < -0.5f;
+        return isDown && !wasDown;
     }
 
     private void ExecuteSelection()

@@ -43,6 +43,8 @@ public static class InputManager
     private static KeyboardState _previousKeyboardState;
     private static GamePadState _currentGamepadState;
     private static GamePadState _previousGamepadState;
+    private static float thumbstickX;
+    private static float thumbstickY;
     private static bool _usingController = false;
     private static Vector2 _rightThumbstick;
     public static bool UsingController => _usingController;
@@ -68,6 +70,9 @@ public static class InputManager
 
         _previousGamepadState = _currentGamepadState;
         _currentGamepadState = GamePad.GetState(PlayerIndex.One);
+
+        thumbstickX = _currentGamepadState.ThumbSticks.Left.X;
+        thumbstickY = _currentGamepadState.ThumbSticks.Left.Y;
 
         _rightThumbstick = new Vector2(_currentGamepadState.ThumbSticks.Right.X, -_currentGamepadState.ThumbSticks.Right.Y);
 
@@ -101,12 +106,12 @@ public static class InputManager
     /// </summary>
     public static bool IsLeftMouseButtonClicked()
     {
-        bool mouseClicked = _currentMouseState.LeftButton == ButtonState.Pressed 
-                            && _previousMouseState.LeftButton == ButtonState.Released 
+        bool mouseClicked = _currentMouseState.LeftButton == ButtonState.Pressed
+                            && _previousMouseState.LeftButton == ButtonState.Released
                             && _mouseClickCooldown <= 0f;
-        
-        bool gamepadClicked = _currentGamepadState.Buttons.A == ButtonState.Pressed 
-                              && _previousGamepadState.Buttons.A == ButtonState.Released 
+
+        bool gamepadClicked = _currentGamepadState.Buttons.A == ButtonState.Pressed
+                              && _previousGamepadState.Buttons.A == ButtonState.Released
                               && _mouseClickCooldown <= 0f;
         return mouseClicked || gamepadClicked;
     }
