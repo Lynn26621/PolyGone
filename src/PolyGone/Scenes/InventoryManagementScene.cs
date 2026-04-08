@@ -144,14 +144,21 @@ namespace PolyGone
         // -----------------------------------------------------------------------
         // Navigation state
         // -----------------------------------------------------------------------
+        private const int MaxSlots = 5; // Unlocking slots handled in unlockTracker line 117
         private enum SelectionMode { PlayerItems, Attachments, Confirm }
         private SelectionMode _currentMode = SelectionMode.PlayerItems;
-        private int _playerItemCursor = 0;
-        private int _attachmentCursor = 0;
         private int _confirmCursor = 0; // 0 = Start Game, 1 = Back
+        private int _playerListScroll = 0;
+        private int _attachmentListScroll = 0;
+
+        private ItemType? _pendingPlayerItem = null;
+        private BlasterAttachmentType? _pendingAttachment = null;
+        private string _statusMessage = "Click an item below to assign it to a slot.";
 
         private readonly List<ItemType> _selectedPlayerItems;
         private readonly List<BlasterAttachmentType> _selectedAttachments;
+        private readonly ItemType?[] _playerItemSlots = new ItemType?[MaxSlots];
+        private readonly BlasterAttachmentType?[] _attachmentSlots = new BlasterAttachmentType?[MaxSlots];
 
         public InventoryManagement(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelFile)
         {
@@ -167,6 +174,8 @@ namespace PolyGone
                 _lastSelectedPlayerItems.FindAll(UnlockTracker.IsItemUnlocked));
             _selectedAttachments = new List<BlasterAttachmentType>(
                 _lastSelectedAttachments.FindAll(UnlockTracker.IsAttachmentUnlocked));
+
+            InitializeSlotsFromSelections();
         }
 
         public void Load()
@@ -186,7 +195,6 @@ namespace PolyGone
         {
             keyboardState = Keyboard.GetState();
 
-            // Ctrl = skip screen, keep current selections
             if (keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl))
             {
                 StartGame();
@@ -201,202 +209,404 @@ namespace PolyGone
                 return;
             }
 
+            HandleKeyboardNavigation();
+            HandleMouseWheelScrolling();
             HandleMouseNavigation();
-
-            switch (_currentMode)
-            {
-                case SelectionMode.PlayerItems:  UpdatePlayerItemSelection();  break;
-                case SelectionMode.Attachments:  UpdateAttachmentSelection();  break;
-                case SelectionMode.Confirm:      UpdateConfirmSelection();     break;
-            }
 
             previousKeyboardState = keyboardState;
         }
 
-        // -----------------------------------------------------------------------
-        // Mouse navigation
-        // -----------------------------------------------------------------------
-        private void HandleMouseNavigation()
+        private void HandleKeyboardNavigation()
         {
-            if (_font == null) return;
-
-            var viewport = _graphics.GraphicsDevice.Viewport;
-            int leftX  = 60;
-            int rightX = viewport.Width / 2 + 20;
-            int listY  = 200;
-
-            // --- Player items column ---
-            for (int i = 0; i < _playerItemNames.Length; i++)
+            if (IsKeyPressed(Keys.Tab))
             {
-                var text   = GetPlayerItemPrefix(i) + _playerItemNames[i];
-                var sz     = _font.MeasureString(text);
-                var bounds = new Rectangle(leftX, listY + i * 40, (int)sz.X, (int)sz.Y);
-
-                if (bounds.Contains(InputManager.GetMousePosition()))
-                {
-                    _currentMode      = SelectionMode.PlayerItems;
-                    _playerItemCursor = i;
-
-                    if (InputManager.IsLeftMouseButtonClicked())
-                    {
-                        TogglePlayerItem(_playerItemTypes[i]);
-                        InputManager.ConsumeClick();
-                    }
-                }
+                _currentMode = _currentMode == SelectionMode.PlayerItems
+                    ? SelectionMode.Attachments
+                    : SelectionMode.PlayerItems;
             }
 
-            // --- Attachments column ---
-            for (int i = 0; i < _attachmentNames.Length; i++)
-            {
-                var text   = GetAttachmentPrefix(i) + _attachmentNames[i];
-                var sz     = _font.MeasureString(text);
-                var bounds = new Rectangle(rightX, listY + i * 40, (int)sz.X, (int)sz.Y);
-
-                if (bounds.Contains(InputManager.GetMousePosition()))
-                {
-                    _currentMode      = SelectionMode.Attachments;
-                    _attachmentCursor = i;
-
-                    if (InputManager.IsLeftMouseButtonClicked())
-                    {
-                        ToggleAttachment(_attachmentTypes[i]);
-                        InputManager.ConsumeClick();
-                    }
-                }
-            }
-
-            // --- Confirm section ---
-            int confirmStartY    = viewport.Height - 150;
-            string[] confirmOpts = { "Start Game", "Back" };
-            for (int i = 0; i < confirmOpts.Length; i++)
-            {
-                var prefix = (i == _confirmCursor && _currentMode == SelectionMode.Confirm) ? "> " : "  ";
-                var text   = prefix + confirmOpts[i];
-                var sz     = _font.MeasureString(text);
-                var pos    = new Vector2(viewport.Width / 2f - sz.X / 2f, confirmStartY + i * 40);
-                var bounds = new Rectangle((int)pos.X, (int)pos.Y, (int)sz.X, (int)sz.Y);
-
-                if (bounds.Contains(InputManager.GetMousePosition()))
-                {
-                    _currentMode   = SelectionMode.Confirm;
-                    _confirmCursor = i;
-
-                    if (InputManager.IsLeftMouseButtonClicked())
-                    {
-                        if (_confirmCursor == 0) StartGame();
-                        else _sceneManager.PopScene(this);
-                        InputManager.ConsumeClick();
-                    }
-                }
-            }
-        }
-
-        // -----------------------------------------------------------------------
-        // Keyboard navigation per mode
-        // -----------------------------------------------------------------------
-        private void UpdatePlayerItemSelection()
-        {
             if (IsKeyPressed(Keys.Up))
-                _playerItemCursor = (_playerItemCursor - 1 + _playerItemNames.Length) % _playerItemNames.Length;
+            {
+                ScrollActiveList(-1);
+            }
+
             if (IsKeyPressed(Keys.Down))
-                _playerItemCursor = (_playerItemCursor + 1) % _playerItemNames.Length;
-
-            if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space))
-                TogglePlayerItem(_playerItemTypes[_playerItemCursor]);
-
-            if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) && !keyboardState.IsKeyDown(Keys.LeftShift)))
-                _currentMode = SelectionMode.Attachments;
-        }
-
-        private void UpdateAttachmentSelection()
-        {
-            if (IsKeyPressed(Keys.Up))
-                _attachmentCursor = (_attachmentCursor - 1 + _attachmentNames.Length) % _attachmentNames.Length;
-            if (IsKeyPressed(Keys.Down))
-                _attachmentCursor = (_attachmentCursor + 1) % _attachmentNames.Length;
-
-            if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space))
-                ToggleAttachment(_attachmentTypes[_attachmentCursor]);
-
-            if (IsKeyPressed(Keys.Left) || (IsKeyPressed(Keys.Tab) && keyboardState.IsKeyDown(Keys.LeftShift)))
-                _currentMode = SelectionMode.PlayerItems;
-            if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) && !keyboardState.IsKeyDown(Keys.LeftShift)))
-                _currentMode = SelectionMode.Confirm;
-        }
-
-        private void UpdateConfirmSelection()
-        {
-            if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Down))
-                _confirmCursor = (_confirmCursor + 1) % 2;
+            {
+                ScrollActiveList(1);
+            }
 
             if (IsKeyPressed(Keys.Enter))
             {
-                if (_confirmCursor == 0) StartGame();
-                else _sceneManager.PopScene(this);
+                if (_currentMode == SelectionMode.Confirm)
+                {
+                    if (_confirmCursor == 0)
+                    {
+                        StartGame();
+                    }
+                    else
+                    {
+                        _sceneManager.PopScene(this);
+                    }
+                }
+                else
+                {
+                    _currentMode = SelectionMode.Confirm;
+                    _confirmCursor = 0;
+                }
             }
 
-            if (IsKeyPressed(Keys.Left) || (IsKeyPressed(Keys.Tab) && keyboardState.IsKeyDown(Keys.LeftShift)))
+            if (_pendingPlayerItem.HasValue || _pendingAttachment.HasValue)
+            {
+                int selectedSlot = GetPressedSlotIndex();
+                if (selectedSlot >= 0)
+                {
+                    AssignPendingToSlot(selectedSlot);
+                }
+            }
+        }
+
+        private void HandleMouseWheelScrolling()
+        {
+            int delta = InputManager.CurrentMouseState.ScrollWheelValue - InputManager.PreviousMouseState.ScrollWheelValue;
+            if (delta == 0)
+            {
+                return;
+            }
+            ScrollActiveList(delta > 0 ? -1 : 1);
+        }
+
+        private void ScrollActiveList(int amount)
+        {
+            int visibleRows = GetVisibleListRows(_graphics.GraphicsDevice.Viewport);
+            if (_currentMode == SelectionMode.Attachments)
+            {
+                int max = Math.Max(0, _attachmentNames.Length - visibleRows);
+                _attachmentListScroll = Math.Clamp(_attachmentListScroll + amount, 0, max);
+            }
+            else
+            {
+                int max = Math.Max(0, _playerItemNames.Length - visibleRows);
+                _playerListScroll = Math.Clamp(_playerListScroll + amount, 0, max);
+            }
+        }
+
+        private void HandleMouseNavigation()
+        {
+            if (_font == null || !InputManager.IsLeftMouseButtonClicked())
+            {
+                return;
+            }
+
+            var viewport = _graphics.GraphicsDevice.Viewport;
+            var mousePos = InputManager.GetMousePosition();
+
+            if (GetPlayerTabRect(viewport).Contains(mousePos))
+            {
+                _currentMode = SelectionMode.PlayerItems;
+                InputManager.ConsumeClick();
+                return;
+            }
+
+            if (GetAttachmentTabRect(viewport).Contains(mousePos))
+            {
                 _currentMode = SelectionMode.Attachments;
+                InputManager.ConsumeClick();
+                return;
+            }
+
+            if (GetStartButtonRect(viewport).Contains(mousePos))
+            {
+                _currentMode = SelectionMode.Confirm;
+                _confirmCursor = 0;
+                StartGame();
+                InputManager.ConsumeClick();
+                return;
+            }
+
+            if (GetBackButtonRect(viewport).Contains(mousePos))
+            {
+                _currentMode = SelectionMode.Confirm;
+                _confirmCursor = 1;
+                _sceneManager.PopScene(this);
+                InputManager.ConsumeClick();
+                return;
+            }
+
+            for (int i = 0; i < MaxSlots; i++)
+            {
+                if (GetClearSlotButtonRect(viewport, i).Contains(mousePos))
+                {
+                    ClearSlot(i);
+                    InputManager.ConsumeClick();
+                    return;
+                }
+            }
+
+            for (int i = 0; i < MaxSlots; i++)
+            {
+                if (GetSlotRect(viewport, i).Contains(mousePos))
+                {
+                    AssignPendingToSlot(i);
+                    InputManager.ConsumeClick();
+                    return;
+                }
+            }
+
+            if (TryGetClickedListIndex(viewport, mousePos, out int clickedIndex))
+            {
+                if (_currentMode == SelectionMode.Attachments)
+                {
+                    if (!UnlockTracker.IsAttachmentUnlocked(_attachmentTypes[clickedIndex]))
+                    {
+                        _statusMessage = UnlockTracker.GetAttachmentUnlockHint(_attachmentTypes[clickedIndex]) ?? "That attachment is locked.";
+                    }
+                    else
+                    {
+                        _pendingAttachment = _attachmentTypes[clickedIndex];
+                        _pendingPlayerItem = null;
+                        _statusMessage = $"Pick an unlocked slot (1-{UnlockTracker.GetBlasterSlotCount()}) for {_attachmentNames[clickedIndex]}.";
+                    }
+                }
+                else
+                {
+                    if (!UnlockTracker.IsItemUnlocked(_playerItemTypes[clickedIndex]))
+                    {
+                        _statusMessage = UnlockTracker.GetUnlockHint(_playerItemTypes[clickedIndex]) ?? "That item is locked.";
+                    }
+                    else
+                    {
+                        _pendingPlayerItem = _playerItemTypes[clickedIndex];
+                        _pendingAttachment = null;
+                        _statusMessage = $"Pick an unlocked slot (1-{UnlockTracker.GetPlayerItemSlotCount()}) for {_playerItemNames[clickedIndex]}.";
+                    }
+                }
+
+                InputManager.ConsumeClick();
+            }
         }
 
-        // -----------------------------------------------------------------------
-        // Toggle helpers (enforce slot limits)
-        // -----------------------------------------------------------------------
-        private void TogglePlayerItem(ItemType item)
+        private bool TryGetClickedListIndex(Viewport viewport, Point mousePos, out int clickedIndex)
         {
-            if (!UnlockTracker.IsItemUnlocked(item)) return;
-
-            if (_selectedPlayerItems.Contains(item))
+            clickedIndex = -1;
+            Rectangle listArea = GetListAreaRect(viewport);
+            if (!listArea.Contains(mousePos))
             {
-                _selectedPlayerItems.Remove(item);
+                return false;
+            }
+
+            int rowHeight = 52;
+            int row = (mousePos.Y - listArea.Y - 12) / rowHeight;
+            if (row < 0)
+            {
+                return false;
+            }
+
+            int visibleRows = GetVisibleListRows(viewport);
+            if (row >= visibleRows)
+            {
+                return false;
+            }
+
+            int scroll = _currentMode == SelectionMode.Attachments ? _attachmentListScroll : _playerListScroll;
+            int maxItems = _currentMode == SelectionMode.Attachments ? _attachmentNames.Length : _playerItemNames.Length;
+            int index = scroll + row;
+            if (index < 0 || index >= maxItems)
+            {
+                return false;
+            }
+
+            clickedIndex = index;
+            return true;
+        }
+
+        private int GetPressedSlotIndex()
+        {
+            if (IsKeyPressed(Keys.D1) || IsKeyPressed(Keys.NumPad1))
+            {
+                return 0;
+            }
+
+            if (IsKeyPressed(Keys.D2) || IsKeyPressed(Keys.NumPad2))
+            {
+                return 1;
+            }
+
+            if (IsKeyPressed(Keys.D3) || IsKeyPressed(Keys.NumPad3))
+            {
+                return 2;
+            }
+
+            return -1;
+        }
+
+        private void AssignPendingToSlot(int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= MaxSlots)
+            {
+                return;
+            }
+
+            if (_currentMode == SelectionMode.Attachments)
+            {
+                int unlockedCount = UnlockTracker.GetBlasterSlotCount();
+                if (slotIndex >= unlockedCount)
+                {
+                    _statusMessage = "That slot is locked.";
+                    return;
+                }
+
+                if (!_pendingAttachment.HasValue)
+                {
+                    _statusMessage = "Select an attachment from the bottom list first.";
+                    return;
+                }
+
+                for (int i = 0; i < MaxSlots; i++)
+                {
+                    if (_attachmentSlots[i] == _pendingAttachment.Value)
+                    {
+                        _attachmentSlots[i] = null;
+                    }
+                }
+
+                _attachmentSlots[slotIndex] = _pendingAttachment.Value;
+                _statusMessage = $"{GetAttachmentName(_pendingAttachment.Value)} placed in slot {slotIndex + 1}.";
+                _pendingAttachment = null;
             }
             else
             {
-#if DEBUG
-                _selectedPlayerItems.Add(item);
-#else
-                int maxSlots = UnlockTracker.GetPlayerItemSlotCount();
-                if (_selectedPlayerItems.Count < maxSlots)
-                    _selectedPlayerItems.Add(item);
-#endif
+                int unlockedCount = UnlockTracker.GetPlayerItemSlotCount();
+                if (slotIndex >= unlockedCount)
+                {
+                    _statusMessage = "That slot is locked.";
+                    return;
+                }
+
+                if (!_pendingPlayerItem.HasValue)
+                {
+                    _statusMessage = "Select an item from the bottom list first.";
+                    return;
+                }
+
+                for (int i = 0; i < MaxSlots; i++)
+                {
+                    if (_playerItemSlots[i] == _pendingPlayerItem.Value)
+                    {
+                        _playerItemSlots[i] = null;
+                    }
+                }
+
+                _playerItemSlots[slotIndex] = _pendingPlayerItem.Value;
+                _statusMessage = $"{GetPlayerItemName(_pendingPlayerItem.Value)} placed in slot {slotIndex + 1}.";
+                _pendingPlayerItem = null;
             }
+
+            RebuildSelectionsFromSlots();
         }
 
-        private void ToggleAttachment(BlasterAttachmentType attachment)
+        private void ClearSlot(int slotIndex)
         {
-            if (!UnlockTracker.IsAttachmentUnlocked(attachment)) return;
-
-            if (_selectedAttachments.Contains(attachment))
+            if (slotIndex < 0 || slotIndex >= MaxSlots)
             {
-                _selectedAttachments.Remove(attachment);
+                return;
+            }
+
+            if (_currentMode == SelectionMode.Attachments)
+            {
+                int unlockedCount = UnlockTracker.GetBlasterSlotCount();
+                if (slotIndex >= unlockedCount)
+                {
+                    _statusMessage = "That slot is locked.";
+                    return;
+                }
+
+                if (!_attachmentSlots[slotIndex].HasValue)
+                {
+                    _statusMessage = "That slot is already empty.";
+                    return;
+                }
+
+                string removedName = GetAttachmentName(_attachmentSlots[slotIndex]!.Value);
+                _attachmentSlots[slotIndex] = null;
+                _statusMessage = $"Removed {removedName} from slot {slotIndex + 1}.";
             }
             else
             {
-#if DEBUG
-                _selectedAttachments.Add(attachment);
-#else
-                int maxSlots = UnlockTracker.GetBlasterSlotCount();
-                if (_selectedAttachments.Count < maxSlots)
-                    _selectedAttachments.Add(attachment);
-#endif
+                int unlockedCount = UnlockTracker.GetPlayerItemSlotCount();
+                if (slotIndex >= unlockedCount)
+                {
+                    _statusMessage = "That slot is locked.";
+                    return;
+                }
+
+                if (!_playerItemSlots[slotIndex].HasValue)
+                {
+                    _statusMessage = "That slot is already empty.";
+                    return;
+                }
+
+                string removedName = GetPlayerItemName(_playerItemSlots[slotIndex]!.Value);
+                _playerItemSlots[slotIndex] = null;
+                _statusMessage = $"Removed {removedName} from slot {slotIndex + 1}.";
             }
+
+            RebuildSelectionsFromSlots();
         }
 
-        // -----------------------------------------------------------------------
-        // Prefix helpers
-        // -----------------------------------------------------------------------
-        private string GetPlayerItemPrefix(int index)
+        private void InitializeSlotsFromSelections()
         {
-            bool unlocked = UnlockTracker.IsItemUnlocked(_playerItemTypes[index]);
-            if (!unlocked) return "[LOCKED] ";
-            return _selectedPlayerItems.Contains(_playerItemTypes[index]) ? "[X] " : "[ ] ";
+            Array.Clear(_playerItemSlots, 0, MaxSlots);
+            Array.Clear(_attachmentSlots, 0, MaxSlots);
+
+            int playerUnlocked = UnlockTracker.GetPlayerItemSlotCount();
+            int p = 0;
+            foreach (var item in _selectedPlayerItems)
+            {
+                if (p >= Math.Min(playerUnlocked, MaxSlots))
+                {
+                    break;
+                }
+
+                _playerItemSlots[p++] = item;
+            }
+
+            int attachmentUnlocked = UnlockTracker.GetBlasterSlotCount();
+            int a = 0;
+            foreach (var attachment in _selectedAttachments)
+            {
+                if (a >= Math.Min(attachmentUnlocked, MaxSlots))
+                {
+                    break;
+                }
+
+                _attachmentSlots[a++] = attachment;
+            }
+
+            RebuildSelectionsFromSlots();
         }
 
-        private string GetAttachmentPrefix(int index)
+        private void RebuildSelectionsFromSlots()
         {
-            bool unlocked = UnlockTracker.IsAttachmentUnlocked(_attachmentTypes[index]);
-            if (!unlocked) return "[LOCKED] ";
-            return _selectedAttachments.Contains(_attachmentTypes[index]) ? "[X] " : "[ ] ";
+            _selectedPlayerItems.Clear();
+            _selectedAttachments.Clear();
+
+            int playerUnlocked = UnlockTracker.GetPlayerItemSlotCount();
+            for (int i = 0; i < Math.Min(playerUnlocked, MaxSlots); i++)
+            {
+                if (_playerItemSlots[i].HasValue)
+                {
+                    _selectedPlayerItems.Add(_playerItemSlots[i]!.Value);
+                }
+            }
+
+            int attachmentUnlocked = UnlockTracker.GetBlasterSlotCount();
+            for (int i = 0; i < Math.Min(attachmentUnlocked, MaxSlots); i++)
+            {
+                if (_attachmentSlots[i].HasValue)
+                {
+                    _selectedAttachments.Add(_attachmentSlots[i]!.Value);
+                }
+            }
         }
 
         // -----------------------------------------------------------------------
@@ -410,6 +620,8 @@ namespace PolyGone
 
         private void StartGame()
         {
+            RebuildSelectionsFromSlots();
+
             _lastSelectedPlayerItems = new List<ItemType>(_selectedPlayerItems);
             _lastSelectedAttachments = new List<BlasterAttachmentType>(_selectedAttachments);
             SaveLoadout();
@@ -433,151 +645,225 @@ namespace PolyGone
 
             spriteBatch.Draw(_pixel, new Rectangle(0, 0,
                 spriteBatch.GraphicsDevice.Viewport.Width,
-                spriteBatch.GraphicsDevice.Viewport.Height), Color.DarkBlue);
+                spriteBatch.GraphicsDevice.Viewport.Height), new Color(14, 24, 52));
 
-            if (_font == null) return;
+            if (_font == null)
+            {
+                return;
+            }
 
             var viewport = spriteBatch.GraphicsDevice.Viewport;
 
-            // Title
-            DrawCentered(spriteBatch, "Select Your Loadout", 50, Color.White);
+            DrawCentered(spriteBatch, "Inventory", 16, Color.White);
 
-            // Instructions
-#if DEBUG
-            string hint = "[DEV] Unlimited slots | Press Ctrl to skip";
-#else
-            string hint = "Fill your slots | Press Ctrl to skip";
-#endif
-            DrawCentered(spriteBatch, hint, 90, Color.Gray);
+            DrawCategoryTabs(spriteBatch, viewport);
+            DrawSlotStack(spriteBatch, viewport);
+            DrawActionButtons(spriteBatch, viewport);
+            DrawListPanel(spriteBatch, viewport);
 
-            DrawPlayerItemsSection(spriteBatch, viewport);
-            DrawAttachmentsSection(spriteBatch, viewport);
-            DrawConfirmSection(spriteBatch, viewport);
+            Color statusColor = (_pendingPlayerItem.HasValue || _pendingAttachment.HasValue) ? Color.Yellow : Color.LightGray;
+            DrawCentered(spriteBatch, _statusMessage, viewport.Height - 55, statusColor);
         }
 
-        private void DrawPlayerItemsSection(SpriteBatch spriteBatch, Viewport viewport)
+        private void DrawCategoryTabs(SpriteBatch spriteBatch, Viewport viewport)
         {
-            int x = 60, y = 200;
+            DrawTab(spriteBatch, GetPlayerTabRect(viewport), "Player Items", _currentMode == SelectionMode.PlayerItems);
+            DrawTab(spriteBatch, GetAttachmentTabRect(viewport), "Attachments", _currentMode == SelectionMode.Attachments);
+        }
 
-            int playerSlots = UnlockTracker.GetPlayerItemSlotCount();
-#if DEBUG
-            string sectionTitle = "Player Items (DEV - all):";
-#else
-            string sectionTitle = $"Player Items ({_selectedPlayerItems.Count}/{playerSlots} slots):";
-#endif
-            Color titleColor = _currentMode == SelectionMode.PlayerItems ? Color.Yellow : Color.White;
-            spriteBatch.DrawString(_font, sectionTitle, new Vector2(x, y - 40), titleColor);
+        private void DrawTab(SpriteBatch spriteBatch, Rectangle rect, string text, bool active)
+        {
+            Color fill = active ? new Color(245, 248, 255, 55) : new Color(95, 105, 125, 45);
+            Color border = active ? Color.White : Color.Gray;
+            spriteBatch.Draw(_pixel, rect, fill);
+            DrawRectOutline(spriteBatch, rect, border, 2);
 
-            for (int i = 0; i < _playerItemNames.Length; i++)
+            Vector2 size = _font!.MeasureString(text) * UiScale;
+            Vector2 pos = new Vector2(rect.X + (rect.Width - size.X) / 2f, rect.Y + (rect.Height - size.Y) / 2f);
+            DrawUiString(spriteBatch, text, pos, active ? Color.Navy : Color.Black);
+        }
+
+        private void DrawSlotStack(SpriteBatch spriteBatch, Viewport viewport)
+        {
+            int unlockedCount = _currentMode == SelectionMode.Attachments
+                ? UnlockTracker.GetBlasterSlotCount()
+                : UnlockTracker.GetPlayerItemSlotCount();
+
+            for (int i = 0; i < MaxSlots; i++)
             {
-                bool unlocked = UnlockTracker.IsItemUnlocked(_playerItemTypes[i]);
-                bool selected = unlocked && _selectedPlayerItems.Contains(_playerItemTypes[i]);
-                bool cursor   = i == _playerItemCursor && _currentMode == SelectionMode.PlayerItems;
+                Rectangle rect = GetSlotRect(viewport, i);
+                bool unlocked = i < unlockedCount;
+                bool pending = (_currentMode == SelectionMode.Attachments && _pendingAttachment.HasValue)
+                    || (_currentMode == SelectionMode.PlayerItems && _pendingPlayerItem.HasValue);
 
-                Color color;
-                string prefix;
-                if (!unlocked)
+                Color fill = unlocked ? new Color(240, 244, 255, 72) : new Color(60, 60, 60, 140);
+                Color border = unlocked ? Color.White : Color.Gray;
+                if (pending && unlocked)
                 {
-                    color  = cursor ? Color.Orange : Color.DarkGray;
-                    prefix = "[LOCKED] ";
+                    border = Color.Yellow;
+                }
+
+                Rectangle clearRect = GetClearSlotButtonRect(viewport, i);
+                Color clearFill = unlocked ? new Color(120, 30, 35, 170) : new Color(55, 55, 55, 160);
+                Color clearBorder = unlocked ? Color.OrangeRed : Color.Gray;
+                spriteBatch.Draw(_pixel, clearRect, clearFill);
+                DrawRectOutline(spriteBatch, clearRect, clearBorder, 2);
+                Vector2 clearSize = _font!.MeasureString("X") * UiScale;
+                Vector2 clearPos = new Vector2(
+                    clearRect.X + (clearRect.Width - clearSize.X) / 2f,
+                    clearRect.Y + (clearRect.Height - clearSize.Y) / 2f);
+                DrawUiString(spriteBatch, "X", clearPos, Color.White);
+
+                spriteBatch.Draw(_pixel, rect, fill);
+                DrawRectOutline(spriteBatch, rect, border, 2);
+
+                string slotLabel = unlocked ? $"Slot {i + 1}" : $"Slot {i + 1} (Locked)";
+                string value = "Empty";
+                if (_currentMode == SelectionMode.Attachments)
+                {
+                    if (_attachmentSlots[i].HasValue)
+                    {
+                        value = GetAttachmentName(_attachmentSlots[i]!.Value);
+                    }
                 }
                 else
                 {
-                    color  = cursor ? Color.Yellow : (selected ? Color.LimeGreen : Color.White);
-                    prefix = selected ? "[X] " : "[ ] ";
+                    if (_playerItemSlots[i].HasValue)
+                    {
+                        value = GetPlayerItemName(_playerItemSlots[i]!.Value);
+                    }
                 }
 
-                spriteBatch.DrawString(_font, prefix + _playerItemNames[i], new Vector2(x, y + i * 40), color);
-            }
-
-            // Description below list
-            if (_currentMode == SelectionMode.PlayerItems)
-            {
-                int descY = y + _playerItemNames.Length * 40 + 10;
-                bool cursorUnlocked = UnlockTracker.IsItemUnlocked(_playerItemTypes[_playerItemCursor]);
-                string desc = cursorUnlocked
-                    ? _playerItemDescriptions[_playerItemCursor]
-                    : (UnlockTracker.GetUnlockHint(_playerItemTypes[_playerItemCursor]) ?? "");
-                if (desc.Length > 0)
-                    spriteBatch.DrawString(_font, desc, new Vector2(x, descY),
-                        cursorUnlocked ? Color.LightGray : Color.Orange);
+                Color textColor = unlocked ? Color.Navy : Color.LightGray;
+                DrawUiString(spriteBatch, slotLabel, new Vector2(rect.X + 14, rect.Y + 10), textColor);
+                DrawUiString(spriteBatch, value, new Vector2(rect.X + 14, rect.Y + 42), textColor);
             }
         }
 
-        private void DrawAttachmentsSection(SpriteBatch spriteBatch, Viewport viewport)
+        private void DrawActionButtons(SpriteBatch spriteBatch, Viewport viewport)
         {
-            int x = viewport.Width / 2 + 20, y = 200;
+            DrawButton(spriteBatch, GetStartButtonRect(viewport), "Start Game", _currentMode == SelectionMode.Confirm && _confirmCursor == 0);
+            DrawButton(spriteBatch, GetBackButtonRect(viewport), "Back", _currentMode == SelectionMode.Confirm && _confirmCursor == 1);
+        }
 
-            int blasterSlots = UnlockTracker.GetBlasterSlotCount();
-#if DEBUG
-            string sectionTitle = "Blaster Attachments (DEV - all):";
-#else
-            string sectionTitle = $"Blaster Attachments ({_selectedAttachments.Count}/{blasterSlots} slots):";
-#endif
-            Color titleColor = _currentMode == SelectionMode.Attachments ? Color.Yellow : Color.White;
-            spriteBatch.DrawString(_font, sectionTitle, new Vector2(x, y - 40), titleColor);
+        private void DrawButton(SpriteBatch spriteBatch, Rectangle rect, string text, bool active)
+        {
+            spriteBatch.Draw(_pixel, rect, active ? new Color(255, 255, 255, 60) : new Color(15, 18, 26, 70));
+            DrawRectOutline(spriteBatch, rect, active ? Color.Yellow : Color.White, 2);
+            Vector2 size = _font!.MeasureString(text) * UiScale;
+            Vector2 pos = new Vector2(rect.X + (rect.Width - size.X) / 2f, rect.Y + (rect.Height - size.Y) / 2f);
+            DrawUiString(spriteBatch, text, pos, Color.White);
+        }
 
-            for (int i = 0; i < _attachmentNames.Length; i++)
+        private void DrawListPanel(SpriteBatch spriteBatch, Viewport viewport)
+        {
+            Rectangle area = GetListAreaRect(viewport);
+            spriteBatch.Draw(_pixel, area, new Color(0, 0, 0, 90));
+            DrawRectOutline(spriteBatch, area, Color.White, 2);
+
+            DrawUiString(spriteBatch, "Mouse wheel / Up-Down to scroll", new Vector2(area.X, area.Y - 46), Color.LightGray);
+
+            int rowHeight = 52;
+            int visibleRows = GetVisibleListRows(viewport);
+            int scroll = _currentMode == SelectionMode.Attachments ? _attachmentListScroll : _playerListScroll;
+            int itemCount = _currentMode == SelectionMode.Attachments ? _attachmentNames.Length : _playerItemNames.Length;
+
+            for (int r = 0; r < visibleRows; r++)
             {
-                bool unlocked = UnlockTracker.IsAttachmentUnlocked(_attachmentTypes[i]);
-                bool selected = unlocked && _selectedAttachments.Contains(_attachmentTypes[i]);
-                bool cursor   = i == _attachmentCursor && _currentMode == SelectionMode.Attachments;
-
-                Color color;
-                string prefix;
-                if (!unlocked)
+                int index = scroll + r;
+                if (index >= itemCount)
                 {
-                    color  = cursor ? Color.Orange : Color.DarkGray;
-                    prefix = "[LOCKED] ";
+                    break;
+                }
+
+                Rectangle rowRect = new Rectangle(area.X + 8, area.Y + 10 + r * rowHeight, area.Width - 16, rowHeight - 6);
+                bool unlocked;
+                bool selected;
+                string name;
+
+                if (_currentMode == SelectionMode.Attachments)
+                {
+                    unlocked = UnlockTracker.IsAttachmentUnlocked(_attachmentTypes[index]);
+                    selected = _attachmentSlots.Any(x => x == _attachmentTypes[index]);
+                    name = _attachmentNames[index];
                 }
                 else
                 {
-                    color  = cursor ? Color.Yellow : (selected ? Color.LimeGreen : Color.White);
-                    prefix = selected ? "[X] " : "[ ] ";
+                    unlocked = UnlockTracker.IsItemUnlocked(_playerItemTypes[index]);
+                    selected = _playerItemSlots.Any(x => x == _playerItemTypes[index]);
+                    name = _playerItemNames[index];
                 }
 
-                spriteBatch.DrawString(_font, prefix + _attachmentNames[i], new Vector2(x, y + i * 40), color);
-            }
+                spriteBatch.Draw(_pixel, rowRect, unlocked ? new Color(236, 241, 255, 78) : new Color(75, 75, 75, 140));
+                DrawRectOutline(spriteBatch, rowRect, unlocked ? (selected ? Color.LimeGreen : Color.White) : Color.Gray, 1);
 
-            // Description below list
-            if (_currentMode == SelectionMode.Attachments)
-            {
-                int descY = y + _attachmentNames.Length * 40 + 10;
-                bool cursorUnlocked = UnlockTracker.IsAttachmentUnlocked(_attachmentTypes[_attachmentCursor]);
-                string desc = cursorUnlocked
-                    ? _attachmentDescriptions[_attachmentCursor]
-                    : (UnlockTracker.GetAttachmentUnlockHint(_attachmentTypes[_attachmentCursor]) ?? "");
-                if (desc.Length > 0)
-                    spriteBatch.DrawString(_font, desc, new Vector2(x, descY),
-                        cursorUnlocked ? Color.LightGray : Color.Orange);
-            }
-        }
-
-        private void DrawConfirmSection(SpriteBatch spriteBatch, Viewport viewport)
-        {
-            int startY = viewport.Height - 150;
-
-            Color sectionColor  = _currentMode == SelectionMode.Confirm ? Color.Yellow : Color.White;
-            string sectionTitle = _currentMode == SelectionMode.Confirm ? "> Ready?" : "  Ready?";
-            DrawCentered(spriteBatch, sectionTitle, startY - 40, sectionColor);
-
-            string[] opts = { "Start Game", "Back" };
-            for (int i = 0; i < opts.Length; i++)
-            {
-                bool isCursor = i == _confirmCursor && _currentMode == SelectionMode.Confirm;
-                var text = (isCursor ? "> " : "  ") + opts[i];
-                DrawCentered(spriteBatch, text, startY + i * 40, isCursor ? Color.Yellow : Color.White);
+                string prefix = unlocked ? (selected ? "[EQUIPPED] " : "") : "[LOCKED] ";
+                DrawUiString(spriteBatch, prefix + name, new Vector2(rowRect.X + 10, rowRect.Y + 12), unlocked ? Color.Navy : Color.LightGray);
             }
         }
 
         // -----------------------------------------------------------------------
         // Utilities
         // -----------------------------------------------------------------------
+        private Rectangle GetPlayerTabRect(Viewport viewport)
+            => new Rectangle(viewport.Width / 2 - 310, 90, 280, 42);
+
+        private Rectangle GetAttachmentTabRect(Viewport viewport)
+            => new Rectangle(viewport.Width / 2 + 30, 90, 280, 42);
+
+        private Rectangle GetSlotRect(Viewport viewport, int slotIndex)
+            => new Rectangle(viewport.Width / 2 - 280, 145 + slotIndex * 96, 560, 84);
+
+        private Rectangle GetClearSlotButtonRect(Viewport viewport, int slotIndex)
+        {
+            Rectangle slotRect = GetSlotRect(viewport, slotIndex);
+            return new Rectangle(slotRect.X - 56, slotRect.Y + 18, 44, 48);
+        }
+
+        private Rectangle GetListAreaRect(Viewport viewport)
+            => new Rectangle(70, viewport.Height - 300, viewport.Width - 140, 240);
+
+        private Rectangle GetStartButtonRect(Viewport viewport)
+            => new Rectangle(viewport.Width - 315, 135, 270, 72);
+
+        private Rectangle GetBackButtonRect(Viewport viewport)
+            => new Rectangle(viewport.Width - 315, 220, 270, 72);
+
+        private int GetVisibleListRows(Viewport viewport)
+            => Math.Max(1, (GetListAreaRect(viewport).Height - 20) / 52);
+
+        private string GetPlayerItemName(ItemType item)
+        {
+            int index = Array.IndexOf(_playerItemTypes, item);
+            return index >= 0 ? _playerItemNames[index] : item.ToString();
+        }
+
+        private string GetAttachmentName(BlasterAttachmentType attachment)
+        {
+            int index = Array.IndexOf(_attachmentTypes, attachment);
+            return index >= 0 ? _attachmentNames[index] : attachment.ToString();
+        }
+
         private void DrawCentered(SpriteBatch spriteBatch, string text, int y, Color color)
         {
-            var sz  = _font!.MeasureString(text);
+            var sz  = _font!.MeasureString(text) * UiScale;
             var pos = new Vector2(_graphics.GraphicsDevice.Viewport.Width / 2f - sz.X / 2f, y);
-            spriteBatch.DrawString(_font, text, pos, color);
+            DrawUiString(spriteBatch, text, pos, color);
+        }
+
+        private void DrawUiString(SpriteBatch spriteBatch, string text, Vector2 position, Color color)
+        {
+            spriteBatch.DrawString(_font!, text, position, color, 0f, Vector2.Zero, UiScale, SpriteEffects.None, 0f);
+        }
+
+        private const float UiScale = 0.9f;
+
+        private void DrawRectOutline(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)
+        {
+            spriteBatch.Draw(_pixel!, new Rectangle(rect.X, rect.Y, rect.Width, thickness), color);
+            spriteBatch.Draw(_pixel!, new Rectangle(rect.X, rect.Bottom - thickness, rect.Width, thickness), color);
+            spriteBatch.Draw(_pixel!, new Rectangle(rect.X, rect.Y, thickness, rect.Height), color);
+            spriteBatch.Draw(_pixel!, new Rectangle(rect.Right - thickness, rect.Y, thickness, rect.Height), color);
         }
 
         private bool IsKeyPressed(Keys key)
@@ -592,7 +878,9 @@ namespace PolyGone
             {
                 string? dir = Path.GetDirectoryName(_loadoutSavePath);
                 if (dir != null && !Directory.Exists(dir))
+                {
                     Directory.CreateDirectory(dir);
+                }
 
                 var data = new
                 {
@@ -608,7 +896,10 @@ namespace PolyGone
         {
             try
             {
-                if (!File.Exists(_loadoutSavePath)) return;
+                if (!File.Exists(_loadoutSavePath))
+                {
+                    return;
+                }
 
                 string json = File.ReadAllText(_loadoutSavePath);
                 using var doc = JsonDocument.Parse(json);
@@ -621,7 +912,9 @@ namespace PolyGone
                     {
                         int val = item.GetInt32();
                         if (Enum.IsDefined(typeof(ItemType), val))
+                        {
                             _lastSelectedPlayerItems.Add((ItemType)val);
+                        }
                     }
                 }
 
@@ -632,7 +925,9 @@ namespace PolyGone
                     {
                         int val = att.GetInt32();
                         if (Enum.IsDefined(typeof(BlasterAttachmentType), val))
+                        {
                             _lastSelectedAttachments.Add((BlasterAttachmentType)val);
+                        }
                     }
                 }
             }
