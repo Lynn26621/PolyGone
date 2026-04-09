@@ -47,7 +47,7 @@ public class GameUI
         spriteBatch.Draw(itemIndicatorTexture, new Rectangle(x, y, barWidth, barHeight), srcRect, Color.DarkRed);
         
         // Foreground (health)
-        int healthWidth = (int)((player.health / (float)player.maxHealth) * barWidth);
+        int healthWidth = (int)((player.Health / (float)player.MaxHealth) * barWidth);
         spriteBatch.Draw(itemIndicatorTexture, new Rectangle(x, y, healthWidth, barHeight), srcRect, Color.Red);
         
     }

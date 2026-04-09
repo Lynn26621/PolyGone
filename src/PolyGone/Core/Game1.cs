@@ -10,8 +10,6 @@ public class Game1 : Game
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
     private SceneManager sceneManager;
-    private KeyboardState _previousKeyboardState;
-    private GamePadState _previousGamePadState;
 
     public Game1()
     {
@@ -87,16 +85,9 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
-        var keyboardState = Keyboard.GetState();
-        var gamePadState = GamePad.GetState(PlayerIndex.One);
-
-        // Update centralized input manager
         InputManager.Update(gameTime);
 
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
-            Exit();
-
-        if (IsKeyPressed(Keys.Escape, keyboardState))
+        if (InputManager.PauseMenuOpen())
         {
             if (sceneManager.GetCurrentScene() is PauseScene)
             {
@@ -109,35 +100,11 @@ public class Game1 : Game
                 InputManager.ResetClickCooldown();
             }
         }
-        if (IsButtonPressed(Buttons.Start, gamePadState))
-        {
-            if (sceneManager.GetCurrentScene() is PauseScene)
-            {
-                sceneManager.PopScene(sceneManager.GetCurrentScene());
-            }
-            else if (sceneManager.GetCurrentScene() is GameScene gameScene)
-            {
-                sceneManager.AddScene(new PauseScene(Content, sceneManager, _graphics, gameScene));
-                // Reset click cooldown when opening pause menu
-                InputManager.ResetClickCooldown();
-            }
-        }
-
         // TODO: Add your update logic here
         sceneManager.GetCurrentScene().Update(gameTime);
-        _previousKeyboardState = keyboardState;
-        _previousGamePadState = GamePad.GetState(PlayerIndex.One);
         base.Update(gameTime);
     }
-    // Same logic below but add gamepad support 
-    private bool IsKeyPressed(Keys key, KeyboardState currentState)
-    {
-        return currentState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
-    }
-    private bool IsButtonPressed(Buttons button, GamePadState currentState)
-    {
-        return currentState.IsButtonDown(button) && !_previousGamePadState.IsButtonDown(button);
-    }
+    
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(Color.White);

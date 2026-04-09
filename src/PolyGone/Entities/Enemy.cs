@@ -18,7 +18,7 @@ class Enemy : Entity
     public Enemy(Texture2D texture, Vector2 position, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, float patrolSpeed = 1f, int[]? visualSize = null)
         : base(texture, position, size, health, color, srcRect, collisionMap, visualSize)
     {
-        this.friction = 0.9f; // Enemy has default friction
+        this.Friction = 0.9f; // Enemy has default friction
         this.patrolSpeed = patrolSpeed;
     }
 
@@ -28,7 +28,7 @@ class Enemy : Entity
         {
             case Projectile projectile:
                 // Only take damage from player projectiles
-                if (projectile.owner == Owner.Player)
+                if (projectile.Owner == Owner.Player)
                 {
                     HandleProjectileHit(projectile);
                 }
@@ -47,12 +47,14 @@ class Enemy : Entity
         }
 
         // Add this projectile's damage to accumulated damage
-        accumulatedDamage += projectile.damage;
+        accumulatedDamage += projectile.Damage;
         hitProjectiles.Add(projectile);
 
         // Expire the projectile unless it's piercing (piercing goes through enemies)
         if (!projectile.IsPiercing)
-            projectile.lifetime = 0f;
+        {
+            projectile.Lifetime = 0f;
+        }
 
         // Apply knockback from the first projectile only (to prevent excessive knockback)
         if (hitProjectiles.Count == 1)
@@ -64,17 +66,17 @@ class Enemy : Entity
     private void ApplyKnockback(Projectile projectile)
     {
         float knockbackStrength = 8f;
-        Vector2 projectileVelocity = new Vector2(projectile.xSpeed, projectile.ySpeed);
+        Vector2 projectileVelocity = new Vector2(projectile.XSpeed, projectile.YSpeed);
         if (projectileVelocity != Vector2.Zero)
         {
             projectileVelocity.Normalize();
-            changeX += projectileVelocity.X * knockbackStrength;
-            changeY += projectileVelocity.Y * knockbackStrength;
+            ChangeX += projectileVelocity.X * knockbackStrength;
+            ChangeY += projectileVelocity.Y * knockbackStrength;
         }
         else
         {
             // Fallback: if projectile has no velocity, apply a simple upward knockback
-            changeY -= knockbackStrength;
+            ChangeY -= knockbackStrength;
         }
     }
 
@@ -87,7 +89,7 @@ class Enemy : Entity
             // When damage window closes, apply accumulated damage and start invincibility
             if (damageWindow <= 0f && accumulatedDamage > 0)
             {
-                health -= accumulatedDamage; // Apply accumulated damage
+                Health -= accumulatedDamage; // Apply accumulated damage
                 accumulatedDamage = 0;
                 hitProjectiles.Clear();
             }
@@ -98,7 +100,7 @@ class Enemy : Entity
     {
         
         // Only check ahead if we're on the ground
-        if (!isOnGround)
+        if (!IsOnGround)
         {
             return;
         }
@@ -119,7 +121,7 @@ class Enemy : Entity
         }
         
         // Set horizontal velocity (not position directly)
-        changeX = patrolDirection * patrolSpeed;
+        ChangeX = patrolDirection * patrolSpeed;
     }
 
 

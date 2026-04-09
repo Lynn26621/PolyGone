@@ -62,7 +62,7 @@ class TurretEnemy : Enemy
             ySpeed: direction.Y * BULLET_SPEED,
             owner: Owner.Enemy,
             srcRect: srcRect,
-            collisionMap: collisionMap
+            collisionMap: CollisionMap
         ));
     }
 
@@ -83,7 +83,7 @@ class TurretEnemy : Enemy
         for (int i = Bullets.Count - 1; i >= 0; i--)
         {
             Bullets[i].Update(gameTime);
-            if (Bullets[i].lifetime <= 0)
+            if (Bullets[i].Lifetime <= 0)
             {
                 Bullets.RemoveAt(i);
             }

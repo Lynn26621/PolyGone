@@ -18,28 +18,20 @@ namespace PolyGone.Entities
         private const float VERTICAL_GAP_NUDGE_STRENGTH = 20f; // Strong nudge for vertical movement through gaps
         private const float HORIZONTAL_GAP_NUDGE_STRENGTH = 15f; // Medium nudge for horizontal gap funneling
         
-        private KeyboardState keyboardState;
-        private KeyboardState previousKeyboardState;
-        private GamePadState gamePadState;
-        private GamePadState previousGamePadState;
-        private float thumbstickX;
-        private float thumbstickY;
-        private bool usingController = false;
-        private Vector2 rightThumbstick;
         private Item? currentWeapon; // Single selected weapon
         private readonly List<Item> itemInventory = new List<Item>(); // Pre-selected items (max 2)
-        public readonly List<Projectile> bullets = new List<Projectile>(); // Shared projectile list for all weapons
+        public readonly List<Projectile> Bullets = new List<Projectile>(); // Shared projectile list for all weapons
         private float ffCooldown = 0f;
         private float coyoteTime = 0f; // Allows jumping shortly after leaving a platform
         
         // Public property to access changeY for items
-        public float ChangeY => changeY;
+        public new float ChangeY => base.ChangeY;
         
         // Public property to access current weapon's cooldown for HUD
         public float Cooldown => GetBlaster()?.Cooldown ?? 0f;
 
         // Public property to control gravity (used by LowGravityItem)
-        public float GravityScale { get => gravityScale; set => gravityScale = value; }
+        public new float GravityScale { get => base.GravityScale; set => base.GravityScale = value; }
 
         // Jump velocity — scaled by LowGravityItem to keep peak height constant
         public float JumpStrength { get; set; } = -16.75f;
@@ -63,19 +55,19 @@ namespace PolyGone.Entities
             switch (selectedWeapon)
             {
                 case WeaponType.Blaster:
-                    currentWeapon = new Blaster(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.White, collisionMap, bullets, srcRect);
+                    currentWeapon = new Blaster(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.White, collisionMap, Bullets, srcRect);
                     break;
                 case WeaponType.Shotgun:
-                    currentWeapon = new Shotgun(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, collisionMap, bullets, srcRect);
+                    currentWeapon = new Shotgun(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, collisionMap, Bullets, srcRect);
                     break;
                 case WeaponType.Rifle:
-                    currentWeapon = new Rifle(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Black, collisionMap, bullets, srcRect);
+                    currentWeapon = new Rifle(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Black, collisionMap, Bullets, srcRect);
                     break;
                 case WeaponType.Automatic:
-                    currentWeapon = new Automatic(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Cyan, collisionMap, bullets, srcRect);
+                    currentWeapon = new Automatic(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Cyan, collisionMap, Bullets, srcRect);
                     break;
                 case WeaponType.VoidLance:
-                    currentWeapon = new VoidLance(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(180, 0, 220), collisionMap, bullets, srcRect);
+                    currentWeapon = new VoidLance(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(180, 0, 220), collisionMap, Bullets, srcRect);
                     break;
             }
             
@@ -120,7 +112,7 @@ namespace PolyGone.Entities
                 }
             }
             
-            this.friction = 0.8f; // Player has more friction for tighter control
+            this.Friction = 0.8f; // Player has more friction for tighter control
         }
 
         protected override void HandleVerticalCollision(ref bool onGround, ref float deltaY, List<(Rectangle, CollisionType)> collisions)
@@ -144,7 +136,7 @@ namespace PolyGone.Entities
                     deltaY = 0;
                     break;
                 case CollisionType.SemiSolid:
-                    if (keyboardState.IsKeyDown(Keys.S) || (thumbstickY < -0.5f))
+                    if (InputManager.GameDrop())
                     {
                         // Drop through platform
                         position.Y += deltaY;
@@ -167,36 +159,31 @@ namespace PolyGone.Entities
         // Handle player input and jumping
         private void HandleInput()
         {
-            previousKeyboardState = keyboardState;
-            keyboardState = Keyboard.GetState();
-            previousGamePadState = gamePadState;
-            gamePadState = GamePad.GetState(PlayerIndex.One);
-            thumbstickX = gamePadState.ThumbSticks.Left.X;
-            thumbstickY = gamePadState.ThumbSticks.Left.Y;
-            rightThumbstick = new Vector2(gamePadState.ThumbSticks.Right.X, -gamePadState.ThumbSticks.Right.Y);
-            if (Math.Abs(rightThumbstick.X) > 0.3f || Math.Abs(rightThumbstick.Y) > 0.3f || Math.Abs(thumbstickX) > 0.1f)
-            {
-                usingController = true;
-            }
             int moveDirection = 0;
 
             // Horizontal movement with speed boost consideration
-            if ((keyboardState.IsKeyDown(Keys.A) && !keyboardState.IsKeyDown(Keys.D)) || (thumbstickX < -0.3f)) moveDirection = -1;
-            else if ((keyboardState.IsKeyDown(Keys.D) && !keyboardState.IsKeyDown(Keys.A)) || (thumbstickX > 0.3f)) moveDirection = 1; 
+            if ((InputManager.GameMoveLeft() && !InputManager.GameMoveRight()))
+            {
+                moveDirection = -1;
+            }
+            else if ((InputManager.GameMoveRight() && !InputManager.GameMoveLeft()))
+            {
+                moveDirection = 1;
+            }
             
             // Apply acceleration with speed boost
             float speedMultiplier = GetSpeedBoostMultiplier();
-            changeX += moveDirection * 1f * speedMultiplier;
-            changeX = MathHelper.Clamp(changeX, -5f * speedMultiplier, 5f * speedMultiplier);
+            ChangeX += moveDirection * 1f * speedMultiplier;
+            ChangeX = MathHelper.Clamp(ChangeX, -5f * speedMultiplier, 5f * speedMultiplier);
 
             // Jumping with coyote time and double jump
-            bool spacePressed = keyboardState.IsKeyDown(Keys.Space) || gamePadState.Buttons.A == ButtonState.Pressed;
-            bool spaceJustPressed = spacePressed && !previousKeyboardState.IsKeyDown(Keys.Space) || previousGamePadState.Buttons.A != ButtonState.Pressed;
-            bool wasOnGroundLastFrame = isOnGround;
+            bool JumpTriggered = InputManager.GameJump();
+            bool JumpHappened = JumpTriggered && !InputManager.GameJumpPressed();
+            bool wasOnGroundLastFrame = IsOnGround;
             
-            if ((isOnGround || coyoteTime > 0f) && spacePressed)
+            if ((IsOnGround || coyoteTime > 0f) && JumpTriggered)
             {
-                changeY = JumpStrength;
+                base.ChangeY = JumpStrength;
                 coyoteTime = 0f; // Reset coyote time after jumping
                 GetActiveDoubleJumpItem()?.Reset(); // Allow double jump in the new air phase
             }
@@ -204,14 +191,14 @@ namespace PolyGone.Entities
             {
                 // Check for double jump
                 var doubleJumpItem = GetActiveDoubleJumpItem();
-                if (doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, spacePressed, wasOnGroundLastFrame))
+                if (doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, JumpTriggered, wasOnGroundLastFrame))
                 {
-                    changeY = JumpStrength; // Same jump strength for double jump
+                    base.ChangeY = JumpStrength; // Same jump strength for double jump
                 }
 #if DEBUG
-                else if (GetDevModeItem()?.IsActive == true && spaceJustPressed)
+                else if (GetDevModeItem()?.IsActive == true && JumpHappened)
                 {
-                    changeY = JumpStrength; // DEV: infinite jumps
+                    base.ChangeY = JumpStrength; // DEV: infinite jumps
                 }
 #endif
             }
@@ -225,53 +212,62 @@ namespace PolyGone.Entities
                     break;
                 case Projectile projectile:
                     // Only take damage from enemy projectiles
-                    if (projectile.owner == Owner.Enemy && invincibilityFrames <= 0f)
+                    if (projectile.Owner == Owner.Enemy && InvincibilityFrames <= 0f)
                     {
 #if DEBUG
-                        if (GetDevModeItem()?.IsActive == true) break;
+                        if (GetDevModeItem()?.IsActive == true)
+                        {
+                            break;
+                        }
 #endif
-                        health -= projectile.damage;
-                        if (health <= 0)
+                        Health -= projectile.Damage;
+                        if (Health <= 0)
                         {
                             TryAbsorbLethalHit();
                         }
 
                         // Apply knockback in the direction the projectile was travelling
-                        Vector2 projectileVelocity = new Vector2(projectile.xSpeed, projectile.ySpeed);
+                        Vector2 projectileVelocity = new Vector2(projectile.XSpeed, projectile.YSpeed);
                         if (projectileVelocity != Vector2.Zero)
                         {
                             projectileVelocity.Normalize();
-                            changeX = projectileVelocity.X * 10f;
-                            changeY = projectileVelocity.Y * 10f - 5f; // extra upward bias
+                            ChangeX = projectileVelocity.X * 10f;
+                            base.ChangeY = projectileVelocity.Y * 10f - 5f; // extra upward bias
                         }
 
-                        invincibilityFrames = 60f;
+                        InvincibilityFrames = 60f;
 
                         // Despawn the projectile on contact
-                        projectile.lifetime = 0f;
+                        projectile.Lifetime = 0f;
                     }
                     break;
                 case Enemy:
                     // Only take damage if not invincible
-                    if (invincibilityFrames <= 0f)
+                    if (InvincibilityFrames <= 0f)
                     {
 #if DEBUG
-                        if (GetDevModeItem()?.IsActive == true) break;
+                        if (GetDevModeItem()?.IsActive == true)
+                        {
+                            break;
+                        }
 #endif
                         // Take 40 damage
-                        health -= 40;
-                        if (health <= 0) TryAbsorbLethalHit();
-                        
+                        Health -= 40;
+                        if (Health <= 0)
+                        {
+                            TryAbsorbLethalHit();
+                        }
+
                         // Calculate knockback direction (away from enemy)
                         float knockbackX = position.X < other.position.X ? -10f : 10f;
                         float knockbackY = -20f;
                         
                         // Apply knockback
-                        changeX = knockbackX;
-                        changeY = knockbackY / 2; // Reduced vertical knockback for better feel
+                        ChangeX = knockbackX;
+                        base.ChangeY = knockbackY / 2; // Reduced vertical knockback for better feel
                         
                         // Set invincibility frames (roughly 1 second at 60fps)
-                        invincibilityFrames = 60f;
+                        InvincibilityFrames = 60f;
                     }
                     break;
             }
@@ -286,7 +282,7 @@ namespace PolyGone.Entities
         protected override void OnVerticalMovementComplete(float deltaTime)
         {
             // Player-specific vertical gap centering (stronger than base)
-            if (Math.Abs(changeY) > 0.1f && collisionMap != null)
+            if (Math.Abs(base.ChangeY) > 0.1f && CollisionMap != null)
             {
                 int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
                 int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);
@@ -304,14 +300,14 @@ namespace PolyGone.Entities
         protected override void OnHorizontalMovementComplete(float deltaTime)
         {
             // Gap funneling: when walking over a 1-tile gap and pressing S, funnel down through it
-            if ((isOnGround && keyboardState.IsKeyDown(Keys.S)) || (thumbstickY < -0.5f && collisionMap != null))
+            if ((IsOnGround || coyoteTime > 0f) && InputManager.GameDrop() && CollisionMap != null)
             {
                 int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
                 int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);
                 
                 // Check if there's a semi-solid platform directly below
                 var keyBelow = new Vector2(playerTileX, playerTileY + 1);
-                bool semiSolidBelow = collisionMap.TryGetValue(keyBelow, out int belowTileId) &&
+                bool semiSolidBelow = CollisionMap.TryGetValue(keyBelow, out int belowTileId) &&
                                       belowTileId != -1 &&
                                       CollisionTypeMapper.GetCollisionType(belowTileId) == CollisionType.SemiSolid;
                 
@@ -338,7 +334,10 @@ namespace PolyGone.Entities
             {
                 float nudge = Math.Sign(offset) * nudgeStrength;
                 if (Math.Abs(nudge) > Math.Abs(offset))
+                {
                     nudge = offset;
+                }
+
                 position.X += nudge;
             }
         }
@@ -376,7 +375,9 @@ namespace PolyGone.Entities
         {
             var ironWill = GetReadyIronWillItem();
             if (ironWill != null && ironWill.TryAbsorbLethalHit())
-                health = 1;
+            {
+                Health = 1;
+            }
         }
 
         // Helper method to get the currently equipped blaster/weapon
@@ -386,7 +387,7 @@ namespace PolyGone.Entities
         }
 
         // Public property to access current blaster for backward compatibility
-        public Blaster blaster => GetBlaster();
+        public Blaster Blaster => GetBlaster();
 
         // Public method to access item inventory for UI
         public List<Item> GetAllItems()
@@ -406,7 +407,7 @@ namespace PolyGone.Entities
             base.Update(gameTime);
             
             // Update coyote time after physics update to use current frame's ground state
-            coyoteTime = isOnGround
+            coyoteTime = IsOnGround
                 ? 6f // 0.1 seconds at 60fps
                 : Math.Max(0f, coyoteTime - 1f);
 
@@ -415,7 +416,7 @@ namespace PolyGone.Entities
             if (currentBlaster != null)
             {
 #if DEBUG
-                int bulletCountBefore = bullets.Count;
+                int bulletCountBefore = Bullets.Count;
 #endif
                 currentBlaster.Follow(new Rectangle((int)position.X, (int)position.Y, size[0], size[1]), cameraOffset);
                 currentBlaster.Use();
@@ -423,20 +424,22 @@ namespace PolyGone.Entities
 #if DEBUG
                 if (GetDevModeItem()?.IsActive == true)
                 {
-                    for (int i = bulletCountBefore; i < bullets.Count; i++)
-                        bullets[i].IsInstantKill = true;
+                    for (int i = bulletCountBefore; i < Bullets.Count; i++)
+                    {
+                        Bullets[i].IsInstantKill = true;
+                    }
                 }
 #endif
             }
             
             // Update all bullets (shared across all weapons) - iterate backwards for safe removal
-            for (int i = bullets.Count - 1; i >= 0; i--)
+            for (int i = Bullets.Count - 1; i >= 0; i--)
             {
-                var bullet = bullets[i];
-                bullet.lifetime -= 1f;
-                if (bullet.lifetime <= 0f)
+                var bullet = Bullets[i];
+                bullet.Lifetime -= 1f;
+                if (bullet.Lifetime <= 0f)
                 {
-                    bullets.RemoveAt(i);
+                    Bullets.RemoveAt(i);
                 }
                 else
                 {
@@ -473,9 +476,13 @@ namespace PolyGone.Entities
                 {
                     for (int y = -4; y <= 4; y++)
                     {
-                        if (x == 0 && y == 0) continue; // Skip center
+                        if (x == 0 && y == 0)
+                        {
+                            continue; // Skip center
+                        }
+
                         Vector2 glowOffset = new Vector2(x, y);
-                        spriteBatch.Draw(texture, position - offset + hitboxOffset + glowOffset, srcRect, glowColor);
+                        spriteBatch.Draw(texture, position - offset + HitboxOffset + glowOffset, srcRect, glowColor);
                     }
                 }
             }
@@ -487,7 +494,7 @@ namespace PolyGone.Entities
             currentBlaster?.Draw(spriteBatch, offset);
             
             // Draw all bullets (shared across all weapons)
-            foreach (var bullet in bullets)
+            foreach (var bullet in Bullets)
             {
                 bullet.Draw(spriteBatch, offset);
             }

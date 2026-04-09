@@ -41,7 +41,11 @@ public static class UnlockTracker
     public static bool IsLevelUnlocked(string levelFile)
     {
         int idx = Array.IndexOf(_levelOrder, levelFile);
-        if (idx <= 0) return true; // first level (or unknown) always unlocked
+        if (idx <= 0)
+        {
+            return true; // first level (or unknown) always unlocked
+        }
+
         return _completedLevels.Contains(_levelOrder[idx - 1]);
     }
 
@@ -49,8 +53,16 @@ public static class UnlockTracker
     public static string? GetLevelUnlockHint(string levelFile)
     {
         int idx = Array.IndexOf(_levelOrder, levelFile);
-        if (idx <= 0) return null;
-        if (_completedLevels.Contains(_levelOrder[idx - 1])) return null;
+        if (idx <= 0)
+        {
+            return null;
+        }
+
+        if (_completedLevels.Contains(_levelOrder[idx - 1]))
+        {
+            return null;
+        }
+
         return $"Complete {GetLevelDisplayName(_levelOrder[idx - 1])} to unlock";
     }
 
@@ -58,10 +70,16 @@ public static class UnlockTracker
     public static bool IsItemUnlocked(ItemType item)
     {
 #if DEBUG
-        if (item == ItemType.DevMode) return true;
+        if (item == ItemType.DevMode)
+        {
+            return true;
+        }
 #endif
         if (!_itemUnlockRequirements.TryGetValue(item, out var requiredLevel))
+        {
             return true; // No requirement — always unlocked
+        }
+
         return _completedLevels.Contains(requiredLevel);
     }
 
@@ -72,7 +90,10 @@ public static class UnlockTracker
     public static string? GetUnlockHint(ItemType item)
     {
         if (!_itemUnlockRequirements.TryGetValue(item, out var level))
+        {
             return null;
+        }
+
         return $"Complete {GetLevelDisplayName(level)} to unlock";
     }
 
@@ -97,11 +118,17 @@ public static class UnlockTracker
         _completedLevels = new HashSet<string>();
         try
         {
-            if (!File.Exists(SavePath)) return;
+            if (!File.Exists(SavePath))
+            {
+                return;
+            }
+
             string json = File.ReadAllText(SavePath);
             var raw = JsonSerializer.Deserialize<List<string>>(json);
             if (raw != null)
+            {
                 _completedLevels = new HashSet<string>(raw);
+            }
         }
         catch { }
     }
@@ -110,14 +137,20 @@ public static class UnlockTracker
     public static void RecordLevelComplete(string levelName)
     {
         if (_completedLevels.Add(levelName))
+        {
             Save();
+        }
     }
 
     /// <summary>Clears all unlock data from memory and disk (used for testing/reset).</summary>
     public static void Reset()
     {
         _completedLevels = new HashSet<string>();
-        try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
+        try { if (File.Exists(SavePath))
+            {
+                File.Delete(SavePath);
+            }
+        } catch { }
     }
 
 #if DEBUG
@@ -128,7 +161,10 @@ public static class UnlockTracker
     public static void ToggleLevelComplete(string levelFile)
     {
         if (!_completedLevels.Add(levelFile))
+        {
             _completedLevels.Remove(levelFile);
+        }
+
         Save();
     }
 #endif
@@ -139,7 +175,10 @@ public static class UnlockTracker
         {
             string? dir = Path.GetDirectoryName(SavePath);
             if (dir != null && !Directory.Exists(dir))
+            {
                 Directory.CreateDirectory(dir);
+            }
+
             File.WriteAllText(SavePath, JsonSerializer.Serialize(new List<string>(_completedLevels)));
         }
         catch { }
