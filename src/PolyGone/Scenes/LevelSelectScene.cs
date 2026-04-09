@@ -17,8 +17,8 @@ namespace PolyGone
         private readonly SceneManager _sceneManager;
         private readonly AudioManager _audioManager;
         private readonly GraphicsDeviceManager _graphics;
-        private readonly string[] _levelNames = { "Test Level 1", "Test Level 2", "Test Level 3", "Back to Menu" };
-        private readonly string?[] _levelFiles = { "TestLevel", "TestLevel2", "TestLevel3", null };
+        private readonly string[] _levelNames = { "Hub", "Test Level 1", "Test Level 2", "Test Level 3", "Back to Menu" };
+        private readonly string?[] _levelFiles = { "Hub", "TestLevel", "TestLevel2", "TestLevel3", null };
         private int _selectedIndex;
 
         public LevelSelect(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)

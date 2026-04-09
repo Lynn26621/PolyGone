@@ -33,6 +33,7 @@ namespace PolyGone.Core
         public void Reset()
         {
             IsTriggered = false;
+            DoorEntered = false;
         }
     }
 }

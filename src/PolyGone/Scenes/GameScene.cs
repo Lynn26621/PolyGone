@@ -10,6 +10,7 @@ using System;
 using PolyGone.Entities;
 using PolyGone.Graphics;
 using PolyGone.Core;
+using System.Diagnostics;
 
 namespace PolyGone;
 
@@ -178,7 +179,8 @@ public class GameScene : IScene
                             );
                             int doorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
                             int doorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                            string connectedLevel = obj.GetProperty("level").GetString() ?? "Hub";
+                            string connectedLevel = (string)(obj.GetProperty("connectedLevel").GetString() ?? "Hub"); //Pulling from array in the JSON seems to cause error
+                            Debug.WriteLine(connectedLevel);
                             levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, connectedLevel));
                             break;
                         default:
@@ -323,6 +325,12 @@ public class GameScene : IScene
         }
         levelComplete = false;
         gameOver = false;
+
+        // Reset Doors
+        foreach (var door in levelDoors)
+        {
+            door.Reset();
+        }
     }
     
     public void Update(GameTime gameTime)
@@ -443,6 +451,16 @@ public class GameScene : IScene
                 levelComplete = true;
                 // Transition to win scene with current loadout
                 sceneManager.AddScene(new WinScene(contentManager, sceneManager, audioManager, graphics, levelName, selectedItems, selectedAttachments));
+            }
+        }
+
+        //Check if player enters door
+        foreach (var door in levelDoors)
+        {
+            door.CheckTrigger(player.Rectangle);
+            if (door.IsTriggered && !door.DoorEntered)
+            {
+                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.ConnectedLevel, selectedItems, selectedAttachments));
             }
         }
     }
