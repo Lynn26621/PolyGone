@@ -182,7 +182,8 @@ namespace PolyGone
         {
             if (_font == null)
             {
-                try { _font = _content.Load<SpriteFont>("Fonts/PauseMenu"); }
+                try
+                { _font = _content.Load<SpriteFont>("Fonts/PauseMenu"); }
                 catch { }
             }
             _audioManager.PlayAudio("null", false, "menuSong", true);
@@ -846,7 +847,7 @@ namespace PolyGone
 
         private void DrawCentered(SpriteBatch spriteBatch, string text, int y, Color color)
         {
-            var sz  = _font!.MeasureString(text) * UiScale;
+            var sz = _font!.MeasureString(text) * UiScale;
             var pos = new Vector2(_graphics.GraphicsDevice.Viewport.Width / 2f - sz.X / 2f, y);
             DrawUiString(spriteBatch, text, pos, color);
         }
