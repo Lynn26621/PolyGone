@@ -42,8 +42,9 @@ public class GameScene : IScene
     private readonly List<ItemType> selectedItems;
     private readonly List<BlasterAttachmentType> selectedAttachments;
     private readonly string levelName;
+    private string previousLevel;
 
-    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
+    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", string previousLevel = "Hub", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
     {       
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
@@ -52,6 +53,7 @@ public class GameScene : IScene
         this.selectedItems = selectedItems ?? new List<ItemType>();
         this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
         this.levelName = levelName;
+        this.previousLevel = previousLevel;
         LoadMapFromJson("Maps/" + levelName + ".json");
         textureStore = GetTextureStore(32, new int[2] { 4, 4 });
     }
@@ -172,16 +174,32 @@ public class GameScene : IScene
                             int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
                             goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight);
                             break;
-                        case "Door": // Add to hub map in Tiled
+                        case "Door":
                             Vector2 doorPos = AdjustCoordinates(
                                 obj.GetProperty("x").GetSingle(),
                                 obj.GetProperty("y").GetSingle()
                             );
                             int doorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
                             int doorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                            string connectedLevel = (string)(obj.GetProperty("connectedLevel").GetString() ?? "Hub"); //Pulling from array in the JSON seems to cause error
-                            Debug.WriteLine(connectedLevel);
-                            levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, connectedLevel));
+                            string connectedLevel = "Hub";
+                            string locatedLevel = "Hub";
+                            List<JsonElement> properties = obj.GetProperty("properties").EnumerateArray().ToList();
+                            foreach (JsonElement prop in properties)
+                            {
+                                string? propName = prop.GetProperty("name").GetString();
+                                switch (propName)
+                                {
+                                    case "connectedLevel":
+                                        connectedLevel = (string)(prop.GetProperty("value").GetString() ?? "Hub");
+                                        break;
+                                    case "locatedLevel":
+                                        locatedLevel = (string)(prop.GetProperty("value").GetString() ?? "Hub");
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                            levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, connectedLevel, locatedLevel, audioManager));
                             break;
                         default:
                             break;
@@ -406,6 +424,12 @@ public class GameScene : IScene
                 turret.Update(gameTime);
         }
 
+        // Update Doors
+        foreach (var door in levelDoors)
+        {
+            door.Update();
+        }
+
         // Before removing dead turrets, rescue any live bullets they still own
         foreach (var turret in turretEnemies)
         {
@@ -458,9 +482,10 @@ public class GameScene : IScene
         foreach (var door in levelDoors)
         {
             door.CheckTrigger(player.Rectangle);
-            if (door.IsTriggered && !door.DoorEntered)
+            if (door.IsTriggered && door.IsActivated)
             {
-                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.ConnectedLevel, selectedItems, selectedAttachments));
+                previousLevel = levelName;
+                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.ConnectedLevel, previousLevel, selectedItems, selectedAttachments)); //Add previous level argument to all game scene instances
             }
         }
     }
@@ -488,6 +513,18 @@ public class GameScene : IScene
         foreach (var bullet in orphanedTurretBullets)
         {
             bullet.Draw(spriteBatch, camera.position);
+        }
+        foreach (var door in levelDoors)
+        {
+            Rectangle doorRect = door.GetBounds();
+            Rectangle doorDest = new Rectangle(
+                (int)(doorRect.X - camera.position.X),
+                (int)(doorRect.Y - camera.position.Y),
+                doorRect.Width,
+                doorRect.Height
+            );
+            Color doorColor = door.IsTriggered ? Color.Gold : Color.SaddleBrown;
+            spriteBatch.Draw(texture, doorDest, textureStore[0], doorColor * 0.5f);
         }
         player.Draw(spriteBatch, camera.position);
         

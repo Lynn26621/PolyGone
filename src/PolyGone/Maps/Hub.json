@@ -3,7 +3,7 @@
  "infinite":false,
  "layers":[
         {
-         "data":[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         "data":[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
             1, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             1, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             1, 1, 1, 1, 1, 1, 1, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -22,7 +22,7 @@
             1, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             1, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             1, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14],
          "height":20,
          "id":1,
          "name":"Tiles",
@@ -61,13 +61,18 @@
                          "name":"connectedLevel",
                          "type":"string",
                          "value":"TestLevel3"
+                        }, 
+                        {
+                         "name":"locatedLevel",
+                         "type":"string",
+                         "value":"Hub"
                         }],
                  "rotation":0,
                  "type":"Door",
                  "visible":true,
                  "width":32,
                  "x":96,
-                 "y":191.875
+                 "y":224
                 }, 
                 {
                  "height":32,
@@ -79,13 +84,18 @@
                          "name":"connectedLevel",
                          "type":"string",
                          "value":"TestLevel2"
+                        }, 
+                        {
+                         "name":"locatedLevel",
+                         "type":"string",
+                         "value":"Hub"
                         }],
                  "rotation":0,
                  "type":"Door",
                  "visible":true,
                  "width":32,
                  "x":96,
-                 "y":319.625
+                 "y":352
                 }, 
                 {
                  "height":32,
@@ -97,13 +107,18 @@
                          "name":"connectedLevel",
                          "type":"string",
                          "value":"TestLevel"
+                        }, 
+                        {
+                         "name":"locatedLevel",
+                         "type":"string",
+                         "value":"Hub"
                         }],
                  "rotation":0,
                  "type":"Door",
                  "visible":true,
                  "width":32,
                  "x":96,
-                 "y":447.625
+                 "y":480
                 }, 
                 {
                  "gid":2,
@@ -115,8 +130,8 @@
                  "type":"",
                  "visible":true,
                  "width":32,
-                 "x":95.8636363636364,
-                 "y":607.863636363636
+                 "x":96,
+                 "y":608
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -156,7 +171,7 @@
          "y":0
         }],
  "nextlayerid":4,
- "nextobjectid":12,
+ "nextobjectid":17,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",
