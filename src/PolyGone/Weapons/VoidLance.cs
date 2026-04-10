@@ -24,7 +24,7 @@ namespace PolyGone.Weapons
 
         public override void Use()
         {
-            if (InputManager.IsLeftMouseButtonClicked() && cooldown <= 0f)
+            if (InputManager.GameShootSingle() && cooldown <= 0f)
             {
                 bullets.Add(new Projectile(
                     texture: texture,

@@ -20,7 +20,7 @@ public class Entity : Sprite
     protected float Friction; // Horizontal friction multiplier in range [0, 1]; 1 keeps full velocity (no friction), 0 stops movement immediately (maximum friction)
     protected readonly int[] VisualSize; // Visual size for drawing (can be larger than hitbox)
     protected Vector2 HitboxOffset; // Offset to center the hitbox within the visual sprite
-    protected bool IsAlive = true;
+    public bool IsAlive = true;
     /// <summary>Multiplier applied to gravity each physics tick. 1 = normal, lower = floatier.</summary>
     protected float GravityScale = 1f;
     

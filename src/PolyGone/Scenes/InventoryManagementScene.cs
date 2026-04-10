@@ -37,12 +37,6 @@ namespace PolyGone
     {
         private Texture2D? _pixel;
         private SpriteFont? _font;
-        private KeyboardState keyboardState;
-        private KeyboardState previousKeyboardState;
-        private GamePadState gamePadState;
-        private GamePadState previousGamePadState;
-        private float thumbstickX;
-        private float thumbstickY;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
         private readonly GraphicsDeviceManager _graphics;
@@ -129,8 +123,6 @@ namespace PolyGone
             _sceneManager = sceneManager;
             _graphics = graphics;
             _levelFile = levelFile;
-            previousKeyboardState = Keyboard.GetState();
-            previousGamePadState = GamePad.GetState(PlayerIndex.One);
 
             // Initialize with last selected values, filtering out any that are now locked
             _selectedItems = new List<ItemType>(_lastSelectedItems.FindAll(UnlockTracker.IsItemUnlocked));
@@ -154,27 +146,19 @@ namespace PolyGone
 
         public void Update(GameTime gameTime)
         {
-            keyboardState = Keyboard.GetState();
-            gamePadState = GamePad.GetState(PlayerIndex.One);
-            thumbstickX = gamePadState.ThumbSticks.Left.X;
-            thumbstickY = gamePadState.ThumbSticks.Left.Y;
 
             // Check for Control key to skip inventory and start with current selections
-            if (keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl) || IsButtonPressed(Buttons.Back))
+            if (InputManager.LoadoutSkip())
             {
                 // Start game with current selections (which were loaded from last time)
                 StartGame();
-                previousKeyboardState = keyboardState;
-                previousGamePadState= gamePadState;
                 return;
             }
 
             // Check for Escape key to go back to previous screen
-            if (InputManager.IsEscapeKeyPressed())
+            if (InputManager.MenuBack())
             {
                 _sceneManager.PopScene(this);
-                previousKeyboardState = keyboardState;
-                previousGamePadState= gamePadState;
                 return;
             }
 
@@ -193,9 +177,6 @@ namespace PolyGone
                     UpdateConfirmSelection();
                     break;
             }
-
-            previousKeyboardState = keyboardState;
-            previousGamePadState = gamePadState;
         }
 
         private void HandleMouseNavigation()
@@ -218,7 +199,7 @@ namespace PolyGone
                     _currentMode = SelectionMode.Items;
                     _itemCursor = i;
 
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         ItemType selectedItem = _itemTypes[_itemCursor];
                         if (UnlockTracker.IsItemUnlocked(selectedItem))
@@ -259,7 +240,7 @@ namespace PolyGone
                     _currentMode = SelectionMode.Weapon;
                     _weaponCursor = i;
 
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         _selectedWeapon = _weaponTypes[_weaponCursor];
                         InputManager.ConsumeClick();
@@ -282,7 +263,7 @@ namespace PolyGone
                     _currentMode = SelectionMode.Confirm;
                     _confirmCursor = i;
 
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         if (_confirmCursor == 0)
                         {
@@ -300,17 +281,17 @@ namespace PolyGone
 
         private void UpdateItemSelection()
         {
-            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp) || IsThumbstickUp())
+            if (InputManager.MenuUp())
             {
                 _itemCursor = (_itemCursor - 1 + _itemNames.Length) % _itemNames.Length;
             }
 
-            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickUp())
+            if (InputManager.MenuDown())
             {
                 _itemCursor = (_itemCursor + 1) % _itemNames.Length;
             }
 
-            if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space) || IsButtonPressed(Buttons.A))
+            if (InputManager.MenuConfirm())
             {
                 ItemType selectedItem = _itemTypes[_itemCursor];
 
@@ -338,7 +319,7 @@ namespace PolyGone
 #endif
             }
 
-            if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) || (IsButtonPressed(Buttons.DPadRight) && !keyboardState.IsKeyDown(Keys.LeftShift) || IsButtonPressed(Buttons.Y))))
+            if (InputManager.LoadoutSectionRight())
             {
                 // Move to weapon selection
                 _currentMode = SelectionMode.Weapon;
@@ -347,29 +328,29 @@ namespace PolyGone
 
         private void UpdateWeaponSelection()
         {
-            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp))
+            if (InputManager.MenuUp())
             {
                 _weaponCursor = (_weaponCursor - 1 + _weaponNames.Length) % _weaponNames.Length;
             }
 
-            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown))
+            if (InputManager.MenuDown())
             {
                 _weaponCursor = (_weaponCursor + 1) % _weaponNames.Length;
             }
 
-            if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space) || IsButtonPressed(Buttons.A))
+            if (InputManager.MenuConfirm())
             {
                 // Select weapon
                 _selectedWeapon = _weaponTypes[_weaponCursor];
             }
 
-            if (IsKeyPressed(Keys.Left) || (IsKeyPressed(Keys.Tab) || (IsButtonPressed(Buttons.DPadLeft) || IsThumbstickLeft()) && keyboardState.IsKeyDown(Keys.LeftShift) || IsButtonPressed(Buttons.Y)))
+            if (InputManager.LoadoutSectionLeft())
             {
                 // Move back to item selection
                 _currentMode = SelectionMode.Items;
             }
 
-            if (IsKeyPressed(Keys.Right) || (IsKeyPressed(Keys.Tab) || (IsButtonPressed(Buttons.DPadRight) || IsThumbstickRight()) && !keyboardState.IsKeyDown(Keys.LeftShift) || IsButtonPressed(Buttons.Y)))
+            if (InputManager.LoadoutSectionRight())
             {
                 // Move to confirm
                 _currentMode = SelectionMode.Confirm;
@@ -378,12 +359,12 @@ namespace PolyGone
 
         private void UpdateConfirmSelection()
         {
-            if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadUp) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickUp() || IsThumbstickDown())
+            if (InputManager.MenuUp() || InputManager.MenuDown())
             {
                 _confirmCursor = (_confirmCursor + 1) % 2;
             }
 
-            if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))
+            if (InputManager.MenuConfirm())
             {
                 if (_confirmCursor == 0)
                 {
@@ -397,7 +378,7 @@ namespace PolyGone
                 }
             }
 
-            if (IsKeyPressed(Keys.Left) || (IsKeyPressed(Keys.Tab) || (IsButtonPressed(Buttons.DPadLeft) || IsThumbstickLeft()) && keyboardState.IsKeyDown(Keys.LeftShift) || IsButtonPressed(Buttons.Y)))
+            if (InputManager.LoadoutSectionLeft())
             {
                 // Move back to weapon selection
                 _currentMode = SelectionMode.Weapon;
@@ -574,42 +555,6 @@ namespace PolyGone
                 var optionSize = _font.MeasureString(optionText);
                 spriteBatch.DrawString(_font, optionText, new Vector2(viewport.Width / 2f - optionSize.X / 2f, startY + i * 40), color);
             }
-        }
-
-        private bool IsKeyPressed(Keys key)
-        {
-            return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
-        }
-
-        private bool IsButtonPressed(Buttons button)
-        {
-            return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
-        }
-        private float previousThumbstickY = 0f;
-        private bool IsThumbstickUp()
-        {
-            bool wasUp = previousThumbstickY > 0.5f;
-            bool isUp = thumbstickY > 0.5f;
-            previousThumbstickY = thumbstickY;
-            return isUp && !wasUp;
-        }
-        private bool IsThumbstickDown()
-        {
-            bool wasDown = previousThumbstickY < -0.5f;
-            bool isDown = thumbstickY < -0.5f;
-            return isDown && !wasDown;
-        }
-        private bool IsThumbstickRight()
-        {
-            bool wasRight = thumbstickX > 0.5f;
-            bool isRight = thumbstickX > 0.5f;
-            return isRight && !wasRight;
-        }
-        private bool IsThumbstickLeft()
-        {
-            bool wasLeft = thumbstickX < -0.5f;
-            bool isLeft = thumbstickX < -0.5f;
-            return isLeft && !wasLeft;
         }
 
         private static void SaveLoadout()

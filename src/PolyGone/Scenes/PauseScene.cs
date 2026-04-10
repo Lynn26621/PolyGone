@@ -17,12 +17,6 @@ internal class PauseScene : IScene
 {
     private Texture2D _pixel;
     private SpriteFont _font;
-    private KeyboardState keyboardState;
-    private KeyboardState previousKeyboardState;
-    private GamePadState gamePadState;
-    private GamePadState previousGamePadState;
-    private float _thumbstickX;
-    private float _thumbstickY;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
@@ -37,8 +31,6 @@ internal class PauseScene : IScene
         _sceneManager = sceneManager;
         _graphics = graphics;
         _gameScene = gameScene;
-        previousKeyboardState = Keyboard.GetState();
-        previousGamePadState = GamePad.GetState(PlayerIndex.One);
         _selectedIndex = 0;
     }
 
@@ -52,10 +44,6 @@ internal class PauseScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        keyboardState = Keyboard.GetState();
-        gamePadState = GamePad.GetState(PlayerIndex.One);
-        _thumbstickX = gamePadState.ThumbSticks.Left.X;
-        _thumbstickY = gamePadState.ThumbSticks.Left.Y;
 
         // Mouse navigation
         if (_font != null)
@@ -75,7 +63,7 @@ internal class PauseScene : IScene
                     _selectedIndex = i;
                     
                     // Mouse click with InputManager
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         ExecuteSelection();
                         InputManager.ConsumeClick();
@@ -85,23 +73,21 @@ internal class PauseScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp) || IsThumbstickUp())
+        if (InputManager.MenuUp())
         {
             _selectedIndex = (_selectedIndex - 1 + _options.Length) % _options.Length;
         }
 
-        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickDown())
+        if (InputManager.MenuDown())
         {
             _selectedIndex = (_selectedIndex + 1) % _options.Length;
         }
 
-        if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))
+        if (InputManager.MenuConfirm())
         {
             ExecuteSelection();
         }
 
-        previousKeyboardState = keyboardState;
-        previousGamePadState = gamePadState;
     }
 
     private void ExecuteSelection()
@@ -174,29 +160,4 @@ internal class PauseScene : IScene
             }
         }
     }
-
-    private bool IsKeyPressed(Keys key)
-    {
-        return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
-    }
-    private bool IsButtonPressed(Buttons button)
-    {
-        return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
-    }
-    private float _previousThumbstickY = 0f;                                            
-    private bool IsThumbstickUp()
-    {
-        bool wasUp = _previousThumbstickY > 0.5f;
-        bool isUp = _thumbstickY > 0.5f;
-        _previousThumbstickY = _thumbstickY;
-        return isUp && !wasUp;
-    }
-    private bool IsThumbstickDown()
-    {
-        bool wasDown = _previousThumbstickY < -0.5f;
-        bool isDown = _thumbstickY < -0.5f;
-        return isDown && !wasDown;
-    }
-
-
 }

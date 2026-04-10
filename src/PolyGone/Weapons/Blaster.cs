@@ -88,7 +88,7 @@ namespace PolyGone.Weapons
         public override void Use()
         {
             // Handle shooting with InputManager to prevent click carryover
-            if (InputManager.IsLeftMouseButtonClicked() && cooldown <= 0f)
+            if (InputManager.GameShootSingle() && cooldown <= 0f)
             {
                 // Central / base bullet
                 bullets.Add(new Projectile(

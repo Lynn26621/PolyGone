@@ -21,7 +21,7 @@ namespace PolyGone.Weapons
         public override void Use()
         {
             // Handle shooting with spread using InputManager
-            if (InputManager.IsLeftMouseButtonClicked() && cooldown <= 0f)
+            if (InputManager.GameShootSingle() && cooldown <= 0f)
             {
                 // Shotgun fires base pellets + any extras from MultiShotItem
                 int pelletCount = 5 + ExtraBulletsPerShot;

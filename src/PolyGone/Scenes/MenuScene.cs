@@ -24,12 +24,6 @@ namespace PolyGone
     {
         private Texture2D _pixel;
         private SpriteFont _font;
-        private KeyboardState keyboardState;
-        private KeyboardState previousKeyboardState;
-        private GamePadState gamePadState;
-        private GamePadState previousGamePadState;
-        private float thumbstickX;
-        private float thumbstickY;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
         private readonly GraphicsDeviceManager _graphics;
@@ -46,8 +40,6 @@ namespace PolyGone
             _content = content;
             _sceneManager = sceneManager;
             _graphics = graphics;
-            previousKeyboardState = Keyboard.GetState();
-            previousGamePadState = GamePad.GetState(PlayerIndex.One);
             _selectedIndex = 0;
         }
 
@@ -66,21 +58,17 @@ namespace PolyGone
 
         public void Update(GameTime gameTime)
         {
-            keyboardState = Keyboard.GetState();
-            gamePadState = GamePad.GetState(PlayerIndex.One);
-            thumbstickX = gamePadState.ThumbSticks.Left.X;
-            thumbstickY = gamePadState.ThumbSticks.Left.Y;
 
             if (_confirmingAction)
             {
                 // Left/Right or A/D to switch between Yes and No
-                if (IsKeyPressed(Keys.Left) || IsKeyPressed(Keys.A) || IsButtonPressed(Buttons.DPadLeft) || IsThumbstickLeft())
+                if (InputManager.MenuLeft())
                     _confirmSelectedIndex = 0;
-                if (IsKeyPressed(Keys.Right) || IsKeyPressed(Keys.D) || IsButtonPressed(Buttons.DPadRight) || IsThumbstickRight())
+                if (InputManager.MenuRight())
                     _confirmSelectedIndex = 1;
 
                 // Enter or Y to confirm
-                if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Y) || IsButtonPressed(Buttons.A))
+                if (InputManager.MenuConfirm())
                 {
                     if (_confirmSelectedIndex == 0)
                         _confirmedAction?.Invoke();
@@ -89,7 +77,7 @@ namespace PolyGone
                 }
 
                 // Escape or N to cancel
-                if (IsKeyPressed(Keys.Escape) || IsKeyPressed(Keys.N) || IsButtonPressed(Buttons.B))
+                if (InputManager.MenuBack())
                     _confirmingAction = false;
 
                 // Mouse support for confirmation buttons
@@ -109,7 +97,7 @@ namespace PolyGone
                     if (yesBounds.Contains(InputManager.GetMousePosition()))
                     {
                         _confirmSelectedIndex = 0;
-                        if (InputManager.IsLeftMouseButtonClicked())
+                        if (InputManager.MenuConfirm())
                         {
                             _confirmedAction?.Invoke();
                             InputManager.ConsumeClick();
@@ -118,16 +106,13 @@ namespace PolyGone
                     else if (noBounds.Contains(InputManager.GetMousePosition()))
                     {
                         _confirmSelectedIndex = 1;
-                        if (InputManager.IsLeftMouseButtonClicked())
+                        if (InputManager.MenuConfirm())
                         {
                             _confirmingAction = false;
                             InputManager.ConsumeClick();
                         }
                     }
                 }
-
-                previousKeyboardState = keyboardState;
-                previousGamePadState = gamePadState;
                 return;
             }
 
@@ -149,7 +134,7 @@ namespace PolyGone
                         _selectedIndex = i;
                         
                         // Mouse click with InputManager
-                        if (InputManager.IsLeftMouseButtonClicked())
+                        if (InputManager.MenuConfirm())
                         {
                             ExecuteSelection();
                             InputManager.ConsumeClick();
@@ -159,23 +144,20 @@ namespace PolyGone
             }
 
             // Keyboard navigation
-            if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp) || IsThumbstickUp())
+            if (InputManager.MenuUp())
             {
                 _selectedIndex = (_selectedIndex - 1 + _options.Length) % _options.Length;
             }
 
-            if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickDown())
+            if (InputManager.MenuDown())
             {
                 _selectedIndex = (_selectedIndex + 1) % _options.Length;
             }
 
-            if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))
+            if (InputManager.MenuConfirm())
             {
                 ExecuteSelection();
             }
-
-            previousKeyboardState = keyboardState;
-            previousGamePadState = gamePadState;
         }
 
         private void ExecuteSelection()
@@ -281,42 +263,6 @@ namespace PolyGone
                 spriteBatch.DrawString(_font, "No",  noPos,  _confirmSelectedIndex == 1 ? Color.Yellow : Color.White);
             }
         }
-
-        private bool IsKeyPressed(Keys key)
-        {
-            return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
-        }
-        private bool IsButtonPressed(Buttons button)
-        {
-            return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
-        }
-        private float previousThumbstickY = 0f;
-        private bool IsThumbstickUp()
-        {
-            bool wasUp = previousThumbstickY > 0.5f;
-            bool isUp = thumbstickY > 0.5f;
-            previousThumbstickY = thumbstickY;
-            return isUp && !wasUp;
-        }
-        private bool IsThumbstickDown()
-        {
-            bool wasDown = previousThumbstickY < -0.5f;
-            bool isDown = thumbstickY < -0.5f;
-            return isDown && !wasDown;
-        }
-        private bool IsThumbstickRight()
-        {
-            bool wasRight = thumbstickX > 0.5f;
-            bool isRight = thumbstickX > 0.5f;
-            return isRight && !wasRight;
-        }
-        private bool IsThumbstickLeft()
-        {
-            bool wasLeft = thumbstickX < -0.5f;
-            bool isLeft = thumbstickX < -0.5f;
-            return isLeft && !wasLeft;
-        }
-
 
     }
 }

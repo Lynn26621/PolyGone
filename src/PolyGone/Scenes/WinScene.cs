@@ -18,12 +18,6 @@ public class WinScene : IScene
     private readonly WeaponType selectedWeapon;
     private SpriteFont font;
     private Texture2D pixel;
-    private KeyboardState keyboardState;
-    private KeyboardState previousKeyboardState;
-    private GamePadState gamePadState;
-    private GamePadState previousGamePadState;
-    private float thumbstickX;
-    private float thumbstickY;
     private readonly string[] options;
     private int selectedIndex;
     private static List<string>? levelOrder;
@@ -48,8 +42,6 @@ public class WinScene : IScene
             options = new[] { "Level Select", "Main Menu" };
         }
         
-        previousKeyboardState = Keyboard.GetState();
-        previousGamePadState = GamePad.GetState(PlayerIndex.One);
         selectedIndex = 0;
 
         // Record this level as completed so locked items can be unlocked
@@ -73,8 +65,6 @@ public class WinScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        keyboardState = Keyboard.GetState();
-        gamePadState = GamePad.GetState(PlayerIndex.One);
 
         // Mouse navigation
         if (font != null)
@@ -94,7 +84,7 @@ public class WinScene : IScene
                     selectedIndex = i;
                     
                     // Mouse click with InputManager
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         ExecuteSelection();
                         InputManager.ConsumeClick();
@@ -104,46 +94,21 @@ public class WinScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp) || IsThumbstickUp())
+        if (InputManager.MenuUp())
         {
             selectedIndex = (selectedIndex - 1 + options.Length) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickDown())
+        if (InputManager.MenuDown())
         {
             selectedIndex = (selectedIndex + 1) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Enter) || IsButtonPressed(Buttons.A))
+        if (InputManager.MenuConfirm())
         {
             ExecuteSelection();
         }
 
-        previousKeyboardState = keyboardState;
-        previousGamePadState = gamePadState;
-    }
-    
-    private bool IsKeyPressed(Keys key)
-    {
-        return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
-    }
-    private bool IsButtonPressed(Buttons button)
-    {
-        return gamePadState.IsButtonDown(button) && !previousGamePadState.IsButtonDown(button);
-    }
-    private float previousThumbstickY = 0f;
-    private bool IsThumbstickUp()
-    {
-        bool wasUp = previousThumbstickY > 0.5f;
-        bool isUp = thumbstickY > 0.5f;
-        previousThumbstickY = thumbstickY;
-        return isUp && !wasUp;
-    }
-    private bool IsThumbstickDown()
-    {
-        bool wasDown = previousThumbstickY < -0.5f;
-        bool isDown = thumbstickY < -0.5f;
-        return isDown && !wasDown;
     }
 
     private void ExecuteSelection()

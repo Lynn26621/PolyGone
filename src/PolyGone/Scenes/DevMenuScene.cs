@@ -10,12 +10,6 @@ internal class DevMenuScene : IScene
 {
     private Texture2D? _pixel;
     private SpriteFont? _font;
-    private KeyboardState _keyboardState;
-    private KeyboardState _previousKeyboardState;
-    private GamePadState _gamePadState;
-    private GamePadState _previousGamePadState;
-    private float thumbstickX;
-    private float thumbstickY;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
@@ -32,8 +26,6 @@ internal class DevMenuScene : IScene
         _content               = content;
         _sceneManager          = sceneManager;
         _graphics              = graphics;
-        _previousKeyboardState = Keyboard.GetState();
-        _previousGamePadState   = GamePad.GetState(PlayerIndex.One);
     }
 
     public void Load()
@@ -47,10 +39,6 @@ internal class DevMenuScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        _keyboardState = Keyboard.GetState();
-        _gamePadState   = GamePad.GetState(PlayerIndex.One);
-        thumbstickX = _gamePadState.ThumbSticks.Left.X;
-        thumbstickY = _gamePadState.ThumbSticks.Left.Y;
 
         if (_font != null)
         {
@@ -68,7 +56,7 @@ internal class DevMenuScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _cursor = i;
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         UnlockTracker.ToggleLevelComplete(LevelFiles[i]);
                         InputManager.ConsumeClick();
@@ -84,7 +72,7 @@ internal class DevMenuScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _cursor = LevelFiles.Length + i;
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         ExecuteAction(_cursor);
                         InputManager.ConsumeClick();
@@ -93,13 +81,10 @@ internal class DevMenuScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up) || IsButtonPressed(Buttons.DPadUp) || IsThumbstickUp()) _cursor = (_cursor - 1 + EntryCount) % EntryCount;
-        if (IsKeyPressed(Keys.Down) || IsButtonPressed(Buttons.DPadDown) || IsThumbstickDown()) _cursor = (_cursor + 1) % EntryCount;
-        if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space) || IsButtonPressed(Buttons.A)) ExecuteAction(_cursor);
-        if (InputManager.IsEscapeKeyPressed() || IsButtonPressed(Buttons.B)) _sceneManager.PopScene(this);
-
-        _previousKeyboardState = _keyboardState;
-        _previousGamePadState = _gamePadState;
+        if (InputManager.MenuUp()) _cursor = (_cursor - 1 + EntryCount) % EntryCount;
+        if (InputManager.MenuDown()) _cursor = (_cursor + 1) % EntryCount;
+        if (InputManager.MenuConfirm()) ExecuteAction(_cursor);
+        if (InputManager.MenuBack()) _sceneManager.PopScene(this);
     }
 
     private void ExecuteAction(int index)
@@ -198,25 +183,5 @@ internal class DevMenuScene : IScene
                 new Vector2(rightX, startY + i * 40), color);
         }
     }
-
-    private bool IsKeyPressed(Keys key) =>
-        _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
-    private bool IsButtonPressed(Buttons button) =>
-        _gamePadState.IsButtonDown(button) && !_previousGamePadState.IsButtonDown(button);
-    private float _previousThumbstickY = 0f;
-    private bool IsThumbstickUp()
-    {
-        bool wasUp = _previousThumbstickY > 0.5f;
-        bool isUp = thumbstickY > 0.5f;
-        _previousThumbstickY = thumbstickY;
-        return isUp && !wasUp;
-    }
-    private bool IsThumbstickDown()
-    {
-        bool wasDown = _previousThumbstickY < -0.5f;
-        bool isDown = thumbstickY < -0.5f;
-        return isDown && !wasDown;
-    }
-
 }
 #endif
