@@ -31,8 +31,10 @@ public class GameScene : IScene
     private bool playerSpawnFound = false;
     private readonly List<Vector2> enemySpawns = new(); // Store enemy spawn positions
     private readonly List<Vector2> turretEnemySpawns = new(); // Store turret spawn positions
+    private readonly List<Vector2> berserkEnemySpawns = new(); // Store berserk spawn positions
     private readonly List<Entity> enemies = new(); // Placeholder for enemy list
     private readonly List<TurretEnemy> turretEnemies = new(); // Stationary blaster enemies
+    private readonly List<BerserkEnemy> berserkEnemies = new(); // Chasing enemies that shoot when low health
     private readonly List<Projectile> orphanedTurretBullets = new(); // Bullets that outlive their turret
     private GoalTrigger goalTrigger; // Win condition trigger
     private bool levelComplete = false;
@@ -161,6 +163,13 @@ public class GameScene : IScene
                             );
                             turretEnemySpawns.Add(turretPos);
                             break;
+                        case "BerserkEnemy":
+                            Vector2 berserkPos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            berserkEnemySpawns.Add(berserkPos);
+                            break;
                         case "Goal":
                             Vector2 goalPos = AdjustCoordinates(
                                 obj.GetProperty("x").GetSingle(),
@@ -253,6 +262,19 @@ public class GameScene : IScene
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
+        // Initialize berserk enemies
+        berserkEnemies.AddRange(berserkEnemySpawns.Select(spawnPos => new BerserkEnemy(
+            texture: texture,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 400,
+            color: Color.White,
+            srcRect: textureStore[2],
+            collisionMap: collisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
         // Initialize patrol enemies from spawn positions
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
             texture: texture,
@@ -287,6 +309,20 @@ public class GameScene : IScene
             health: 80,
             color: Color.White,
             srcRect: textureStore[6],
+            collisionMap: collisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Reset berserk enemies
+        berserkEnemies.Clear();
+        berserkEnemies.AddRange(berserkEnemySpawns.Select(spawnPos => new BerserkEnemy(
+            texture: texture,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 400,
+            color: Color.White,
+            srcRect: textureStore[2],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
@@ -379,12 +415,38 @@ public class GameScene : IScene
             if (turret.position.Y > worldMaxY)
                 turret.HandleDeath();
         }
+        // Check berserk enemies for falling out of bounds
+        foreach (var berserk in berserkEnemies)
+        {
+            if (berserk.position.Y > worldMaxY)
+            {
+                berserk.HandleDeath();
+            }
+            else if (berserk.position.X < 0)
+            {
+                berserk.position.X = 0;
+            }
+            else if (berserk.position.X + berserk.size[0] > worldMaxX)
+            {
+                berserk.position.X = worldMaxX - berserk.size[0];
+            }
+        }  
 
         // Update alive turret enemies
         foreach (var turret in turretEnemies)
         {
             if (turret.IsAlive)
+            {
                 turret.Update(gameTime);
+            }
+        }
+        // Update alive berserk enemies
+        foreach (var berserk in berserkEnemies)
+        {
+            if (berserk.IsAlive)
+            {
+                berserk.Update(gameTime);
+            }
         }
 
         // Before removing dead turrets, rescue any live bullets they still own
@@ -396,8 +458,20 @@ public class GameScene : IScene
             }
         }
 
+        // Before removing dead berserk enemies, rescue any live bullets they still own
+        foreach (var berserk in berserkEnemies)
+        {
+            if (!berserk.IsAlive)
+            {
+                orphanedTurretBullets.AddRange(berserk.Bullets);
+            }
+        }
+
         // Remove turret enemies that died this frame
         turretEnemies.RemoveAll(t => !t.IsAlive);
+
+        // Remove berserk enemies that died this frame
+        berserkEnemies.RemoveAll(b => !b.IsAlive);
 
         // Advance and prune orphaned bullets
         for (int i = orphanedTurretBullets.Count - 1; i >= 0; i--)
@@ -410,7 +484,7 @@ public class GameScene : IScene
         }
 
         // Gather all entities for collision detection after all updates
-        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. player.bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. orphanedTurretBullets];
+        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. berserkEnemies, .. player.bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. berserkEnemies.SelectMany(b => b.Bullets), .. orphanedTurretBullets];
 
         // Handle entity-to-entity collisions
         player.EntityCollisionUpdate(allEntities);
@@ -421,6 +495,10 @@ public class GameScene : IScene
         foreach (var turret in turretEnemies)
         {
             turret.EntityCollisionUpdate(allEntities);
+        }
+        foreach (var berserk in berserkEnemies)
+        {
+            berserk.EntityCollisionUpdate(allEntities);
         }
         
         // Check for goal trigger
@@ -455,6 +533,10 @@ public class GameScene : IScene
         foreach (var turret in turretEnemies)
         {
             turret.Draw(spriteBatch, camera.position);
+        }
+        foreach (var berserk in berserkEnemies)
+        {
+            berserk.Draw(spriteBatch, camera.position);
         }
         foreach (var bullet in orphanedTurretBullets)
         {

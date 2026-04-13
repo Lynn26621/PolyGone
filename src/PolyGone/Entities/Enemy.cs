@@ -101,6 +101,10 @@ class Enemy : Entity
 
     private void PatrolUpdate()
     {
+        if (!ShouldPatrol())
+        {
+            return;
+        }
         
         // Only check ahead if we're on the ground
         if (!isOnGround)
@@ -124,8 +128,20 @@ class Enemy : Entity
         }
         
         // Set horizontal velocity (not position directly)
-        changeX = patrolDirection * patrolSpeed;
+        changeX = patrolDirection * patrolSpeed * GetPatrolSpeedMultiplier();
     }
+
+    protected virtual float GetPatrolSpeedMultiplier()
+    {
+        return 1f;
+    }
+
+    protected virtual bool ShouldPatrol()
+    {
+        return true;
+    }
+
+    protected float PatrolSpeed => patrolSpeed;
 
 
     public override void Update(GameTime gameTime)
