@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PolyGone.Core;
 
 namespace PolyGone;
 
@@ -13,17 +14,23 @@ internal class GameOverScene : IScene
     private SpriteFont? font;
     private readonly ContentManager content;
     private readonly SceneManager sceneManager;
+    private AudioManager audioManager;
     private readonly GraphicsDeviceManager graphics;
     private readonly GameScene gameScene;
     private readonly string[] options = { "Restart Level", "Change Loadout", "Level Select", "Main Menu" };
     private int selectedIndex;
 
-    public GameOverScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics, GameScene gameScene)
+    public GameOverScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, GameScene gameScene)
     {
         this.content = content;
         this.sceneManager = sceneManager;
         this.graphics = graphics;
         this.gameScene = gameScene;
+<<<<<<< Controller-Support
+=======
+        this.audioManager = audioManager;
+        previousKeyboardState = Keyboard.GetState();
+>>>>>>> DEV
         selectedIndex = 0;
     }
 
@@ -33,6 +40,7 @@ internal class GameOverScene : IScene
         {
             font = content.Load<SpriteFont>("Fonts/PauseMenu");
         }
+        audioManager.PlayAudio("null", false, "gameOverSong", true);
     }
 
     public void Update(GameTime gameTime)
@@ -85,21 +93,21 @@ internal class GameOverScene : IScene
     {
         string levelName = gameScene.GetLevelName();
         List<ItemType> currentItems = gameScene.GetSelectedItems();
-        WeaponType currentWeapon = gameScene.GetSelectedWeapon();
+        List<BlasterAttachmentType> currentAttachments = gameScene.GetSelectedAttachments();
 
         switch (options[selectedIndex])
         {
             case "Restart Level":
                 sceneManager.PopScene(this);
                 sceneManager.PopScene(gameScene);
-                sceneManager.AddScene(new GameScene(content, sceneManager, graphics, levelName, currentItems, currentWeapon));
+                sceneManager.AddScene(new GameScene(content, sceneManager, audioManager, graphics, levelName, currentItems, currentAttachments));
                 InputManager.ResetClickCooldown();
                 break;
 
             case "Change Loadout":
                 sceneManager.PopScene(this);
                 sceneManager.PopScene(gameScene);
-                sceneManager.AddScene(new InventoryManagement(content, sceneManager, graphics, levelName));
+                sceneManager.AddScene(new InventoryManagement(content, sceneManager, audioManager, graphics, levelName));
                 InputManager.ResetClickCooldown();
                 break;
 
@@ -114,9 +122,10 @@ internal class GameOverScene : IScene
                 // If no LevelSelect found in the stack, push one
                 if (sceneManager.GetCurrentScene() is not LevelSelect)
                 {
-                    sceneManager.AddScene(new LevelSelect(content, sceneManager, graphics));
+                    sceneManager.AddScene(new LevelSelect(content, sceneManager, audioManager, graphics));
                 }
                 InputManager.ResetClickCooldown();
+                audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
                 break;
 
             case "Main Menu":
@@ -128,9 +137,10 @@ internal class GameOverScene : IScene
                 }
                 if (sceneManager.GetCurrentScene() is not MenuScene)
                 {
-                    sceneManager.AddScene(new MenuScene(content, sceneManager, graphics));
+                    sceneManager.AddScene(new MenuScene(content, sceneManager, audioManager, graphics));
                 }
                 InputManager.ResetClickCooldown();
+                audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
                 break;
         }
     }

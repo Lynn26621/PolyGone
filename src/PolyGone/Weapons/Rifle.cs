@@ -4,18 +4,21 @@ using Microsoft.Xna.Framework.Input;
 using Math = System.Math;
 using System.Collections.Generic;
 using PolyGone.Entities;
+using PolyGone.Core;
 
 namespace PolyGone.Weapons
 {
     class Rifle : Blaster
     {
         public override float MaxCooldown => 60f; // Rifle has longer cooldown
+        private AudioManager audioManager;
 
-        public Rifle(Texture2D texture, Vector2 position, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
-            : base(texture, position, size, color, collisionMap, sharedBullets, srcRect)
+        public Rifle(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
+            : base(texture, position, audioManager, size, color, collisionMap, sharedBullets, srcRect)
         {
             Name = "Rifle";
             Description = "Long range weapon with high damage but slow fire rate.";
+            this.audioManager = audioManager;
         }
 
         public override void Use()
@@ -27,6 +30,7 @@ namespace PolyGone.Weapons
                     bullets.Add(new Projectile(
                         texture: texture,
                         position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
+                        audioManager: audioManager,
                         size: new int[2] { 11, 11 }, 
                         lifetime: 250, // Longer range than blaster
                         health: 3,
@@ -38,6 +42,8 @@ namespace PolyGone.Weapons
                         srcRect: srcRect,
                         collisionMap: collisionMap
                     ));
+
+                audioManager.PlayAudio("shootSfx", true, "null", false); //Play shoot sound effect
 
                 // Extra bullets from MultiShotItem
                 if (ExtraBulletsPerShot > 0)
@@ -51,6 +57,7 @@ namespace PolyGone.Weapons
                         bullets.Add(new Projectile(
                             texture: texture,
                             position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
+                            audioManager: audioManager,
                             size: new int[2] { 11, 11 },
                             lifetime: 250,
                             health: 3,

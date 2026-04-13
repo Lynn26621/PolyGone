@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Math = System.Math;
 using System.Collections.Generic;
 using PolyGone.Entities;
+using PolyGone.Core;
 
 namespace PolyGone.Weapons
 {
@@ -14,12 +15,14 @@ namespace PolyGone.Weapons
     class VoidLance : Blaster
     {
         public override float MaxCooldown => 50f; // Slow fire rate
+        private AudioManager audioManager;
 
-        public VoidLance(Texture2D texture, Vector2 position, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
-            : base(texture, position, size, color, collisionMap, sharedBullets, srcRect)
+        public VoidLance(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
+            : base(texture, position, audioManager, size, color, collisionMap, sharedBullets, srcRect)
         {
             Name = "Void Lance";
             Description = "Fires a slow, piercing bolt that passes through enemies.";
+            this.audioManager = audioManager;
         }
 
         public override void Use()
@@ -29,6 +32,7 @@ namespace PolyGone.Weapons
                 bullets.Add(new Projectile(
                     texture: texture,
                     position: new Vector2(position.X + size[0] / 2f - 7f, position.Y + size[1] / 2f - 7f),
+                    audioManager: audioManager,
                     size: new int[2] { 14, 14 }, // Bigger bolt
                     lifetime: 240f,              // Long range
                     health: 99,                  // Won't die from health damage
@@ -42,6 +46,8 @@ namespace PolyGone.Weapons
                     isPiercing: true             // Passes through enemies
                 ));
 
+                audioManager.PlayAudio("shootSfx", true, "null", false); //Play shoot sound effect
+
                 // Extra bullets from MultiShotItem
                 if (ExtraBulletsPerShot > 0)
                 {
@@ -54,6 +60,7 @@ namespace PolyGone.Weapons
                         bullets.Add(new Projectile(
                             texture: texture,
                             position: new Vector2(position.X + size[0] / 2f - 7f, position.Y + size[1] / 2f - 7f),
+                            audioManager: audioManager,
                             size: new int[2] { 14, 14 },
                             lifetime: 240f,
                             health: 99,

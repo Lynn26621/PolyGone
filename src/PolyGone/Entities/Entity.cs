@@ -1,15 +1,17 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Linq;
-using System.Collections.Generic;
+using PolyGone.Core;
 using PolyGone.Items;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace PolyGone;
 
 public class Entity : Sprite
 {
 
+<<<<<<< Controller-Support
     protected readonly Dictionary<Vector2, int>? CollisionMap;
     protected float ChangeX;
     protected float ChangeY;
@@ -21,6 +23,21 @@ public class Entity : Sprite
     protected readonly int[] VisualSize; // Visual size for drawing (can be larger than hitbox)
     protected Vector2 HitboxOffset; // Offset to center the hitbox within the visual sprite
     public bool IsAlive = true;
+=======
+    protected readonly Dictionary<Vector2, int>? collisionMap;
+    private AudioManager audioManager;
+    protected float changeX;
+    protected float changeY;
+    protected bool isOnGround;
+    public int health;
+    public readonly int maxHealth;
+    protected float invincibilityFrames;
+    protected float friction; // Horizontal friction multiplier in range [0, 1]; 1 keeps full velocity (no friction), 0 stops movement immediately (maximum friction)
+    protected readonly int[] visualSize; // Visual size for drawing (can be larger than hitbox)
+    protected Vector2 hitboxOffset; // Offset to center the hitbox within the visual sprite
+    protected bool isAlive = true;
+    public bool IsAlive => isAlive;
+>>>>>>> DEV
     /// <summary>Multiplier applied to gravity each physics tick. 1 = normal, lower = floatier.</summary>
     protected float GravityScale = 1f;
     
@@ -29,7 +46,7 @@ public class Entity : Sprite
     protected const int TILE_HALF_SIZE = TILE_SIZE / 2;
 
 
-    public Entity(Texture2D texture, Vector2 position, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, int[]? visualSize = null)
+    public Entity(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, int[]? visualSize = null)
         : base(texture, position, size, color, srcRect)
     {
         this.CollisionMap = collisionMap;
@@ -46,6 +63,7 @@ public class Entity : Sprite
             (this.VisualSize[0] - size[0]) / 2f, // Center horizontally
             this.VisualSize[1] - size[1] // Align bottom edges
         );
+        this.audioManager = audioManager;
     }
 
     protected virtual List<(Rectangle, CollisionType)> GetIntersectingTiles(Rectangle target)
@@ -167,7 +185,12 @@ public class Entity : Sprite
     public virtual void HandleDeath()
     {
         // Default implementation marks entity as not alive
+<<<<<<< Controller-Support
         IsAlive = false;
+=======
+        isAlive = false;
+        audioManager.PlayAudio("deathSfx", true, "null", false); //Play death sound effect
+>>>>>>> DEV
     }
 
     // Physics and collision update for non-player entities (no input)

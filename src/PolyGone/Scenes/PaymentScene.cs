@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PolyGone.Core;
 
 namespace PolyGone;
 
@@ -20,6 +21,7 @@ internal class PaymentScene : IScene
     private Texture2D? _pixel;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
+    private readonly AudioManager _audioManager;
     private readonly GraphicsDeviceManager _graphics;
 
     private string _pin = "";
@@ -31,10 +33,11 @@ internal class PaymentScene : IScene
     // Maximum chars rendered inside the PIN box (prevents overflow)
     private const int PinDisplayMax = 8;
 
-    public PaymentScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
+    public PaymentScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)
     {
         _content = content;
         _sceneManager = sceneManager;
+        _audioManager = audioManager;
         _graphics = graphics;
     }
 
@@ -154,7 +157,7 @@ internal class PaymentScene : IScene
     {
         FormbarSession.Clear();
         _sceneManager.PopScene(this);
-        _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _graphics));
+        _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _audioManager, _graphics));
     }
 
     // -----------------------------------------------------------------------

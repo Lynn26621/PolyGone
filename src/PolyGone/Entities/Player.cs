@@ -8,6 +8,7 @@ using System.Numerics;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using PolyGone.Weapons;
 using PolyGone.Items;
+using PolyGone.Core;
 
 namespace PolyGone.Entities
 {
@@ -18,6 +19,7 @@ namespace PolyGone.Entities
         private const float VERTICAL_GAP_NUDGE_STRENGTH = 20f; // Strong nudge for vertical movement through gaps
         private const float HORIZONTAL_GAP_NUDGE_STRENGTH = 15f; // Medium nudge for horizontal gap funneling
         
+        private AudioManager audioManager;
         private Item? currentWeapon; // Single selected weapon
         private readonly List<Item> itemInventory = new List<Item>(); // Pre-selected items (max 2)
         public readonly List<Projectile> Bullets = new List<Projectile>(); // Shared projectile list for all weapons
@@ -46,13 +48,17 @@ namespace PolyGone.Entities
             Dictionary<Vector2, int> collisionMap, 
             Texture2D blasterTexture, 
             List<ItemType> selectedItems, 
-            WeaponType selectedWeapon, 
+            List<BlasterAttachmentType> selectedAttachments,
+            AudioManager audioManager,
             int[]? visualSize = null
         )
-            : base(texture, position, size, health, color, srcRect, collisionMap, visualSize)
+            : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, visualSize)
         {
-            // Create the selected weapon
-            switch (selectedWeapon)
+            // Always use the Blaster as the base weapon
+            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, audioManager, new int[] { 32, 32 }, Color.White, collisionMap, bullets, srcRect);
+
+            // Apply blaster attachments to the freshly created blaster
+            foreach (var attachmentType in selectedAttachments)
             {
                 case WeaponType.Blaster:
                     currentWeapon = new Blaster(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.White, collisionMap, Bullets, srcRect);
@@ -69,9 +75,39 @@ namespace PolyGone.Entities
                 case WeaponType.VoidLance:
                     currentWeapon = new VoidLance(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(180, 0, 220), collisionMap, Bullets, srcRect);
                     break;
+                Item? attachment = null;
+                switch (attachmentType)
+                {
+                    case BlasterAttachmentType.MultiShot:
+                        attachment = new PolyGone.Items.MultiShotItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, srcRect);
+                        break;
+                    case BlasterAttachmentType.RapidFire:
+                        attachment = new PolyGone.Items.RapidFireItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Orange, srcRect);
+                        break;
+                    case BlasterAttachmentType.Piercing:
+                        attachment = new PolyGone.Items.PiercingAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(140, 0, 200), srcRect);
+                        break;
+                    case BlasterAttachmentType.DamageBoost:
+                        attachment = new PolyGone.Items.DamageBoostAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(255, 60, 0), srcRect);
+                        break;
+#if DEBUG
+                    case BlasterAttachmentType.DevBlaster:
+                        // DEV: Apply all attachment effects at once
+                        new PolyGone.Items.MultiShotItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, srcRect).Apply(this);
+                        new PolyGone.Items.RapidFireItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Orange, srcRect).Apply(this);
+                        new PolyGone.Items.PiercingAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(140, 0, 200), srcRect).Apply(this);
+                        new PolyGone.Items.DamageBoostAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(255, 60, 0), srcRect).Apply(this);
+                        break;
+#endif
+                }
+                if (attachment != null)
+                {
+                    itemInventory.Add(attachment);
+                    attachment.Apply(this);
+                }
             }
-            
-            // Create and activate the selected items
+
+            // Create and activate the selected player items
             foreach (var itemType in selectedItems)
             {
                 Item? item = null;
@@ -85,12 +121,6 @@ namespace PolyGone.Entities
                         break;
                     case ItemType.HealingGlow:
                         item = new HealingGlowItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Green, srcRect);
-                        break;
-                    case ItemType.MultiShot:
-                        item = new MultiShotItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, srcRect);
-                        break;
-                    case ItemType.RapidFire:
-                        item = new RapidFireItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Orange, srcRect);
                         break;
                     case ItemType.LowGravity:
                         item = new LowGravityItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Purple, srcRect);
@@ -112,7 +142,8 @@ namespace PolyGone.Entities
                 }
             }
             
-            this.Friction = 0.8f; // Player has more friction for tighter control
+            this.friction = 0.8f; // Player has more friction for tighter control
+            this.audioManager = audioManager; // Store reference to AudioManager for playing audio
         }
 
         protected override void HandleVerticalCollision(ref bool onGround, ref float deltaY, List<(Rectangle, CollisionType)> collisions)
@@ -183,7 +214,8 @@ namespace PolyGone.Entities
             
             if ((IsOnGround || coyoteTime > 0f) && JumpTriggered)
             {
-                base.ChangeY = JumpStrength;
+                changeY = JumpStrength;
+                audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect                 
                 coyoteTime = 0f; // Reset coyote time after jumping
                 GetActiveDoubleJumpItem()?.Reset(); // Allow double jump in the new air phase
             }
@@ -193,12 +225,14 @@ namespace PolyGone.Entities
                 var doubleJumpItem = GetActiveDoubleJumpItem();
                 if (doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, JumpTriggered, wasOnGroundLastFrame))
                 {
-                    base.ChangeY = JumpStrength; // Same jump strength for double jump
+                    changeY = JumpStrength; // Same jump strength for double jump
+                    audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #if DEBUG
                 else if (GetDevModeItem()?.IsActive == true && JumpHappened)
                 {
-                    base.ChangeY = JumpStrength; // DEV: infinite jumps
+                    changeY = JumpStrength; // DEV: infinite jumps
+                    audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #endif
             }
@@ -215,10 +249,9 @@ namespace PolyGone.Entities
                     if (projectile.Owner == Owner.Enemy && InvincibilityFrames <= 0f)
                     {
 #if DEBUG
-                        if (GetDevModeItem()?.IsActive == true)
-                        {
-                            break;
-                        }
+                        if (GetDevModeItem()?.IsActive == true) break;
+
+                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 #endif
                         Health -= projectile.Damage;
                         if (Health <= 0)
@@ -246,10 +279,16 @@ namespace PolyGone.Entities
                     if (InvincibilityFrames <= 0f)
                     {
 #if DEBUG
+<<<<<<< Controller-Support
                         if (GetDevModeItem()?.IsActive == true)
                         {
                             break;
                         }
+=======
+                        if (GetDevModeItem()?.IsActive == true) break;
+
+                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
+>>>>>>> DEV
 #endif
                         // Take 40 damage
                         Health -= 40;

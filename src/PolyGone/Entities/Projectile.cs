@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
+using PolyGone.Core;
 
 namespace PolyGone
 {
@@ -23,8 +24,8 @@ namespace PolyGone
         public bool IsPiercing { get; }
         /// <summary>When true, the projectile instantly kills any enemy it hits (DEV only).</summary>
         public bool IsInstantKill { get; set; } = false;
-        public Projectile(Texture2D texture, Vector2 position, int[] size, float lifetime, int health, Color color, float xSpeed, float ySpeed, Owner owner, int damage, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, bool isPiercing = false)
-            : base(texture, position, size, health, color, srcRect, collisionMap)
+        public Projectile(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, float lifetime, int health, Color color, float xSpeed, float ySpeed, Owner owner, int damage, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, bool isPiercing = false)
+            : base(texture, position, audioManager, size, health, color, srcRect, collisionMap)
         {
             this.XSpeed = xSpeed;
             this.YSpeed = ySpeed;

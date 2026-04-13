@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PolyGone.Core;
 
 namespace PolyGone
 {
@@ -12,16 +13,18 @@ namespace PolyGone
         private SpriteFont? _font;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
+        private readonly AudioManager _audioManager;
         private readonly GraphicsDeviceManager _graphics;
         private readonly string[] _levelNames = { "Test Level 1", "Test Level 2", "Test Level 3", "Back to Menu" };
         private readonly string?[] _levelFiles = { "TestLevel", "TestLevel2", "TestLevel3", null };
         private int _selectedIndex;
 
-        public LevelSelect(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
+        public LevelSelect(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)
         {
             _pixel = null;
             _content = content;
             _sceneManager = sceneManager;
+            _audioManager = audioManager;
             _graphics = graphics;
             _selectedIndex = 0;
         }
@@ -39,6 +42,7 @@ namespace PolyGone
                     // Font not available
                 }
             }
+            _audioManager.PlayAudio("null", false, "menuSong", true);
         }
 
         public void Update(GameTime gameTime)
@@ -134,19 +138,19 @@ namespace PolyGone
                 // Require Formbar login before accessing any level
                 if (!FormbarSession.IsLoggedIn)
                 {
-                    _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _graphics));
+                    _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _audioManager, _graphics));
                     return;
                 }
 
                 // If the player has already paid for all levels, go straight to loadout selection
                 if (PurchaseTracker.HasPurchased(FormbarSession.UserId, FormbarSession.AllLevelsKey))
                 {
-                    _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _graphics, levelFile));
+                    _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _audioManager, _graphics, levelFile));
                 }
                 else
                 {
                     // Safety net: payment should have happened upfront, but if not, require it now
-                    _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _graphics));
+                    _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _audioManager, _graphics));
                 }
             }
         }

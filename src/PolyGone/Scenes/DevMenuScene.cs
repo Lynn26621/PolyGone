@@ -157,17 +157,15 @@ internal class DevMenuScene : IScene
             spriteBatch.DrawString(_font, prefix + actions[i], new Vector2(startX, actionBaseY + i * 40), color);
         }
 
-        // ── Right column: item unlock status (read-only) ─────────────────
+        // ── Right column: item / attachment unlock status (read-only) ─────
         int rightX = vp.Width / 2 + 50;
-        spriteBatch.DrawString(_font, "Item Unlock Status:", new Vector2(rightX, startY - 40), Color.LightCyan);
+        spriteBatch.DrawString(_font, "Player Item Unlock Status:", new Vector2(rightX, startY - 40), Color.LightCyan);
 
         var allItems = new (ItemType Type, string Name, string Req)[]
         {
             (ItemType.DoubleJump,  "Double Jump",  "always"),
             (ItemType.SpeedBoost,  "Speed Boost",  "always"),
             (ItemType.HealingGlow, "Healing Glow", "Level 1"),
-            (ItemType.MultiShot,   "Multi-Shot",   "Level 1"),
-            (ItemType.RapidFire,   "Rapid Fire",   "Level 2"),
             (ItemType.LowGravity,  "Low Gravity",  "Level 2"),
             (ItemType.IronWill,    "Iron Will",    "Level 3"),
             (ItemType.DevMode,     "Dev Mode",     "always [DEV]"),
@@ -181,6 +179,27 @@ internal class DevMenuScene : IScene
             spriteBatch.DrawString(_font,
                 $"{prefix}{allItems[i].Name}  ({allItems[i].Req})",
                 new Vector2(rightX, startY + i * 40), color);
+        }
+
+        // Blaster attachment unlock status
+        int attY = startY + allItems.Length * 40 + 20;
+        spriteBatch.DrawString(_font, "Blaster Attachment Unlocks:", new Vector2(rightX, attY - 30), Color.LightCyan);
+        var allAttachments = new (BlasterAttachmentType Type, string Name, string Req)[]
+        {
+            (BlasterAttachmentType.MultiShot,   "Multi-Shot",     "always"),
+            (BlasterAttachmentType.RapidFire,   "Rapid Fire",     "Level 1"),
+            (BlasterAttachmentType.Piercing,    "Piercing Rounds","Level 2"),
+            (BlasterAttachmentType.DamageBoost, "Damage Amp",     "Level 3"),
+            (BlasterAttachmentType.DevBlaster,  "Dev Blaster",    "always [DEV]"),
+        };
+        for (int i = 0; i < allAttachments.Length; i++)
+        {
+            bool unlocked = UnlockTracker.IsAttachmentUnlocked(allAttachments[i].Type);
+            string prefix = unlocked ? "[+] " : "[ ] ";
+            Color color   = unlocked ? Color.LightGreen : Color.DarkGray;
+            spriteBatch.DrawString(_font,
+                $"{prefix}{allAttachments[i].Name}  ({allAttachments[i].Req})",
+                new Vector2(rightX, attY + i * 40), color);
         }
     }
 }

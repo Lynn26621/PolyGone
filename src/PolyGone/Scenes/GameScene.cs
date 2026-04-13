@@ -9,13 +9,21 @@ using System.Linq;
 using System;
 using PolyGone.Entities;
 using PolyGone.Graphics;
+using PolyGone.Core;
 
 namespace PolyGone;
 
 public class GameScene : IScene
 {
     private ContentManager contentManager;
-    private Texture2D texture;
+    private Texture2D playerSheet;
+    private Texture2D enemySheet;
+    private Texture2D miscSheet;
+    private Texture2D textureSheet;
+    private Texture2D foregroundSheet;
+    private Texture2D backgroundSheet;
+    private Texture2D collisionSheet;
+    private AudioManager audioManager;
     private SpriteFont hudFont;
     private SceneManager sceneManager;
     private Player player;
@@ -36,19 +44,20 @@ public class GameScene : IScene
     private bool levelComplete = false;
     private bool gameOver = false;
     private readonly List<ItemType> selectedItems;
-    private readonly WeaponType selectedWeapon;
+    private readonly List<BlasterAttachmentType> selectedAttachments;
     private readonly string levelName;
 
-    public GameScene(ContentManager contentManager, SceneManager sceneManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, WeaponType selectedWeapon = WeaponType.Blaster)
+    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
     {       
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
+        this.audioManager = audioManager;
         this.graphics = graphics;
-        this.selectedItems = selectedItems ?? new List<ItemType>(); // Default to empty list
-        this.selectedWeapon = selectedWeapon;
+        this.selectedItems = selectedItems ?? new List<ItemType>();
+        this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
         this.levelName = levelName;
         LoadMapFromJson("Maps/" + levelName + ".json");
-        textureStore = GetTextureStore(32, new int[2] { 4, 4 });
+        textureStore = GetTextureStore(32, new int[2] { 2, 2 });
     }
 
     // Public method to get the level name for restart functionality
@@ -56,7 +65,7 @@ public class GameScene : IScene
     
     // Public methods to get the current loadout for restart functionality
     public List<ItemType> GetSelectedItems() => new List<ItemType>(selectedItems);
-    public WeaponType GetSelectedWeapon() => selectedWeapon;
+    public List<BlasterAttachmentType> GetSelectedAttachments() => new List<BlasterAttachmentType>(selectedAttachments);
 
     // Generates a list of rectangles representing individual textures in a texture atlas
     public List<Rectangle> GetTextureStore(int textureSize, int[] gridSize)
@@ -188,9 +197,34 @@ public class GameScene : IScene
     {
         // Reset input state to prevent carried over clicks from triggering actions
         InputManager.ResetClickCooldown();
+
+        //Play level music
+        if (levelName != null)
+        {
+            switch (levelName)
+            {
+                case "TestLevel":
+                    audioManager.PlayAudio("null", false, "level1Song", true);
+                    break;
+                case "TestLevel2":
+                    audioManager.PlayAudio("null", false, "level2Song", true);
+                    break;
+                case "TestLevel3":
+                    audioManager.PlayAudio("null", false, "level3Song", true);
+                    break;
+                default:
+                    break;
+            }
+        }
         
         // Load texture atlas and initialize camera
-        texture = contentManager.Load<Texture2D>("PolyGoneTileMap");
+        playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
+        enemySheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneEnemySheet");
+        miscSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneMiscSpriteSheet");
+        textureSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneMgSheet");
+        foregroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneFgSheet");
+        backgroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneBgSheet");
+        collisionSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneCollisionSheet");
         try
         {
             hudFont = contentManager.Load<SpriteFont>("Fonts/PauseMenu");
@@ -202,41 +236,44 @@ public class GameScene : IScene
         camera = new(new Vector2(0, 0));
         // Initialize player with selected items and weapon
         player = new Player(
-            texture: texture,
+            texture: playerSheet,
             position: playerPos,
             size: new int[2] { 60, 60 },
             health: 100,
             color: Color.White,
-            srcRect: textureStore[1],
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
-            blasterTexture: texture,
+            blasterTexture: playerSheet,
             selectedItems: selectedItems,
-            selectedWeapon: selectedWeapon,
+            selectedAttachments: selectedAttachments,
+            audioManager: audioManager,
             visualSize: new int[2] { 64, 64 }
         );
         
         // Initialize GameUI
-        gameUI = new GameUI(player, texture, textureStore[4], hudFont);
+        gameUI = new GameUI(player, textureSheet, textureStore[2], hudFont);
         // Initialize turret enemies
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 80,
             color: Color.White,
-            srcRect: textureStore[6],
+            srcRect: textureStore[1],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Initialize patrol enemies from spawn positions
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             health: 50,
             color: Color.White,
-            srcRect: textureStore[2],
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 }
@@ -254,25 +291,27 @@ public class GameScene : IScene
         orphanedTurretBullets.Clear();
         turretEnemies.Clear();
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 80,
             color: Color.White,
-            srcRect: textureStore[6],
+            srcRect: textureStore[1],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Reset patrol enemies
         enemies.Clear();
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             health: 50,
             color: Color.White,
-            srcRect: textureStore[2],
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 }
@@ -321,7 +360,7 @@ public class GameScene : IScene
         if (!player.IsAlive && !gameOver)
         {
             gameOver = true;
-            sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, graphics, this));
+            sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, audioManager, graphics, this));
             return;
         }
         
@@ -404,7 +443,7 @@ public class GameScene : IScene
             {
                 levelComplete = true;
                 // Transition to win scene with current loadout
-                sceneManager.AddScene(new WinScene(contentManager, sceneManager, graphics, levelName, selectedItems, selectedWeapon));
+                sceneManager.AddScene(new WinScene(contentManager, sceneManager, audioManager, graphics, levelName, selectedItems, selectedAttachments));
             }
         }
     }
@@ -419,7 +458,7 @@ public class GameScene : IScene
                 64
             );
             Rectangle src = textureStore[tile.Value % textureStore.Count]; // Ensure we don't go out of bounds
-            spriteBatch.Draw(texture, dest, src, Color.White);
+            spriteBatch.Draw(textureSheet, dest, src, Color.White);
         }
         foreach (var enemy in enemies)
         {
@@ -447,7 +486,7 @@ public class GameScene : IScene
             );
             // Draw goal with a green tint (using tile 0 or any appropriate texture)
             Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
-            spriteBatch.Draw(texture, goalDest, textureStore[0], goalColor * 0.5f);
+            spriteBatch.Draw(textureSheet, goalDest, textureStore[0], goalColor * 0.5f);
         }
         
         // Draw new GameUI (health, cooldown, and active items)

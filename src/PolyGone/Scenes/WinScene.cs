@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PolyGone.Core;
 
 namespace PolyGone;
 
@@ -12,24 +13,26 @@ public class WinScene : IScene
 {
     private readonly ContentManager contentManager;
     private readonly SceneManager sceneManager;
+    private readonly AudioManager audioManager;
     private readonly GraphicsDeviceManager graphics;
     private readonly string currentLevel;
     private readonly List<ItemType> selectedItems;
-    private readonly WeaponType selectedWeapon;
+    private readonly List<BlasterAttachmentType> selectedAttachments;
     private SpriteFont font;
     private Texture2D pixel;
     private readonly string[] options;
     private int selectedIndex;
     private static List<string>? levelOrder;
 
-    public WinScene(ContentManager contentManager, SceneManager sceneManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType> selectedItems = null, WeaponType selectedWeapon = WeaponType.Blaster)
+    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType> selectedItems = null, List<BlasterAttachmentType> selectedAttachments = null)
     {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
+        this.audioManager = audioManager;
         this.graphics = graphics;
         this.currentLevel = currentLevel;
         this.selectedItems = selectedItems ?? new List<ItemType>();
-        this.selectedWeapon = selectedWeapon;
+        this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
         
         // Build options list based on whether there's a next level
         string? nextLevel = GetNextLevel(currentLevel);
@@ -54,6 +57,7 @@ public class WinScene : IScene
         {
             font = contentManager.Load<SpriteFont>("Fonts/PauseMenu");
         }
+        audioManager.PlayAudio("null", false, "goalAchievedSong", true);
     }
 
     // Clean up resources to prevent memory leaks
@@ -122,7 +126,7 @@ public class WinScene : IScene
             {
                 sceneManager.PopScene(this); // Remove WinScene
                 sceneManager.PopScene(sceneManager.GetCurrentScene()); // Remove old GameScene
-                sceneManager.AddScene(new GameScene(contentManager, sceneManager, graphics, nextLevel, selectedItems, selectedWeapon));
+                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, nextLevel, selectedItems, selectedAttachments));
                 InputManager.ResetClickCooldown();
             }
         }
@@ -137,6 +141,7 @@ public class WinScene : IScene
             }
             
             InputManager.ResetClickCooldown();
+            audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
         }
         else if (selectedOption == "Main Menu")
         {
@@ -149,6 +154,7 @@ public class WinScene : IScene
             }
             
             InputManager.ResetClickCooldown();
+            audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
         }
     }
     
