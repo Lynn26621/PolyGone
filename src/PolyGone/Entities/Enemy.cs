@@ -1,6 +1,8 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using PolyGone.Core;
+using PolyGone.Entities;
+using System;
 using System.Collections.Generic;
 
 namespace PolyGone;
@@ -10,6 +12,8 @@ class Enemy : Entity
     private readonly float patrolSpeed;
     private float patrolDirection = 1f; // 1 for right, -1 for left
     private AudioManager audioManager;
+    private readonly Player? player;
+    private const float VIEW_RANGE = 400f;
     
     // Multi-hit damage system
     private float damageWindow = 0f; // Frames remaining in damage window
@@ -17,12 +21,13 @@ class Enemy : Entity
     private readonly List<Projectile> hitProjectiles = new List<Projectile>(); // Track projectiles that hit during window
     private const float DAMAGE_WINDOW_DURATION = 2f; // 2 frames to accumulate damage
     
-    public Enemy(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, float patrolSpeed = 1f, int[]? visualSize = null)
+    public Enemy(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, float patrolSpeed = 1f, int[]? visualSize = null, Player? player = null)
         : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, visualSize)
     {
         this.friction = 0.9f; // Enemy has default friction
         this.patrolSpeed = patrolSpeed;
         this.audioManager = audioManager;
+        this.player = player;
     }
 
     protected override void OnEntityCollision(Entity other)
@@ -57,7 +62,9 @@ class Enemy : Entity
 
         // Expire the projectile unless it's piercing (piercing goes through enemies)
         if (!projectile.IsPiercing)
+        {
             projectile.lifetime = 0f;
+        }
 
         // Apply knockback from the first projectile only (to prevent excessive knockback)
         if (hitProjectiles.Count == 1)
@@ -131,6 +138,32 @@ class Enemy : Entity
         changeX = patrolDirection * patrolSpeed * GetPatrolSpeedMultiplier();
     }
 
+    private bool IsPlayerInViewRange()
+    {
+        if (player is null)
+        {
+            return false;
+        }
+
+        Vector2 myCenter = new Vector2(position.X + size[0] / 2f, position.Y + size[1] / 2f);
+        Vector2 playerCenter = new Vector2(player.position.X + player.size[0] / 2f, player.position.Y + player.size[1] / 2f);
+        return Vector2.Distance(myCenter, playerCenter) <= VIEW_RANGE;
+    }
+
+    protected virtual void ChasePlayerUpdate()
+    {
+        if (player is null || !IsPlayerInViewRange())
+        {
+            return;
+        }
+
+        float myCenterX = position.X + size[0] / 2f;
+        float playerCenterX = player.position.X + player.size[0] / 2f;
+        float deltaX = playerCenterX - myCenterX;
+
+        changeX = Math.Abs(deltaX) > 2f ? Math.Sign(deltaX) * patrolSpeed * GetPatrolSpeedMultiplier() : 0f;
+    }
+
     protected virtual float GetPatrolSpeedMultiplier()
     {
         return 1f;
@@ -149,8 +182,15 @@ class Enemy : Entity
         // Update damage window system
         UpdateDamageWindow();
         
-        // Update patrol behavior
-        PatrolUpdate();
+        if (IsPlayerInViewRange())
+        {
+            ChasePlayerUpdate();
+        }
+        else
+        {
+            // Update patrol behavior
+            PatrolUpdate();
+        }
         
         base.Update(gameTime);
     }

@@ -33,10 +33,12 @@ public class GameScene : IScene
     private readonly List<Vector2> turretEnemySpawns = new(); // Store turret spawn positions
     private readonly List<Vector2> berserkEnemySpawns = new(); // Store berserk spawn positions
     private readonly List<Vector2> factoryEnemySpawns = new(); // Store factory spawn positions
+    private readonly List<Vector2> frogSpawns = new(); // Store frog spawn positions
     private readonly List<Entity> enemies = new(); // Placeholder for enemy list
     private readonly List<TurretEnemy> turretEnemies = new(); // Stationary blaster enemies
     private readonly List<BerserkEnemy> berserkEnemies = new(); // Chasing enemies that shoot when low health
     private readonly List<FactoryEnemy> factoryEnemies = new(); // Stationary enemies that spawn patrol enemies
+    private readonly List<Frog> frogs = new(); // Jumping enemies
     private readonly List<Projectile> orphanedTurretBullets = new(); // Bullets that outlive their turret
     private GoalTrigger goalTrigger; // Win condition trigger
     private bool levelComplete = false;
@@ -179,6 +181,13 @@ public class GameScene : IScene
                             );
                             factoryEnemySpawns.Add(factoryPos);
                             break;
+                        case "Frog":
+                            Vector2 frogPos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            frogSpawns.Add(frogPos);
+                            break;
                         case "Goal":
                             Vector2 goalPos = AdjustCoordinates(
                                 obj.GetProperty("x").GetSingle(),
@@ -297,18 +306,32 @@ public class GameScene : IScene
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
+        // Initialize frogs
+        frogs.AddRange(frogSpawns.Select(spawnPos => new Frog(
+            texture: texture,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 100,
+            color: Color.White,
+            srcRect: textureStore[5],
+            collisionMap: collisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
         // Initialize patrol enemies from spawn positions
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
             texture: texture,
             position: spawnPos,
             audioManager: audioManager,
             size: new int[2] { 60, 60 },
-            health: 50,
+            health: 100,
             color: Color.White,
             srcRect: textureStore[2],
             collisionMap: collisionMap,
             patrolSpeed: 1f,
-            visualSize: new int[2] { 64, 64 }
+            visualSize: new int[2] { 64, 64 },
+            player: player
         )));
     }
     
@@ -362,6 +385,20 @@ public class GameScene : IScene
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
+        // Reset frogs
+        frogs.Clear();
+        frogs.AddRange(frogSpawns.Select(spawnPos => new Frog(
+            texture: texture,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 100,
+            color: Color.White,
+            srcRect: textureStore[2],
+            collisionMap: collisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
         // Reset patrol enemies
         enemies.Clear();
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
@@ -369,12 +406,13 @@ public class GameScene : IScene
             position: spawnPos,
             audioManager: audioManager,
             size: new int[2] { 60, 60 },
-            health: 50,
+            health: 100,
             color: Color.White,
             srcRect: textureStore[2],
             collisionMap: collisionMap,
             patrolSpeed: 1f,
-            visualSize: new int[2] { 64, 64 }
+            visualSize: new int[2] { 64, 64 },
+            player: player
         )));
         
         // Reset goal trigger and level completion
@@ -428,18 +466,26 @@ public class GameScene : IScene
         foreach (var enemy in enemies)
         {
             if (enemy.position.Y > worldMaxY)
+            {
                 enemy.HandleDeath();
+            }
             else if (enemy.position.X < 0)
+            {
                 enemy.position.X = 0;
+            }
             else if (enemy.position.X + enemy.size[0] > worldMaxX)
+            {
                 enemy.position.X = worldMaxX - enemy.size[0];
+            }
         }
 
         // Update alive patrol enemies
         foreach (var enemy in enemies)
         {
             if (enemy.IsAlive)
+            {
                 enemy.Update(gameTime);
+            }
         }
 
         // Remove patrol enemies that died this frame
@@ -449,7 +495,9 @@ public class GameScene : IScene
         foreach (var turret in turretEnemies)
         {
             if (turret.position.Y > worldMaxY)
+            {
                 turret.HandleDeath();
+            }
         }
         // Check berserk enemies for falling out of bounds
         foreach (var berserk in berserkEnemies)
@@ -485,6 +533,23 @@ public class GameScene : IScene
             }
         }
 
+        // Check frogs for falling out of bounds
+        foreach (var frog in frogs)
+        {
+            if (frog.position.Y > worldMaxY)
+            {
+                frog.HandleDeath();
+            }
+            else if (frog.position.X < 0)
+            {
+                frog.position.X = 0;
+            }
+            else if (frog.position.X + frog.size[0] > worldMaxX)
+            {
+                frog.position.X = worldMaxX - frog.size[0];
+            }
+        }
+
         // Update alive turret enemies
         foreach (var turret in turretEnemies)
         {
@@ -507,6 +572,14 @@ public class GameScene : IScene
             if (factory.IsAlive)
             {
                 factory.Update(gameTime);
+            }
+        }
+        // Update alive frogs
+        foreach (var frog in frogs)
+        {
+            if (frog.IsAlive)
+            {
+                frog.Update(gameTime);
             }
         }
 
@@ -547,6 +620,9 @@ public class GameScene : IScene
         // Remove factory enemies that died this frame
         factoryEnemies.RemoveAll(f => !f.IsAlive);
 
+        // Remove frogs that died this frame
+        frogs.RemoveAll(j => !j.IsAlive);
+
         // Advance and prune orphaned bullets
         for (int i = orphanedTurretBullets.Count - 1; i >= 0; i--)
         {
@@ -558,7 +634,7 @@ public class GameScene : IScene
         }
 
         // Gather all entities for collision detection after all updates
-        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. berserkEnemies, .. factoryEnemies, .. player.bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. berserkEnemies.SelectMany(b => b.Bullets), .. orphanedTurretBullets];
+        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. berserkEnemies, .. factoryEnemies, .. frogs, .. player.bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. berserkEnemies.SelectMany(b => b.Bullets), .. orphanedTurretBullets];
 
         // Handle entity-to-entity collisions
         player.EntityCollisionUpdate(allEntities);
@@ -577,6 +653,10 @@ public class GameScene : IScene
         foreach (var factory in factoryEnemies)
         {
             factory.EntityCollisionUpdate(allEntities);
+        }
+        foreach (var frog in frogs)
+        {
+            frog.EntityCollisionUpdate(allEntities);
         }
         
         // Check for goal trigger
@@ -619,6 +699,10 @@ public class GameScene : IScene
         foreach (var factory in factoryEnemies)
         {
             factory.Draw(spriteBatch, camera.position);
+        }
+        foreach (var frog in frogs)
+        {
+            frog.Draw(spriteBatch, camera.position);
         }
         foreach (var bullet in orphanedTurretBullets)
         {

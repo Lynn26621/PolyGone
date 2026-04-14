@@ -62,7 +62,8 @@ class FactoryEnemy : Enemy
             srcRect: srcRect,
             collisionMap: collisionMap,
             patrolSpeed: 2f,
-            visualSize: new int[] { 32, 32 }
+            visualSize: new int[] { 32, 32 },
+            player: player
         );
 
         SpawnedEnemies.Add(spawnedEnemy);
