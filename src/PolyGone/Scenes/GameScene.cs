@@ -32,9 +32,11 @@ public class GameScene : IScene
     private readonly List<Vector2> enemySpawns = new(); // Store enemy spawn positions
     private readonly List<Vector2> turretEnemySpawns = new(); // Store turret spawn positions
     private readonly List<Vector2> berserkEnemySpawns = new(); // Store berserk spawn positions
+    private readonly List<Vector2> factoryEnemySpawns = new(); // Store factory spawn positions
     private readonly List<Entity> enemies = new(); // Placeholder for enemy list
     private readonly List<TurretEnemy> turretEnemies = new(); // Stationary blaster enemies
     private readonly List<BerserkEnemy> berserkEnemies = new(); // Chasing enemies that shoot when low health
+    private readonly List<FactoryEnemy> factoryEnemies = new(); // Stationary enemies that spawn patrol enemies
     private readonly List<Projectile> orphanedTurretBullets = new(); // Bullets that outlive their turret
     private GoalTrigger goalTrigger; // Win condition trigger
     private bool levelComplete = false;
@@ -170,6 +172,13 @@ public class GameScene : IScene
                             );
                             berserkEnemySpawns.Add(berserkPos);
                             break;
+                        case "FactoryEnemy":
+                            Vector2 factoryPos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            factoryEnemySpawns.Add(factoryPos);
+                            break;
                         case "Goal":
                             Vector2 goalPos = AdjustCoordinates(
                                 obj.GetProperty("x").GetSingle(),
@@ -275,6 +284,19 @@ public class GameScene : IScene
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
+        // Initialize factory enemies
+        factoryEnemies.AddRange(factoryEnemySpawns.Select(spawnPos => new FactoryEnemy(
+            texture: texture,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 200,
+            color: Color.White,
+            srcRect: textureStore[3],
+            collisionMap: collisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
         // Initialize patrol enemies from spawn positions
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
             texture: texture,
@@ -323,6 +345,20 @@ public class GameScene : IScene
             health: 400,
             color: Color.White,
             srcRect: textureStore[2],
+            collisionMap: collisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Reset factory enemies
+        factoryEnemies.Clear();
+        factoryEnemies.AddRange(factoryEnemySpawns.Select(spawnPos => new FactoryEnemy(
+            texture: texture,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 200,
+            color: Color.White,
+            srcRect: textureStore[3],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
@@ -432,6 +468,23 @@ public class GameScene : IScene
             }
         }  
 
+        // Check factory enemies for falling out of bounds
+        foreach (var factory in factoryEnemies)
+        {
+            if (factory.position.Y > worldMaxY)
+            {
+                factory.HandleDeath();
+            }
+            else if (factory.position.X < 0)
+            {
+                factory.position.X = 0;
+            }
+            else if (factory.position.X + factory.size[0] > worldMaxX)
+            {
+                factory.position.X = worldMaxX - factory.size[0];
+            }
+        }
+
         // Update alive turret enemies
         foreach (var turret in turretEnemies)
         {
@@ -446,6 +499,24 @@ public class GameScene : IScene
             if (berserk.IsAlive)
             {
                 berserk.Update(gameTime);
+            }
+        }
+        // Update alive factory enemies
+        foreach (var factory in factoryEnemies)
+        {
+            if (factory.IsAlive)
+            {
+                factory.Update(gameTime);
+            }
+        }
+
+        // Collect newly spawned enemies from factories
+        foreach (var factory in factoryEnemies)
+        {
+            if (factory.SpawnedEnemies.Count > 0)
+            {
+                enemies.AddRange(factory.SpawnedEnemies);
+                factory.SpawnedEnemies.Clear();
             }
         }
 
@@ -473,6 +544,9 @@ public class GameScene : IScene
         // Remove berserk enemies that died this frame
         berserkEnemies.RemoveAll(b => !b.IsAlive);
 
+        // Remove factory enemies that died this frame
+        factoryEnemies.RemoveAll(f => !f.IsAlive);
+
         // Advance and prune orphaned bullets
         for (int i = orphanedTurretBullets.Count - 1; i >= 0; i--)
         {
@@ -484,7 +558,7 @@ public class GameScene : IScene
         }
 
         // Gather all entities for collision detection after all updates
-        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. berserkEnemies, .. player.bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. berserkEnemies.SelectMany(b => b.Bullets), .. orphanedTurretBullets];
+        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. berserkEnemies, .. factoryEnemies, .. player.bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. berserkEnemies.SelectMany(b => b.Bullets), .. orphanedTurretBullets];
 
         // Handle entity-to-entity collisions
         player.EntityCollisionUpdate(allEntities);
@@ -499,6 +573,10 @@ public class GameScene : IScene
         foreach (var berserk in berserkEnemies)
         {
             berserk.EntityCollisionUpdate(allEntities);
+        }
+        foreach (var factory in factoryEnemies)
+        {
+            factory.EntityCollisionUpdate(allEntities);
         }
         
         // Check for goal trigger
@@ -537,6 +615,10 @@ public class GameScene : IScene
         foreach (var berserk in berserkEnemies)
         {
             berserk.Draw(spriteBatch, camera.position);
+        }
+        foreach (var factory in factoryEnemies)
+        {
+            factory.Draw(spriteBatch, camera.position);
         }
         foreach (var bullet in orphanedTurretBullets)
         {
