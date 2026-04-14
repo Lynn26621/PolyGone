@@ -10,13 +10,13 @@ class Enemy : Entity
     private readonly float patrolSpeed;
     private float patrolDirection = 1f; // 1 for right, -1 for left
     private AudioManager audioManager;
-    
+
     // Multi-hit damage system
     private float damageWindow = 0f; // Frames remaining in damage window
     private int accumulatedDamage = 0; // Damage accumulated during current window
     private readonly List<Projectile> hitProjectiles = new List<Projectile>(); // Track projectiles that hit during window
     private const float DAMAGE_WINDOW_DURATION = 2f; // 2 frames to accumulate damage
-    
+
     public Enemy(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, float patrolSpeed = 1f, int[]? visualSize = null)
         : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, visualSize)
     {
@@ -41,6 +41,11 @@ class Enemy : Entity
 
     private void HandleProjectileHit(Projectile projectile)
     {
+        if (projectile.EnemiesHit.Contains(this))
+        {
+            return; // Already hit by this projectile
+        }
+
         // If no damage window is active, start a new one
         if (damageWindow <= 0f)
         {
@@ -54,10 +59,13 @@ class Enemy : Entity
         // Add this projectile's damage to accumulated damage
         accumulatedDamage += projectile.damage;
         hitProjectiles.Add(projectile);
-
         // Expire the projectile unless it's piercing (piercing goes through enemies)
         if (!projectile.IsPiercing)
             projectile.lifetime = 0f;
+        else
+        {
+            projectile.EnemiesHit.Add(this); // Track that this enemy has been hit by this projectile
+        }
 
         // Apply knockback from the first projectile only (to prevent excessive knockback)
         if (hitProjectiles.Count == 1)
@@ -88,7 +96,7 @@ class Enemy : Entity
         if (damageWindow > 0f)
         {
             damageWindow -= 1f;
-            
+
             // When damage window closes, apply accumulated damage and start invincibility
             if (damageWindow <= 0f && accumulatedDamage > 0)
             {
@@ -101,28 +109,28 @@ class Enemy : Entity
 
     private void PatrolUpdate()
     {
-        
+
         // Only check ahead if we're on the ground
         if (!isOnGround)
         {
             return;
         }
-        
+
         // Check for walls ahead by looking a bit further ahead
         float checkDistance = 10f;
         float nextX = position.X + (patrolDirection * checkDistance);
         Rectangle nextRect = new Rectangle((int)nextX, (int)position.Y, size[0], size[1]);
         var horizontalCollisions = GetIntersectingTiles(nextRect);
-        
+
         // Check if there's ground ahead
         bool groundAhead = IsGroundAhead(patrolDirection);
-        
+
         // Reverse direction if hitting a wall or reaching an edge
         if (horizontalCollisions.Count > 0 || !groundAhead)
         {
             patrolDirection *= -1f;
         }
-        
+
         // Set horizontal velocity (not position directly)
         changeX = patrolDirection * patrolSpeed;
     }
@@ -132,10 +140,10 @@ class Enemy : Entity
     {
         // Update damage window system
         UpdateDamageWindow();
-        
+
         // Update patrol behavior
         PatrolUpdate();
-        
+
         base.Update(gameTime);
     }
 }
