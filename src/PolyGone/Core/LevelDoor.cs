@@ -13,17 +13,20 @@ namespace PolyGone.Core
         public bool IsTriggered { get; private set; }
         public bool IsActivated { get; private set; }
         public string ConnectedLevel { get; private set; }
-        public string LocatedLevel { get; private set; }
+        public int LoadX;
+        public int LoadY;
         private KeyboardState keyboardState;
+        private KeyboardState prevKeyboardState;
         private AudioManager audioManager;
 
-        public LevelDoor(Vector2 position, int width, int height, string connectedLevel, string locatedLevel, AudioManager audioManager)
+        public LevelDoor(Vector2 position, int width, int height, string connectedLevel, int loadX, int loadY, AudioManager audioManager)
         : base(position, width, height)
         {
             IsTriggered = false;
             IsActivated = false;
             ConnectedLevel = connectedLevel;
-            LocatedLevel = locatedLevel;
+            LoadX = loadX;
+            LoadY = loadY;
             this.audioManager = audioManager;
         }
 
@@ -48,11 +51,12 @@ namespace PolyGone.Core
             }
             if (IsTriggered)
             {
-                if (keyboardState.IsKeyDown(Keys.W))
+                if (keyboardState.IsKeyDown(Keys.W) && prevKeyboardState.IsKeyUp(Keys.W))
                 {
                     IsActivated = true;
                 }
             }
+            prevKeyboardState = Keyboard.GetState();
         }
 
         public void Reset()

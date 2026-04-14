@@ -42,9 +42,10 @@ public class GameScene : IScene
     private readonly List<ItemType> selectedItems;
     private readonly List<BlasterAttachmentType> selectedAttachments;
     private readonly string levelName;
-    private string previousLevel;
+    private int? loadX;
+    private int? loadY;
 
-    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", string previousLevel = "Hub", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
+    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null, int? loadX = null, int? loadY = null)
     {       
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
@@ -53,7 +54,9 @@ public class GameScene : IScene
         this.selectedItems = selectedItems ?? new List<ItemType>();
         this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
         this.levelName = levelName;
-        this.previousLevel = previousLevel;
+        this.loadX = loadX;
+        this.loadY = loadY;
+
         LoadMapFromJson("Maps/" + levelName + ".json");
         textureStore = GetTextureStore(32, new int[2] { 4, 4 });
     }
@@ -145,9 +148,21 @@ public class GameScene : IScene
                     switch (objType)
                     {
                         case "Player":
+                            int playerX;
+                            int playerY;
+                            if (loadX.HasValue && loadY.HasValue)
+                            {
+                                playerX = loadX.Value;
+                                playerY = loadY.Value;
+                            }
+                            else
+                            {
+                                playerX = (int)obj.GetProperty("x").GetSingle();
+                                playerY = (int)obj.GetProperty("y").GetSingle();
+                            }
                             playerPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
+                                playerX,
+                                playerY
                             );
                             playerSpawnFound = true;
                             break;
@@ -182,7 +197,8 @@ public class GameScene : IScene
                             int doorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
                             int doorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
                             string connectedLevel = "Hub";
-                            string locatedLevel = "Hub";
+                            int playerLoadX = 0;
+                            int playerLoadY = 0;
                             List<JsonElement> properties = obj.GetProperty("properties").EnumerateArray().ToList();
                             foreach (JsonElement prop in properties)
                             {
@@ -192,14 +208,17 @@ public class GameScene : IScene
                                     case "connectedLevel":
                                         connectedLevel = (string)(prop.GetProperty("value").GetString() ?? "Hub");
                                         break;
-                                    case "locatedLevel":
-                                        locatedLevel = (string)(prop.GetProperty("value").GetString() ?? "Hub");
+                                    case "loadX":
+                                        playerLoadX = (int)prop.GetProperty("value").GetSingle();
+                                        break;
+                                    case "loadY":
+                                        playerLoadY = (int)prop.GetProperty("value").GetSingle();
                                         break;
                                     default:
                                         break;
                                 }
                             }
-                            levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, connectedLevel, locatedLevel, audioManager));
+                            levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, connectedLevel, playerLoadX, playerLoadY, audioManager));
                             break;
                         default:
                             break;
@@ -484,8 +503,8 @@ public class GameScene : IScene
             door.CheckTrigger(player.Rectangle);
             if (door.IsTriggered && door.IsActivated)
             {
-                previousLevel = levelName;
-                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.ConnectedLevel, previousLevel, selectedItems, selectedAttachments)); //Add previous level argument to all game scene instances
+                sceneManager.PopScene(this);
+                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.ConnectedLevel, selectedItems, selectedAttachments, door.LoadX, door.LoadY));
             }
         }
     }
