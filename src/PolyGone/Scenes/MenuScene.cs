@@ -32,7 +32,7 @@ namespace PolyGone
         private readonly SceneManager _sceneManager;
         private readonly AudioManager _audioManager;
         private readonly GraphicsDeviceManager _graphics;
-        private readonly string[] _options = { "Play", "Level Select", "Options", "Log Out", "Exit to Desktop" };
+        private readonly string[] _options = { "Play", "Options", "Log Out", "Exit to Desktop" };
         private int _selectedIndex;
         private bool _confirmingAction;
         private string _confirmMessage;
@@ -190,15 +190,10 @@ namespace PolyGone
             }
             else if (_selectedIndex == 1)
             {
-                // Level Select
-                _sceneManager.AddScene(new LevelSelect(_content, _sceneManager, _audioManager, _graphics));
-            }
-            else if (_selectedIndex == 2)
-            {
                 // Options
                 _sceneManager.AddScene(new OptionsScene(_content, _sceneManager, _audioManager, _graphics));
             }
-            else if (_selectedIndex == 3)
+            else if (_selectedIndex == 2)
             {
                 // Log Out — ask for confirmation
                 BeginConfirmation(
@@ -210,7 +205,7 @@ namespace PolyGone
                         _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _audioManager, _graphics));
                     });
             }
-            else if (_selectedIndex == 4)
+            else if (_selectedIndex == 3)
             {
                 // Exit to Desktop — ask for confirmation
                 BeginConfirmation(
