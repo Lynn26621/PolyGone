@@ -49,6 +49,7 @@ public class GameScene : IScene
     private GoalTrigger goalTrigger; // Win condition trigger
     private bool levelComplete = false;
     private bool gameOver = false;
+    private Texture2D texture;
     private readonly List<ItemType> selectedItems;
     private readonly List<BlasterAttachmentType> selectedAttachments;
     private readonly string levelName;
