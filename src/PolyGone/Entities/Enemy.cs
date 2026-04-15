@@ -14,6 +14,8 @@ class Enemy : Entity
     private AudioManager audioManager;
     private readonly Player? player;
     private const float VIEW_RANGE = 400f;
+    private float hitFlashFrames = 0f;
+    private const float HIT_FLASH_DURATION = 6f; // 0.1s at 60 FPS
     
     // Multi-hit damage system
     private float damageWindow = 0f; // Frames remaining in damage window
@@ -46,6 +48,8 @@ class Enemy : Entity
 
     private void HandleProjectileHit(Projectile projectile)
     {
+        hitFlashFrames = HIT_FLASH_DURATION;
+
         // If no damage window is active, start a new one
         if (damageWindow <= 0f)
         {
@@ -179,6 +183,11 @@ class Enemy : Entity
 
     public override void Update(GameTime gameTime)
     {
+        if (hitFlashFrames > 0f)
+        {
+            hitFlashFrames -= 1f;
+        }
+
         // Update damage window system
         UpdateDamageWindow();
         
@@ -193,5 +202,19 @@ class Enemy : Entity
         }
         
         base.Update(gameTime);
+    }
+
+    public override void Draw(SpriteBatch spriteBatch, Vector2 offset)
+    {
+        Color originalColor = color;
+
+        if (hitFlashFrames > 0f)
+        {
+            // Keep some original brightness while flashing red
+            color = Color.Lerp(originalColor, Color.Red, 0.75f);
+        }
+
+        base.Draw(spriteBatch, offset);
+        color = originalColor;
     }
 }
