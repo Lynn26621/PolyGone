@@ -41,6 +41,11 @@ class Enemy : Entity
 
     private void HandleProjectileHit(Projectile projectile)
     {
+        if (projectile.lifetime <= 0f)
+        {
+            return;
+        }
+
         if (projectile.EnemiesHit.Contains(this))
         {
             return; // Already hit by this projectile
@@ -59,12 +64,11 @@ class Enemy : Entity
         // Add this projectile's damage to accumulated damage
         accumulatedDamage += projectile.damage;
         hitProjectiles.Add(projectile);
+        projectile.EnemiesHit.Add(this); // Track that this enemy has been hit by this projectile
         // Expire the projectile unless it's piercing (piercing goes through enemies)
         if (!projectile.IsPiercing)
-            projectile.lifetime = 0f;
-        else
         {
-            projectile.EnemiesHit.Add(this); // Track that this enemy has been hit by this projectile
+            projectile.lifetime = 0f;
         }
 
         // Apply knockback from the first projectile only (to prevent excessive knockback)
