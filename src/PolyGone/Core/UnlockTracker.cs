@@ -137,22 +137,24 @@ public static class UnlockTracker
     /// </summary>
     public static int GetPlayerItemSlotCount()
     {
-        int slots = 1;
+        int slots = 2;
         if (_completedLevels.Contains("TestLevel"))  slots++;
+        if (_completedLevels.Contains("TestLevel2")) slots++;
         if (_completedLevels.Contains("TestLevel3")) slots++;
-        return slots; // Max 3
+        return slots; // Max 5
     }
 
     /// <summary>
     /// Returns the number of blaster attachment slots available.
-    /// Starts at 1; completing TestLevel2 adds a 2nd slot; completing TestLevel3 adds a 3rd.
+    /// Starts at 2; each completed level adds another slot.
     /// </summary>
     public static int GetBlasterSlotCount()
     {
-        int slots = 1;
+        int slots = 2;
+        if (_completedLevels.Contains("TestLevel"))  slots++;
         if (_completedLevels.Contains("TestLevel2")) slots++;
         if (_completedLevels.Contains("TestLevel3")) slots++;
-        return slots; // Max 3
+        return slots;
     }
 
     /// <summary>Converts an internal level file name to a display name.</summary>
