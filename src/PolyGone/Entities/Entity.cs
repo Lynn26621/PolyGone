@@ -11,7 +11,6 @@ namespace PolyGone;
 public class Entity : Sprite
 {
 
-<<<<<<< Controller-Support
     protected readonly Dictionary<Vector2, int>? CollisionMap;
     protected float ChangeX;
     protected float ChangeY;
@@ -23,7 +22,6 @@ public class Entity : Sprite
     protected readonly int[] VisualSize; // Visual size for drawing (can be larger than hitbox)
     protected Vector2 HitboxOffset; // Offset to center the hitbox within the visual sprite
     public bool IsAlive = true;
-=======
     protected readonly Dictionary<Vector2, int>? collisionMap;
     private AudioManager audioManager;
     protected float changeX;
@@ -36,8 +34,6 @@ public class Entity : Sprite
     protected readonly int[] visualSize; // Visual size for drawing (can be larger than hitbox)
     protected Vector2 hitboxOffset; // Offset to center the hitbox within the visual sprite
     protected bool isAlive = true;
-    public bool IsAlive => isAlive;
->>>>>>> DEV
     /// <summary>Multiplier applied to gravity each physics tick. 1 = normal, lower = floatier.</summary>
     protected float GravityScale = 1f;
     
@@ -185,12 +181,8 @@ public class Entity : Sprite
     public virtual void HandleDeath()
     {
         // Default implementation marks entity as not alive
-<<<<<<< Controller-Support
-        IsAlive = false;
-=======
         isAlive = false;
         audioManager.PlayAudio("deathSfx", true, "null", false); //Play death sound effect
->>>>>>> DEV
     }
 
     // Physics and collision update for non-player entities (no input)

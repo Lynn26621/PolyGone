@@ -41,7 +41,7 @@ class Enemy : Entity
 
     private void HandleProjectileHit(Projectile projectile)
     {
-        if (projectile.lifetime <= 0f)
+        if (projectile.Lifetime <= 0f)
         {
             return;
         }

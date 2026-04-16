@@ -163,14 +163,5 @@ internal class PauseScene : IScene
             }
         }
     }
-<<<<<<< Controller-Support
-=======
 
-    private bool IsKeyPressed(Keys key)
-    {
-        return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
-    }
-
-
->>>>>>> DEV
 }

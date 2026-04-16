@@ -96,13 +96,8 @@ namespace PolyGone.Weapons
 
         public override void Use()
         {
-<<<<<<< Controller-Support
             // Handle shooting with InputManager to prevent click carryover
             if (InputManager.GameShootSingle() && cooldown <= 0f)
-=======
-            // Handle shooting — hold-fire when auto, click otherwise
-            if ((IsAutoFire ? InputManager.IsLeftMouseButtonHeld() : InputManager.IsLeftMouseButtonClicked()) && cooldown <= 0f)
->>>>>>> DEV
             {
                 int baseDamage = (int)(40 * DamageMultiplier);
 

@@ -55,26 +55,11 @@ namespace PolyGone.Entities
             : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, visualSize)
         {
             // Always use the Blaster as the base weapon
-            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, audioManager, new int[] { 32, 32 }, Color.White, collisionMap, bullets, srcRect);
+            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, audioManager, new int[] { 32, 32 }, Color.White, collisionMap, Bullets, srcRect);
 
             // Apply blaster attachments to the freshly created blaster
             foreach (var attachmentType in selectedAttachments)
             {
-                case WeaponType.Blaster:
-                    currentWeapon = new Blaster(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.White, collisionMap, Bullets, srcRect);
-                    break;
-                case WeaponType.Shotgun:
-                    currentWeapon = new Shotgun(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, collisionMap, Bullets, srcRect);
-                    break;
-                case WeaponType.Rifle:
-                    currentWeapon = new Rifle(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Black, collisionMap, Bullets, srcRect);
-                    break;
-                case WeaponType.Automatic:
-                    currentWeapon = new Automatic(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Cyan, collisionMap, Bullets, srcRect);
-                    break;
-                case WeaponType.VoidLance:
-                    currentWeapon = new VoidLance(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(180, 0, 220), collisionMap, Bullets, srcRect);
-                    break;
                 Item? attachment = null;
                 switch (attachmentType)
                 {
@@ -279,16 +264,13 @@ namespace PolyGone.Entities
                     if (InvincibilityFrames <= 0f)
                     {
 #if DEBUG
-<<<<<<< Controller-Support
                         if (GetDevModeItem()?.IsActive == true)
                         {
                             break;
                         }
-=======
                         if (GetDevModeItem()?.IsActive == true) break;
 
                         audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
->>>>>>> DEV
 #endif
                         // Take 40 damage
                         Health -= 40;

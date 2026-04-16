@@ -181,9 +181,11 @@ namespace PolyGone
             _graphics = graphics;
             _levelFile = levelFile;
 
-            // Initialize with last selected values, filtering out any that are now locked
-            _selectedItems = new List<ItemType>(_lastSelectedItems.FindAll(UnlockTracker.IsItemUnlocked));
-            _selectedWeapon = _lastSelectedWeapon;
+            // Initialise with last selections, filtering any that became locked
+            _selectedPlayerItems = new List<ItemType>(
+                _lastSelectedPlayerItems.FindAll(UnlockTracker.IsItemUnlocked));
+            _selectedAttachments = new List<BlasterAttachmentType>(
+                _lastSelectedAttachments.FindAll(UnlockTracker.IsAttachmentUnlocked));
 
             TrimSelectionsToCapacity();
         }
@@ -205,41 +207,31 @@ namespace PolyGone
         public void Update(GameTime gameTime)
         {
 
-            // Check for Control key to skip inventory and start with current selections
             if (InputManager.LoadoutSkip())
             {
                 StartGame();
                 return;
             }
 
-            // Check for Escape key to go back to previous screen
             if (InputManager.MenuBack())
             {
                 _sceneManager.PopScene(this);
                 return;
             }
 
-            HandleKeyboardNavigation();
-            HandleMouseNavigation();
-
-            switch (_currentMode)
-            {
-                case SelectionMode.PlayerItems:  UpdatePlayerItemSelection();  break;
-                case SelectionMode.Attachments:  UpdateAttachmentSelection();  break;
-                case SelectionMode.Confirm:      UpdateConfirmSelection();     break;
-            }
         }
 
         private void HandleKeyboardNavigation()
         {
-            if (IsKeyPressed(Keys.Enter))
+            if (InputManager.MenuConfirm())
             {
                 if (_currentMode == SelectionMode.Confirm)
                 {
-                    _currentMode      = SelectionMode.PlayerItems;
-                    _playerItemCursor = i;
-
-                    if (InputManager.MenuConfirm())
+                    if (_confirmCursor == 0)
+                    {
+                        StartGame();
+                    }
+                    else
                     {
                         _sceneManager.PopScene(this);
                     }
@@ -254,7 +246,7 @@ namespace PolyGone
 
         private void HandleMouseNavigation()
         {
-            if (_font == null || !InputManager.IsLeftMouseButtonClicked())
+            if (_font == null || !InputManager.MenuConfirm())
             {
                 return;
             }
@@ -262,12 +254,13 @@ namespace PolyGone
             var viewport = _graphics.GraphicsDevice.Viewport;
             var mousePos = InputManager.GetMousePosition();
 
-                    if (InputManager.MenuConfirm())
-                    {
-                        ToggleAttachment(_attachmentTypes[i]);
-                        InputManager.ConsumeClick();
-                    }
-                }
+            if (GetStartButtonRect(viewport).Contains(mousePos))
+            {
+                _currentMode = SelectionMode.Confirm;
+                _confirmCursor = 0;
+                StartGame();
+                InputManager.ConsumeClick();
+                return;
             }
 
             if (GetBackButtonRect(viewport).Contains(mousePos))
@@ -279,92 +272,32 @@ namespace PolyGone
                 return;
             }
 
-                    if (InputManager.MenuConfirm())
-                    {
-                        if (_confirmCursor == 0) StartGame();
-                        else _sceneManager.PopScene(this);
-                        InputManager.ConsumeClick();
-                    }
-                }
+            if (TryHandleEquippedClick(viewport, mousePos) || TryHandleUnequippedClick(viewport, mousePos))
+            {
+                InputManager.ConsumeClick();
             }
         }
 
         private bool TryHandleEquippedClick(Viewport viewport, Point mousePos)
         {
-            if (InputManager.MenuUp())
+            var equippedArea = GetEquippedListRect(viewport);
+            if (!equippedArea.Contains(mousePos))
             {
-                _itemCursor = (_itemCursor - 1 + _itemNames.Length) % _itemNames.Length;
+                return false;
             }
 
-            if (InputManager.MenuDown())
+            int rowIndex = GetClickedRowIndex(equippedArea, mousePos, ListRowHeight, 10);
+            if (rowIndex < 0)
             {
-                _itemCursor = (_itemCursor + 1) % _itemNames.Length;
+                return false;
             }
 
-            if (InputManager.MenuConfirm())
+            var equippedEntries = GetEquippedEntries();
+            if (rowIndex >= equippedEntries.Count)
             {
-                ItemType selectedItem = _itemTypes[_itemCursor];
-
-                if (!UnlockTracker.IsItemUnlocked(selectedItem))
-                {
-                    // Item is locked — do nothing
-                }
-                else if (_selectedItems.Contains(selectedItem))
-                {
-                    // Deselect item
-                    _selectedItems.Remove(selectedItem);
-                }
-#if DEBUG
-                else
-                {
-                    // DEV: no item limit
-                    _selectedItems.Add(selectedItem);
-                }
-#else
-                else if (_selectedItems.Count < 2)
-                {
-                    // Select item (max 2)
-                    _selectedItems.Add(selectedItem);
-                }
-#endif
+                return false;
             }
 
-            if (InputManager.LoadoutSectionRight())
-            {
-                // Move to weapon selection
-                _currentMode = SelectionMode.Weapon;
-            }
-        }
-
-        private void UpdateAttachmentSelection()
-        {
-            if (InputManager.MenuUp())
-            {
-                _weaponCursor = (_weaponCursor - 1 + _weaponNames.Length) % _weaponNames.Length;
-            }
-
-            if (InputManager.MenuDown())
-            {
-                _weaponCursor = (_weaponCursor + 1) % _weaponNames.Length;
-            }
-
-            if (InputManager.MenuConfirm())
-            {
-                // Select weapon
-                _selectedWeapon = _weaponTypes[_weaponCursor];
-            }
-
-            if (InputManager.LoadoutSectionLeft())
-            {
-                // Move back to item selection
-                _currentMode = SelectionMode.Items;
-            }
-
-            if (InputManager.LoadoutSectionRight())
-            {
-                // Move to confirm
-                _currentMode = SelectionMode.Confirm;
-            }
             var entry = equippedEntries[rowIndex];
             if (entry.IsAttachment)
             {
@@ -376,15 +309,12 @@ namespace PolyGone
                 var item = _playerItemTypes[entry.DefinitionIndex];
                 _selectedPlayerItems.Remove(item);
             }
+
+            return true;
         }
 
         private bool TryHandleUnequippedClick(Viewport viewport, Point mousePos)
         {
-            if (InputManager.MenuUp() || InputManager.MenuDown())
-            {
-                _confirmCursor = (_confirmCursor + 1) % 2;
-
-            if (InputManager.MenuConfirm())
             var unequippedArea = GetUnequippedListRect(viewport);
             if (!unequippedArea.Contains(mousePos))
             {
@@ -397,7 +327,11 @@ namespace PolyGone
                 return false;
             }
 
-            if (InputManager.LoadoutSectionLeft())
+            var candidates = GetUnequippedEntries();
+            if (rowIndex >= candidates.Count)
+            {
+                return false;
+            }
 
             var entry = candidates[rowIndex];
             if (entry.IsAttachment)
@@ -732,6 +666,73 @@ namespace PolyGone
                 unlocked ? Color.Gold : Color.Gray);
         }
 
+        // -----------------------------------------------------------------------
+        // Utilities
+        // -----------------------------------------------------------------------
+        private Rectangle GetMeterRect(Viewport viewport)
+            => new Rectangle(viewport.Width / 2 - 260, 92, 520, 28);
+
+        private Rectangle GetEquippedListRect(Viewport viewport)
+            => new Rectangle(56, 160, viewport.Width / 2 - 82, viewport.Height - 245);
+
+        private Rectangle GetUnequippedListRect(Viewport viewport)
+            => new Rectangle(viewport.Width / 2 + 26, 160, viewport.Width / 2 - 82, viewport.Height - 245);
+
+        private Rectangle GetStartButtonRect(Viewport viewport)
+            => new Rectangle(viewport.Width - 315, 16, 260, 44);
+
+        private Rectangle GetBackButtonRect(Viewport viewport)
+            => new Rectangle(viewport.Width - 315, 66, 260, 44);
+
+        private string GetPlayerItemName(ItemType item)
+        {
+            int index = Array.IndexOf(_playerItemTypes, item);
+            return index >= 0 ? _playerItemNames[index] : item.ToString();
+        }
+
+        private int GetPlayerItemSlotCost(ItemType item)
+        {
+            int index = Array.IndexOf(_playerItemTypes, item);
+            return index >= 0 && index < _playerItemSlotCosts.Length ? _playerItemSlotCosts[index] : 1;
+        }
+
+        private string GetAttachmentName(BlasterAttachmentType attachment)
+        {
+            int index = Array.IndexOf(_attachmentTypes, attachment);
+            return index >= 0 ? _attachmentNames[index] : attachment.ToString();
+        }
+
+        private int GetAttachmentSlotCost(BlasterAttachmentType attachment)
+        {
+            int index = Array.IndexOf(_attachmentTypes, attachment);
+            return index >= 0 && index < _attachmentSlotCosts.Length ? _attachmentSlotCosts[index] : 1;
+        }
+
+        private void DrawCentered(SpriteBatch spriteBatch, string text, int y, Color color)
+        {
+            var sz = _font!.MeasureString(text) * UiScale;
+            var pos = new Vector2(_graphics.GraphicsDevice.Viewport.Width / 2f - sz.X / 2f, y);
+            DrawUiString(spriteBatch, text, pos, color);
+        }
+
+        private void DrawUiString(SpriteBatch spriteBatch, string text, Vector2 position, Color color)
+        {
+            spriteBatch.DrawString(_font!, text, position, color, 0f, Vector2.Zero, UiScale, SpriteEffects.None, 0f);
+        }
+
+        private const float UiScale = 0.9f;
+
+        private void DrawRectOutline(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)
+        {
+            spriteBatch.Draw(_pixel!, new Rectangle(rect.X, rect.Y, rect.Width, thickness), color);
+            spriteBatch.Draw(_pixel!, new Rectangle(rect.X, rect.Bottom - thickness, rect.Width, thickness), color);
+            spriteBatch.Draw(_pixel!, new Rectangle(rect.X, rect.Y, thickness, rect.Height), color);
+            spriteBatch.Draw(_pixel!, new Rectangle(rect.Right - thickness, rect.Y, thickness, rect.Height), color);
+        }
+
+        // -----------------------------------------------------------------------
+        // Save / load
+        // -----------------------------------------------------------------------
         private static void SaveLoadout()
         {
             try

@@ -26,11 +26,7 @@ internal class GameOverScene : IScene
         this.sceneManager = sceneManager;
         this.graphics = graphics;
         this.gameScene = gameScene;
-<<<<<<< Controller-Support
-=======
         this.audioManager = audioManager;
-        previousKeyboardState = Keyboard.GetState();
->>>>>>> DEV
         selectedIndex = 0;
     }
 

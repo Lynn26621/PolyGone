@@ -11,11 +11,8 @@ public class Game1 : Game
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
     private SceneManager sceneManager;
-<<<<<<< Controller-Support
-=======
     private KeyboardState _previousKeyboardState;
     private AudioManager audioManager;
->>>>>>> DEV
 
     public Game1()
     {

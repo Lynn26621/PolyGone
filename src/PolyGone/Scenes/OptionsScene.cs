@@ -612,12 +612,4 @@ internal class OptionsScene : IScene
             _resetProgressConfirmSelectedIndex = 1;
         }
     }
-<<<<<<< Controller-Support
-=======
-
-    private bool IsKeyPressed(Keys key)
-    {
-        return _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
-    }
->>>>>>> DEV
 }
