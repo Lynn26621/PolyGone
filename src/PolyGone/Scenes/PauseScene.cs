@@ -122,11 +122,10 @@ internal class PauseScene : IScene
         else if (_selectedIndex == 2)
         {
             // Change Loadout (Restarts Level) - go back to inventory management
-            // The original Menu and LevelSelect should still be in the stack from initial navigation
+            // The original Menu and should still be in the stack from initial navigation
             string levelName = _gameScene.GetLevelName();
             _sceneManager.PopScene(this); // Pop pause scene
-            _sceneManager.PopScene(_gameScene); // Pop game scene
-            // Stack is now: Menu → LevelSelect
+            // Stack is now: Menu → Game Scene
             // Just add InventoryManagement on top
             _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _audioManager, _graphics, levelName));
             InputManager.ResetClickCooldown();

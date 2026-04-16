@@ -555,7 +555,7 @@ public class GameScene : IScene
                 doorRect.Height
             );
             Color doorColor = door.IsTriggered ? Color.Gold : Color.SaddleBrown;
-            spriteBatch.Draw(texture, doorDest, textureStore[0], doorColor * 0.5f);
+            spriteBatch.Draw(textureSheet, doorDest, textureStore[0], doorColor * 0.5f);
         }
         player.Draw(spriteBatch, camera.position);
         
