@@ -194,12 +194,11 @@ namespace PolyGone.Entities
 
             // Jumping with coyote time and double jump
             bool JumpTriggered = InputManager.GameJump();
-            bool JumpHappened = JumpTriggered && !InputManager.GameJumpPressed();
             bool wasOnGroundLastFrame = IsOnGround;
-            
+
             if ((IsOnGround || coyoteTime > 0f) && JumpTriggered)
             {
-                changeY = JumpStrength;
+                base.ChangeY = JumpStrength;
                 audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect                 
                 coyoteTime = 0f; // Reset coyote time after jumping
                 GetActiveDoubleJumpItem()?.Reset(); // Allow double jump in the new air phase
@@ -210,13 +209,13 @@ namespace PolyGone.Entities
                 var doubleJumpItem = GetActiveDoubleJumpItem();
                 if (doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, JumpTriggered, wasOnGroundLastFrame))
                 {
-                    changeY = JumpStrength; // Same jump strength for double jump
+                    base.ChangeY = JumpStrength; // Same jump strength for double jump
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #if DEBUG
-                else if (GetDevModeItem()?.IsActive == true && JumpHappened)
+                else if (GetDevModeItem()?.IsActive == true && JumpTriggered)
                 {
-                    changeY = JumpStrength; // DEV: infinite jumps
+                    base.ChangeY = JumpStrength; // DEV: infinite jumps
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #endif
@@ -423,10 +422,11 @@ namespace PolyGone.Entities
 
         public void Update(GameTime gameTime, Vector2 cameraOffset)
         {
+            Console.WriteLine("Player Update called");
             HandleInput();
             
             base.Update(gameTime);
-            
+
             // Update coyote time after physics update to use current frame's ground state
             coyoteTime = IsOnGround
                 ? 6f // 0.1 seconds at 60fps

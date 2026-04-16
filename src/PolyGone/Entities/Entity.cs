@@ -181,7 +181,7 @@ public class Entity : Sprite
     public virtual void HandleDeath()
     {
         // Default implementation marks entity as not alive
-        isAlive = false;
+        IsAlive = false;
         audioManager.PlayAudio("deathSfx", true, "null", false); //Play death sound effect
     }
 

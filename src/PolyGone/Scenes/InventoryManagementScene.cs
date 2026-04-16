@@ -218,6 +218,8 @@ namespace PolyGone
                 _sceneManager.PopScene(this);
                 return;
             }
+            HandleKeyboardNavigation();
+            HandleMouseNavigation();
 
         }
 
