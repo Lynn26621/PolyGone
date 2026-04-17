@@ -18,7 +18,7 @@ internal class GameOverScene : IScene
     private AudioManager audioManager;
     private readonly GraphicsDeviceManager graphics;
     private readonly GameScene gameScene;
-    private readonly string[] options = { "Hub","Restart Level", "Change Loadout", "Main Menu" };
+    private readonly string[] options = { "Hub","Restart Level", "Main Menu" };
     private int selectedIndex;
 
     public GameOverScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, GameScene gameScene)
@@ -102,13 +102,6 @@ internal class GameOverScene : IScene
                 sceneManager.PopScene(this);
                 sceneManager.PopScene(gameScene);
                 sceneManager.AddScene(new GameScene(content, sceneManager, audioManager, graphics, levelName, currentItems, currentAttachments));
-                InputManager.ResetClickCooldown();
-                break;
-
-            case "Change Loadout":
-                sceneManager.PopScene(this);
-                sceneManager.PopScene(gameScene);
-                sceneManager.AddScene(new InventoryManagement(content, sceneManager, audioManager, graphics, levelName));
                 InputManager.ResetClickCooldown();
                 break;
 

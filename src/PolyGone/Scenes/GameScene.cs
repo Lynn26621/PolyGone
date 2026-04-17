@@ -42,6 +42,7 @@ public class GameScene : IScene
     private readonly List<TurretEnemy> turretEnemies = new(); // Stationary blaster enemies
     private readonly List<Projectile> orphanedTurretBullets = new(); // Bullets that outlive their turret
     private GoalTrigger goalTrigger; // Win condition trigger
+    private SwitchTrigger inventoryAccess; // Inventory access trigger
     private List<LevelDoor> levelDoors = new(); // Doors connecting levels to hub
     private bool levelComplete = false;
     private bool gameOver = false;
@@ -224,7 +225,16 @@ public class GameScene : IScene
                                         break;
                                 }
                             }
-                            levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, connectedLevel, playerLoadX, playerLoadY, audioManager));
+                            levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connectedLevel, playerLoadX, playerLoadY));
+                            break;
+                        case "Inventory":
+                            Vector2 inventoryPos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            int inventoryWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                            int inventoryHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                            inventoryAccess = new SwitchTrigger(inventoryPos, inventoryWidth, inventoryHeight, audioManager);
                             break;
                         default:
                             break;
@@ -375,6 +385,12 @@ public class GameScene : IScene
         levelComplete = false;
         gameOver = false;
 
+        // Reset inventory access trigger
+        if (inventoryAccess != null)
+        {
+            inventoryAccess.Reset();
+        }
+
         // Reset Doors
         foreach (var door in levelDoors)
         {
@@ -455,10 +471,21 @@ public class GameScene : IScene
                 turret.Update(gameTime);
         }
 
-        // Update Doors
+        // Update Doors Input
         foreach (var door in levelDoors)
         {
             door.Update();
+        }
+
+        //Update Inventory Access Input
+        if (inventoryAccess != null)
+        {
+            inventoryAccess.Update();
+            inventoryAccess.CheckTrigger(player.Rectangle);
+            if (inventoryAccess.IsTriggered && inventoryAccess.IsActivated)
+            {
+                sceneManager.AddScene(new InventoryManagement(contentManager, sceneManager, audioManager, graphics, levelName));
+            }
         }
 
         // Before removing dead turrets, rescue any live bullets they still own
@@ -557,6 +584,21 @@ public class GameScene : IScene
             Color doorColor = door.IsTriggered ? Color.Gold : Color.SaddleBrown;
             spriteBatch.Draw(textureSheet, doorDest, textureStore[0], doorColor * 0.5f);
         }
+
+        //Draw inventory access trigger (if it exists)
+        if (inventoryAccess != null)
+        {
+            Rectangle inventoryRect = inventoryAccess.GetBounds();
+            Rectangle inventoryDest = new Rectangle(
+                (int)(inventoryRect.X - camera.position.X),
+                (int)(inventoryRect.Y - camera.position.Y),
+                inventoryRect.Width,
+                inventoryRect.Height
+            );
+            Color inventoryColor = inventoryAccess.IsTriggered ? Color.Gold : Color.SaddleBrown;
+            spriteBatch.Draw(textureSheet, inventoryDest, textureStore[0], inventoryColor * 0.5f);
+        }
+
         player.Draw(spriteBatch, camera.position);
         
         // Draw goal trigger (if it exists)
@@ -573,7 +615,7 @@ public class GameScene : IScene
             Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
             spriteBatch.Draw(textureSheet, goalDest, textureStore[0], goalColor * 0.5f);
         }
-        
+
         // Draw new GameUI (health, cooldown, and active items)
         gameUI.Draw(spriteBatch);
     }

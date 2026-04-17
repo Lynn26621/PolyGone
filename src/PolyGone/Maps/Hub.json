@@ -39,19 +39,6 @@
          "name":"Objects",
          "objects":[
                 {
-                 "gid":3,
-                 "height":32,
-                 "id":1,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"Enemy",
-                 "visible":true,
-                 "width":32,
-                 "x":96,
-                 "y":96
-                }, 
-                {
                  "height":32,
                  "id":2,
                  "name":"Level3Door",
@@ -136,9 +123,9 @@
                  "y":480
                 }, 
                 {
-                 "gid":2,
+                 "gid":25,
                  "height":32,
-                 "id":11,
+                 "id":20,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
@@ -146,6 +133,31 @@
                  "visible":true,
                  "width":32,
                  "x":96,
+                 "y":608
+                }, 
+                {
+                 "gid":29,
+                 "height":32,
+                 "id":23,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"Enemy",
+                 "visible":true,
+                 "width":32,
+                 "x":96,
+                 "y":96
+                }, 
+                {
+                 "height":32,
+                 "id":24,
+                 "name":"Inventory",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"Inventory",
+                 "visible":true,
+                 "width":32,
+                 "x":512,
                  "y":608
                 }],
          "opacity":1,
@@ -186,7 +198,7 @@
          "y":0
         }],
  "nextlayerid":4,
- "nextobjectid":20,
+ "nextobjectid":26,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",
@@ -197,8 +209,16 @@
          "source":"..\/..\/..\/TiledAssets\/TiledSets\/BasicTiles.tsx"
         }, 
         {
-         "firstgid":17,
+         "firstgid":9,
          "source":"..\/..\/..\/TiledAssets\/TiledSets\/CollisionTiles.tsx"
+        }, 
+        {
+         "firstgid":25,
+         "source":"..\/..\/..\/TiledAssets\/TiledSets\/PlayerSheet.tsx"
+        }, 
+        {
+         "firstgid":29,
+         "source":"..\/..\/..\/TiledAssets\/TiledSets\/EnemySheet.tsx"
         }],
  "tilewidth":32,
  "type":"map",
