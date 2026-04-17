@@ -24,6 +24,8 @@ namespace PolyGone
         public bool IsPiercing { get; }
         /// <summary>When true, the projectile instantly kills any enemy it hits (DEV only).</summary>
         public bool IsInstantKill { get; set; } = false;
+        internal List<Enemy> EnemiesHit = new(); // Track enemies hit to prevent multiple hits from piercing projectiles
+
         public Projectile(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, float lifetime, int health, Color color, float xSpeed, float ySpeed, Owner owner, int damage, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, bool isPiercing = false)
             : base(texture, position, audioManager, size, health, color, srcRect, collisionMap)
         {
