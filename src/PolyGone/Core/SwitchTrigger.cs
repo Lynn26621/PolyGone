@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace PolyGone.Core
 {
-    public class SwitchTrigger : Trigger
+    public class SwitchTrigger : PolyGone.Trigger
     {
         public bool IsTriggered { get; private set; }
         public bool IsActivated { get; private set; }
