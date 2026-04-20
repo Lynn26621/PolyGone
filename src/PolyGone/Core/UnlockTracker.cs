@@ -120,6 +120,7 @@ public static class UnlockTracker
         if (_completedLevels.Contains("TestLevel"))  slots++;
         if (_completedLevels.Contains("TestLevel2")) slots++;
         if (_completedLevels.Contains("TestLevel3")) slots++;
+        if (_completedLevels.Contains("TestLevel4")) slots++;
         return slots; // Max 5
     }
 

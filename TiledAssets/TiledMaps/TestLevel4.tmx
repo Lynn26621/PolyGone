@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="42">
+ <tileset firstgid="1" source="../TiledSets/PolyGoneTextureSheet.tsx"/>
+ <tileset firstgid="5" source="../TiledSets/BasicTiles.tsx"/>
+ <tileset firstgid="13" source="../TiledSets/CollisionTiles.tsx"/>
+ <layer id="1" name="Tiles" width="30" height="20">
+  <data encoding="csv">
+1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+</data>
+ </layer>
+ <objectgroup id="2" name="Objects">
+  <object id="8" name="Enemy" type="Enemy" gid="6" x="672" y="512" width="32" height="32"/>
+  <object id="11" name="Player" type="Player" gid="6" x="576" y="608" width="32" height="32"/>
+  <object id="13" name="Enemy" type="Enemy" gid="6" x="608" y="512" width="32" height="32"/>
+  <object id="14" name="Enemy" type="Enemy" gid="6" x="544" y="512" width="32" height="32"/>
+  <object id="15" name="Enemy" type="Enemy" gid="6" x="480" y="512" width="32" height="32"/>
+  <object id="16" name="Enemy" type="Enemy" gid="6" x="416" y="512" width="32" height="32"/>
+  <object id="17" name="Enemy" type="Enemy" gid="6" x="736" y="512" width="32" height="32"/>
+  <object id="18" name="Turret" type="TurretEnemy" gid="6" x="672" y="416" width="32" height="32"/>
+  <object id="19" name="Turret" type="TurretEnemy" gid="6" x="608" y="416" width="32" height="32"/>
+  <object id="20" name="Turret" type="TurretEnemy" gid="6" x="544" y="416" width="32" height="32"/>
+  <object id="21" name="Turret" type="TurretEnemy" gid="6" x="480" y="416" width="32" height="32"/>
+  <object id="22" name="Turret" type="TurretEnemy" gid="6" x="416" y="416" width="32" height="32"/>
+  <object id="23" name="Turret" type="TurretEnemy" gid="6" x="736" y="416" width="32" height="32"/>
+  <object id="24" name="BerserkEnemy" type="BerserkEnemy" gid="6" x="672" y="320" width="32" height="32"/>
+  <object id="25" name="BerserkEnemy" type="BerserkEnemy" gid="6" x="608" y="320" width="32" height="32"/>
+  <object id="26" name="BerserkEnemy" type="BerserkEnemy" gid="6" x="544" y="320" width="32" height="32"/>
+  <object id="27" name="BerserkEnemy" type="BerserkEnemy" gid="6" x="480" y="320" width="32" height="32"/>
+  <object id="28" name="BerserkEnemy" type="BerserkEnemy" gid="6" x="416" y="320" width="32" height="32"/>
+  <object id="29" name="BerserkEnemy" type="BerserkEnemy" gid="6" x="736" y="320" width="32" height="32"/>
+  <object id="30" name="FactoryEnemy" type="FactoryEnemy" gid="6" x="672" y="224" width="32" height="32"/>
+  <object id="31" name="FactoryEnemy" type="FactoryEnemy" gid="6" x="608" y="224" width="32" height="32"/>
+  <object id="32" name="FactoryEnemy" type="FactoryEnemy" gid="6" x="544" y="224" width="32" height="32"/>
+  <object id="33" name="FactoryEnemy" type="FactoryEnemy" gid="6" x="480" y="224" width="32" height="32"/>
+  <object id="34" name="FactoryEnemy" type="FactoryEnemy" gid="6" x="416" y="224" width="32" height="32"/>
+  <object id="35" name="FactoryEnemy" type="FactoryEnemy" gid="6" x="736" y="224" width="32" height="32"/>
+  <object id="36" name="Frog" type="Frog" gid="6" x="672" y="128" width="32" height="32"/>
+  <object id="37" name="Frog" type="Frog" gid="6" x="608" y="128" width="32" height="32"/>
+  <object id="38" name="Frog" type="Frog" gid="6" x="544" y="128" width="32" height="32"/>
+  <object id="39" name="Frog" type="Frog" gid="6" x="480" y="128" width="32" height="32"/>
+  <object id="40" name="Frog" type="Frog" gid="6" x="416" y="128" width="32" height="32"/>
+  <object id="41" name="Frog" type="Frog" gid="6" x="736" y="128" width="32" height="32"/>
+ </objectgroup>
+ <layer id="3" name="Collisions" width="30" height="20">
+  <data encoding="csv">
+13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,
+13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13
+</data>
+ </layer>
+</map>

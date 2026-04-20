@@ -54,11 +54,11 @@ class FactoryEnemy : Enemy
         audioManager.PlayAudio("shootSfx", true, "null", false); //Play shoot sound effect (placeholder)
         Enemy spawnedEnemy = new Enemy(
             texture: texture,
-            position: new Vector2(position.X, position.Y + size[1] + 10),
+            position: new Vector2(position.X + size[0] / 2f - 15, position.Y + size[1] / 2f - 15),
             audioManager: audioManager,
             size: new int[] { 30, 30 },
             health: 25,
-            color: Color.Green,
+            color: Color.White,
             srcRect: srcRect,
             collisionMap: collisionMap,
             patrolSpeed: 2f,

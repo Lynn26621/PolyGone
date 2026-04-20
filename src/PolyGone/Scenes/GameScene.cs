@@ -295,40 +295,40 @@ public class GameScene : IScene
         )));
         // Initialize berserk enemies
         berserkEnemies.AddRange(berserkEnemySpawns.Select(spawnPos => new BerserkEnemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
             audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 400,
-            color: Color.White,
-            srcRect: textureStore[2],
+            color: Color.Red,
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Initialize factory enemies
         factoryEnemies.AddRange(factoryEnemySpawns.Select(spawnPos => new FactoryEnemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
             audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 200,
             color: Color.White,
-            srcRect: textureStore[3],
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Initialize frogs
         frogs.AddRange(frogSpawns.Select(spawnPos => new Frog(
-            texture: texture,
+            texture: miscSheet,
             position: spawnPos,
             audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 100,
             color: Color.White,
-            srcRect: textureStore[5],
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
@@ -373,7 +373,7 @@ public class GameScene : IScene
         // Reset berserk enemies
         berserkEnemies.Clear();
         berserkEnemies.AddRange(berserkEnemySpawns.Select(spawnPos => new BerserkEnemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
             audioManager: audioManager,
             size: new int[2] { 60, 60 },
@@ -387,28 +387,28 @@ public class GameScene : IScene
         // Reset factory enemies
         factoryEnemies.Clear();
         factoryEnemies.AddRange(factoryEnemySpawns.Select(spawnPos => new FactoryEnemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
             audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 200,
             color: Color.White,
-            srcRect: textureStore[3],
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Reset frogs
         frogs.Clear();
         frogs.AddRange(frogSpawns.Select(spawnPos => new Frog(
-            texture: texture,
+            texture: miscSheet,
             position: spawnPos,
             audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 100,
             color: Color.White,
-            srcRect: textureStore[2],
+            srcRect: textureStore[0],
             collisionMap: collisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
