@@ -53,7 +53,7 @@ public class GameScene : IScene
     private int? loadY;
 
     public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null, int? loadX = null, int? loadY = null)
-    {       
+    {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
         this.audioManager = audioManager;
@@ -70,7 +70,7 @@ public class GameScene : IScene
 
     // Public method to get the level name for restart functionality
     public string GetLevelName() => levelName;
-    
+
     // Public methods to get the current loadout for restart functionality
     public List<ItemType> GetSelectedItems() => new List<ItemType>(selectedItems);
     public List<BlasterAttachmentType> GetSelectedAttachments() => new List<BlasterAttachmentType>(selectedAttachments);
@@ -103,16 +103,16 @@ public class GameScene : IScene
         // Read and parse JSON file
         string jsonContent = File.ReadAllText(filepath);
         using JsonDocument doc = JsonDocument.Parse(jsonContent);
-        
+
         // Get root and layers
         JsonElement root = doc.RootElement;
         JsonElement layers = root.GetProperty("layers");
-        
+
         int width = root.GetProperty("width").GetInt32();
-        
+
         tileMap = new Dictionary<Vector2, int>();
         collisionMap = new Dictionary<Vector2, int>();
-        
+
         foreach (JsonElement layer in layers.EnumerateArray())
         {
             string? layerName = layer.GetProperty("name").GetString();
@@ -120,28 +120,28 @@ public class GameScene : IScene
             if (layerName != "Objects")
             {
                 JsonElement dataArray = layer.GetProperty("data");
-                
+
                 int index = 0;
                 foreach (JsonElement tile in dataArray.EnumerateArray())
                 {
                     int tileValue = tile.GetInt32();
                     int x = index % width;
                     int y = index / width;
-                    
+
                     if (tileValue > 0)
                     {
                         // Tiled's firstgid is 1, so we subtract 1 to convert to 0-based index.
                         // Wrap tileValue to fit within our texture store (assuming 16 tiles per layer in Tiled)
                         if (layerName == "Tiles")
                         {
-                            tileMap[new Vector2(x, y)] = tileValue % 16 - 1; 
+                            tileMap[new Vector2(x, y)] = tileValue % 16 - 1;
                         }
                         else if (layerName == "Collisions")
                         {
                             collisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
                         }
                     }
-                    
+
                     index++;
                 }
             }
@@ -155,6 +155,7 @@ public class GameScene : IScene
                     switch (objType)
                     {
                         case "Player":
+                        case "PlayerSpawn":
                             int playerX;
                             int playerY;
                             if (loadX.HasValue && loadY.HasValue)
@@ -240,15 +241,23 @@ public class GameScene : IScene
                             break;
                     }
                 }
-            } 
+            }
         }
-        
+
+        // If no player marker exists in the map, allow door-provided coordinates.
+        if (!playerSpawnFound && loadX.HasValue && loadY.HasValue)
+        {
+            playerPos = AdjustCoordinates(loadX.Value, loadY.Value);
+            playerSpawnFound = true;
+        }
+
         // Validate that a player spawn was found
         if (!playerSpawnFound)
         {
             throw new InvalidOperationException(
-                $"Map file '{filepath}' is missing a required PlayerSpawn object in the Objects layer. " +
-                "Please ensure the map contains exactly one object with type='PlayerSpawn'."
+                $"Map file '{filepath}' is missing a required player spawn in the Objects layer. " +
+                "Please ensure the map contains exactly one object with type='Player' or type='PlayerSpawn', " +
+                "or provide door load coordinates when transitioning into this level."
             );
         }
     }
@@ -276,7 +285,7 @@ public class GameScene : IScene
                     break;
             }
         }
-        
+
         // Load texture atlas and initialize camera
         playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
         enemySheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneEnemySheet");
@@ -309,7 +318,7 @@ public class GameScene : IScene
             audioManager: audioManager,
             visualSize: new int[2] { 64, 64 }
         );
-        
+
         // Initialize GameUI
         gameUI = new GameUI(player, textureSheet, textureStore[2], hudFont);
         // Initialize turret enemies
@@ -339,14 +348,14 @@ public class GameScene : IScene
             visualSize: new int[2] { 64, 64 }
         )));
     }
-    
+
     private void Reset()
     {
         // Reset player
         player.position = playerPos;
         player.health = 100;
         player.bullets.Clear();
-        
+
         // Reset turret enemies
         orphanedTurretBullets.Clear();
         turretEnemies.Clear();
@@ -376,7 +385,7 @@ public class GameScene : IScene
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 }
         )));
-        
+
         // Reset goal trigger and level completion
         if (goalTrigger != null)
         {
@@ -397,7 +406,7 @@ public class GameScene : IScene
             door.Reset();
         }
     }
-    
+
     public void Update(GameTime gameTime)
     {
         // Check if level is complete or game over
@@ -405,15 +414,15 @@ public class GameScene : IScene
         {
             return;
         }
-        
+
         // Update player and camera
         player.Update(gameTime, camera.position);
-        camera.Follow(player.Rectangle, new Vector2(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight), new Vector2( tileMap.Keys.Max(k => k.X + 1) * 64, tileMap.Keys.Max(k => k.Y + 1) * 64));
-        
+        camera.Follow(player.Rectangle, new Vector2(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight), new Vector2(tileMap.Keys.Max(k => k.X + 1) * 64, tileMap.Keys.Max(k => k.Y + 1) * 64));
+
         // Check all entities for out-of-bounds
         float worldMaxY = tileMap.Keys.Max(k => k.Y + 1) * 64;
         float worldMaxX = tileMap.Keys.Max(k => k.X + 1) * 64;
-        
+
         // Check player bounds
         if (player.position.Y > worldMaxY)
         {
@@ -435,7 +444,7 @@ public class GameScene : IScene
             sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, audioManager, graphics, this));
             return;
         }
-        
+
         // Check enemies for falling out of bounds
         foreach (var enemy in enemies)
         {
@@ -523,7 +532,7 @@ public class GameScene : IScene
         {
             turret.EntityCollisionUpdate(allEntities);
         }
-        
+
         // Check for goal trigger
         if (goalTrigger != null && !levelComplete)
         {
@@ -600,7 +609,7 @@ public class GameScene : IScene
         }
 
         player.Draw(spriteBatch, camera.position);
-        
+
         // Draw goal trigger (if it exists)
         if (goalTrigger != null)
         {
