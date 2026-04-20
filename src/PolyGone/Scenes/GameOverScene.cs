@@ -107,6 +107,23 @@ internal class GameOverScene : IScene
                 InputManager.ResetClickCooldown();
                 break;
 
+            case "Level Select":
+                sceneManager.PopScene(this);
+                sceneManager.PopScene(gameScene);
+                // Pop any scenes between here and LevelSelect
+                while (sceneManager.GetCurrentScene() != null && sceneManager.GetCurrentScene() is not LevelSelect)
+                {
+                    sceneManager.PopScene(sceneManager.GetCurrentScene());
+                }
+                // If no LevelSelect found in the stack, push one
+                if (sceneManager.GetCurrentScene() is not LevelSelect)
+                {
+                    sceneManager.AddScene(new LevelSelect(content, sceneManager, audioManager, graphics));
+                }
+                InputManager.ResetClickCooldown();
+                audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
+                break;
+
             case "Main Menu":
                 sceneManager.PopScene(this);
                 sceneManager.PopScene(gameScene);
