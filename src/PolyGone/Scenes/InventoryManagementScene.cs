@@ -145,6 +145,11 @@ namespace PolyGone
         private enum SelectionMode { Loadout, Confirm }
         private SelectionMode _currentMode = SelectionMode.Loadout;
         private int _confirmCursor = 0; // 0 = Start Game, 1 = Back
+        private enum NavigationSection { EquippedList, UnequippedList, ActionButtons }
+        private NavigationSection _currentSection = NavigationSection.EquippedList;
+        private int _equippedListCursor = 0;
+        private int _unequippedListCursor = 0;
+        private int _actionButtonCursor = 0;
 
 
         private readonly List<ItemType> _selectedPlayerItems;
@@ -225,24 +230,38 @@ namespace PolyGone
 
         private void HandleKeyboardNavigation()
         {
+            // Handle section switching (Left/Right)
+            if (InputManager.MenuLeft())
+            {
+                if (_currentSection == NavigationSection.UnequippedList)
+                {
+                    _currentSection = NavigationSection.EquippedList;
+                }
+                else if (_currentSection == NavigationSection.ActionButtons)
+                {
+                    _currentSection = NavigationSection.UnequippedList;
+                }
+            }
+
+            if (InputManager.MenuRight())
+            {
+                if (_currentSection == NavigationSection.EquippedList)
+                {
+                    _currentSection = NavigationSection.UnequippedList;
+                }
+                else if (_currentSection == NavigationSection.UnequippedList)
+                {
+                    _currentSection = NavigationSection.ActionButtons;
+                }
+            }
+
+            // Handle up/down navigation within sections
+            HandleVerticalNavigation();
+
+            // Handle item selection
             if (InputManager.MenuConfirm())
             {
-                if (_currentMode == SelectionMode.Confirm)
-                {
-                    if (_confirmCursor == 0)
-                    {
-                        StartGame();
-                    }
-                    else
-                    {
-                        _sceneManager.PopScene(this);
-                    }
-                }
-                else
-                {
-                    _currentMode = SelectionMode.Confirm;
-                    _confirmCursor = 0;
-                }
+                HandleItemSelection();
             }
         }
 
@@ -280,6 +299,73 @@ namespace PolyGone
             }
         }
 
+        private void HandleVerticalNavigation()
+        {
+            if (InputManager.MenuUp())
+            {
+                switch (_currentSection)
+                {
+                    case NavigationSection.EquippedList:
+                        var equippedEntries = GetEquippedEntries();
+                        if (equippedEntries.Count > 0)
+                        {
+                            _equippedListCursor = Math.Max(0, _equippedListCursor - 1);
+                        }
+                        break;
+
+                    case NavigationSection.UnequippedList:
+                        var unequippedEntries = GetUnequippedEntries();
+                        if (unequippedEntries.Count > 0)
+                        {
+                            _unequippedListCursor = Math.Max(0, _unequippedListCursor - 1);
+                        }
+                        break;
+
+                    case NavigationSection.ActionButtons:
+                        _actionButtonCursor = Math.Max(0, _actionButtonCursor - 1);
+                        break;
+                }
+            }
+
+            if (InputManager.MenuDown())
+            {
+                switch (_currentSection)
+                {
+                    case NavigationSection.EquippedList:
+                        var equippedEntries = GetEquippedEntries();
+                        if (equippedEntries.Count > 0)
+                        {
+                            _equippedListCursor = Math.Min(equippedEntries.Count - 1, _equippedListCursor + 1);
+                        }
+                        else if (_currentSection == NavigationSection.EquippedList)
+                        {
+                            // If equipped list is empty, move to action buttons
+                            _currentSection = NavigationSection.ActionButtons;
+                            _actionButtonCursor = 0;
+                        }
+                        break;
+
+                    case NavigationSection.UnequippedList:
+                        var unequippedEntries = GetUnequippedEntries();
+                        if (unequippedEntries.Count > 0)
+                        {
+                            _unequippedListCursor = Math.Min(unequippedEntries.Count - 1, _unequippedListCursor + 1);
+                        }
+                        else
+                        {
+                            // Move to action buttons if at bottom
+                            _currentSection = NavigationSection.ActionButtons;
+                            _actionButtonCursor = 0;
+                        }
+                        break;
+
+                    case NavigationSection.ActionButtons:
+                        _actionButtonCursor = Math.Min(1, _actionButtonCursor + 1);
+                        break;
+                }
+            }
+        }
+
         private bool TryHandleEquippedClick(Viewport viewport, Point mousePos)
         {
             var equippedArea = GetEquippedListRect(viewport);
@@ -313,6 +399,24 @@ namespace PolyGone
             }
 
             return true;
+        }
+
+        private void HandleItemSelection()
+        {
+            switch (_currentSection)
+            {
+                case NavigationSection.EquippedList:
+                    HandleEquippedItemSelection();
+                    break;
+
+                case NavigationSection.UnequippedList:
+                    HandleUnequippedItemSelection();
+                    break;
+
+                case NavigationSection.ActionButtons:
+                    HandleActionButtonSelection();
+                    break;
+            }
         }
 
         private bool TryHandleUnequippedClick(Viewport viewport, Point mousePos)
@@ -416,6 +520,98 @@ namespace PolyGone
             _selectedAttachments.AddRange(keptAttachments);
         }
 
+        private void HandleEquippedItemSelection()
+{
+    var equippedEntries = GetEquippedEntries();
+    if (_equippedListCursor >= 0 && _equippedListCursor < equippedEntries.Count)
+    {
+        var entry = equippedEntries[_equippedListCursor];
+        
+        // Remove the selected item (same logic as your mouse click)
+        if (entry.IsAttachment)
+        {
+            var attachment = _attachmentTypes[entry.DefinitionIndex];
+            _selectedAttachments.Remove(attachment);
+        }
+        else
+        {
+            var item = _playerItemTypes[entry.DefinitionIndex];
+            _selectedPlayerItems.Remove(item);
+        }
+        
+        // Adjust cursor if we removed the last item
+        if (_equippedListCursor >= GetEquippedEntries().Count && _equippedListCursor > 0)
+        {
+            _equippedListCursor--;
+        }
+    }
+}
+
+private void HandleUnequippedItemSelection()
+{
+    var unequippedEntries = GetUnequippedEntries();
+    if (_unequippedListCursor >= 0 && _unequippedListCursor < unequippedEntries.Count)
+    {
+        var entry = unequippedEntries[_unequippedListCursor];
+        
+        // Add the selected item (same logic as your mouse click)
+        if (entry.IsAttachment)
+        {
+            var attachment = _attachmentTypes[entry.DefinitionIndex];
+            if (!UnlockTracker.IsAttachmentUnlocked(attachment))
+            {
+                return; // Can't equip locked items
+            }
+
+            int cost = GetAttachmentSlotCost(attachment);
+            int used = GetTotalUsedSlots();
+            int max = GetSharedSlotCount();
+            if (used + cost > max)
+            {
+                return; // Not enough slots
+            }
+
+            _selectedAttachments.Add(attachment);
+        }
+        else
+        {
+            var itemType = _playerItemTypes[entry.DefinitionIndex];
+            if (!UnlockTracker.IsItemUnlocked(itemType))
+            {
+                return; // Can't equip locked items
+            }
+
+            int itemCost = GetPlayerItemSlotCost(itemType);
+            int totalUsed = GetTotalUsedSlots();
+            int sharedMax = GetSharedSlotCount();
+            if (totalUsed + itemCost > sharedMax)
+            {
+                return; // Not enough slots
+            }
+
+            _selectedPlayerItems.Add(itemType);
+        }
+        
+        // Adjust cursor if we moved the last item
+        if (_unequippedListCursor >= GetUnequippedEntries().Count && _unequippedListCursor > 0)
+        {
+            _unequippedListCursor--;
+        }
+    }
+}
+
+private void HandleActionButtonSelection()
+{
+    if (_actionButtonCursor == 0)
+    {
+        StartGame(); // Start Game button
+    }
+    else
+    {
+        _sceneManager.PopScene(this); // Back button
+    }
+}
+
         private int GetTotalUsedSlots()
         {
             return _selectedPlayerItems.Sum(GetPlayerItemSlotCost)
@@ -507,8 +703,11 @@ namespace PolyGone
 
         private void DrawActionButtons(SpriteBatch spriteBatch, Viewport viewport)
         {
-            DrawButton(spriteBatch, GetStartButtonRect(viewport), "Start Game", _currentMode == SelectionMode.Confirm && _confirmCursor == 0);
-            DrawButton(spriteBatch, GetBackButtonRect(viewport), "Back", _currentMode == SelectionMode.Confirm && _confirmCursor == 1);
+            bool startSelected = _currentSection == NavigationSection.ActionButtons && _actionButtonCursor == 0;
+            bool backSelected = _currentSection == NavigationSection.ActionButtons && _actionButtonCursor == 1;
+
+            DrawButton(spriteBatch, GetStartButtonRect(viewport), "Start Game", startSelected);
+            DrawButton(spriteBatch, GetBackButtonRect(viewport), "Back", backSelected);
         }
 
         private void DrawButton(SpriteBatch spriteBatch, Rectangle rect, string text, bool active)
@@ -649,14 +848,31 @@ namespace PolyGone
                 return;
             }
 
+            // Check if this row is currently selected for keyboard navigation
+            bool isSelected = IsRowSelected(row, equipped);
+
             Color fill = !unlocked
                 ? new Color(70, 70, 70, 150)
                 : equipped
                     ? new Color(72, 130, 78, 145)
                     : new Color(86, 96, 135, 130);
 
+            // Brighten the fill color if selected
+            if (isSelected)
+            {
+                fill = new Color(
+                    Math.Min(255, fill.R + 40),
+                    Math.Min(255, fill.G + 40),
+                    Math.Min(255, fill.B + 40),
+                    fill.A);
+            }
+
             spriteBatch.Draw(_pixel, rowRect, fill);
-            DrawRectOutline(spriteBatch, rowRect, unlocked ? Color.White : Color.Gray, 1);
+
+            // Use yellow outline for selected items
+            Color outlineColor = isSelected ? Color.Yellow : (unlocked ? Color.White : Color.Gray);
+            int outlineThickness = isSelected ? 2 : 1;
+            DrawRectOutline(spriteBatch, rowRect, outlineColor, outlineThickness);
 
             string prefix = !unlocked ? "[LOCKED] " : "";
             DrawUiString(spriteBatch, $"{prefix}[{typeLabel}] {name}", new Vector2(rowRect.X + 10, rowRect.Y + 6), unlocked ? Color.White : Color.LightGray);
@@ -666,6 +882,19 @@ namespace PolyGone
             DrawUiString(spriteBatch, costText,
                 new Vector2(rowRect.Right - costSize.X - 10, rowRect.Y + 6),
                 unlocked ? Color.Gold : Color.Gray);
+        }
+
+        private bool IsRowSelected(int row, bool equipped)
+        {
+            if (_currentSection == NavigationSection.EquippedList && equipped)
+            {
+                return row == _equippedListCursor;
+            }
+            else if (_currentSection == NavigationSection.UnequippedList && !equipped)
+            {
+                return row == _unequippedListCursor;
+            }
+            return false;
         }
 
         // -----------------------------------------------------------------------
