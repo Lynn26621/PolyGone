@@ -170,7 +170,6 @@ internal class DevMenuScene : IScene
         var allItems = new (ItemType Type, string Name, string Req)[]
         {
             (ItemType.DoubleJump,  "Double Jump",  "always"),
-            (ItemType.SpeedBoost,  "Speed Boost",  "always"),
             (ItemType.HealingGlow, "Healing Glow", "Level 1"),
             (ItemType.LowGravity,  "Low Gravity",  "Level 2"),
             (ItemType.IronWill,    "Iron Will",    "Level 3"),

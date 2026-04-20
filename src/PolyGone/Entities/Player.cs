@@ -103,9 +103,6 @@ namespace PolyGone.Entities
                     case ItemType.DoubleJump:
                         item = new DoubleJumpItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Blue, srcRect);
                         break;
-                    case ItemType.SpeedBoost:
-                        item = new SpeedBoostItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Yellow, srcRect);
-                        break;
                     case ItemType.HealingGlow:
                         item = new HealingGlowItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Green, srcRect);
                         break;
@@ -183,10 +180,10 @@ namespace PolyGone.Entities
 
             // Horizontal movement with speed boost consideration
             if (keyboardState.IsKeyDown(Keys.A) && !keyboardState.IsKeyDown(Keys.D)) moveDirection = -1;
-            else if (keyboardState.IsKeyDown(Keys.D) && !keyboardState.IsKeyDown(Keys.A)) moveDirection = 1; 
-            
+            else if (keyboardState.IsKeyDown(Keys.D) && !keyboardState.IsKeyDown(Keys.A)) moveDirection = 1;
+
             // Apply acceleration with speed boost
-            float speedMultiplier = GetSpeedBoostMultiplier();
+            float speedMultiplier = 1.5f; // Base speed multiplier
             changeX += moveDirection * 1f * speedMultiplier;
             changeX = MathHelper.Clamp(changeX, -5f * speedMultiplier, 5f * speedMultiplier);
 
@@ -349,12 +346,6 @@ namespace PolyGone.Entities
                     nudge = offset;
                 position.X += nudge;
             }
-        }
-
-        private float GetSpeedBoostMultiplier()
-        {
-            var speedBoostItem = itemInventory.OfType<SpeedBoostItem>().FirstOrDefault();
-            return speedBoostItem?.GetSpeedMultiplier() ?? 1.0f;
         }
 
         private DoubleJumpItem? GetActiveDoubleJumpItem()

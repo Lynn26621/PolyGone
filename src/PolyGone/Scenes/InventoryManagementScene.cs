@@ -17,7 +17,6 @@ namespace PolyGone
     public enum ItemType
     {
         DoubleJump,
-        SpeedBoost,
         HealingGlow,
         LowGravity,
         IronWill,
@@ -61,7 +60,6 @@ namespace PolyGone
         private readonly string[] _playerItemNames =
         {
             "Double Jump",
-            "Speed Boost",
             "Healing Glow",
             "Low Gravity",
             "Iron Will",
@@ -72,7 +70,6 @@ namespace PolyGone
         private readonly ItemType[] _playerItemTypes =
         {
             ItemType.DoubleJump,
-            ItemType.SpeedBoost,
             ItemType.HealingGlow,
             ItemType.LowGravity,
             ItemType.IronWill,
@@ -83,7 +80,6 @@ namespace PolyGone
         private readonly string[] _playerItemDescriptions =
         {
             "One additional jump while airborne",
-            "Move 50% faster",
             "Regenerate 10 HP every 2 seconds",
             "40% gravity - rises and falls slowly, same jump height",
             "Once per 20s, survive a killing blow and stay at 1 HP",
@@ -155,7 +151,6 @@ namespace PolyGone
         private readonly int[] _playerItemSlotCosts =
         {
             2, // Double Jump
-            1, // Speed Boost
             2, // Healing Glow
             1, // Low Gravity
             2, // Iron Will
