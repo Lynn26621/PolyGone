@@ -22,18 +22,7 @@ public class Entity : Sprite
     protected readonly int[] VisualSize; // Visual size for drawing (can be larger than hitbox)
     protected Vector2 HitboxOffset; // Offset to center the hitbox within the visual sprite
     public bool IsAlive = true;
-    protected readonly Dictionary<Vector2, int>? collisionMap;
     private AudioManager audioManager;
-    protected float changeX;
-    protected float changeY;
-    protected bool isOnGround;
-    public int health;
-    public readonly int maxHealth;
-    protected float invincibilityFrames;
-    protected float friction; // Horizontal friction multiplier in range [0, 1]; 1 keeps full velocity (no friction), 0 stops movement immediately (maximum friction)
-    protected readonly int[] visualSize; // Visual size for drawing (can be larger than hitbox)
-    protected Vector2 hitboxOffset; // Offset to center the hitbox within the visual sprite
-    protected bool isAlive = true;
     /// <summary>Multiplier applied to gravity each physics tick. 1 = normal, lower = floatier.</summary>
     protected float GravityScale = 1f;
     

@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace PolyGone;
@@ -97,10 +98,20 @@ public static class InputManager
         bool mouseInput = _currentMouseState.Position != _previousMouseState.Position ||
                          _currentMouseState.LeftButton == ButtonState.Pressed;
 
-        bool menuUpHeld = _currentKeyboardState.IsKeyDown(Keys.W) || thumbstickY > 0.3f;
-        bool menuDownHeld = _currentKeyboardState.IsKeyDown(Keys.S) || thumbstickY < -0.3f;
-        bool menuLeftHeld = _currentKeyboardState.IsKeyDown(Keys.A) || thumbstickX < -0.3f;
-        bool menuRightHeld = _currentKeyboardState.IsKeyDown(Keys.D) || thumbstickX > 0.3f;
+        bool keyboardInput = _currentKeyboardState.GetPressedKeys().Length > 0;
+
+        bool menuUpHeld = _currentKeyboardState.IsKeyDown(Keys.W) ||
+                          thumbstickY > 0.3f ||
+                          _currentGamepadState.DPad.Up == ButtonState.Pressed;
+        bool menuDownHeld = _currentKeyboardState.IsKeyDown(Keys.S) ||
+                            thumbstickY < -0.3f ||
+                            _currentGamepadState.DPad.Down == ButtonState.Pressed;
+        bool menuLeftHeld = _currentKeyboardState.IsKeyDown(Keys.A) ||
+                            thumbstickX < -0.3f ||
+                            _currentGamepadState.DPad.Left == ButtonState.Pressed;
+        bool menuRightHeld = _currentKeyboardState.IsKeyDown(Keys.D) ||
+                             thumbstickX > 0.3f ||
+                             _currentGamepadState.DPad.Right == ButtonState.Pressed;
 
         if (controllerInput && !mouseInput)
         {
@@ -158,7 +169,7 @@ public static class InputManager
         }
 
         // Update escape key cooldown 
-        if (_escapeKeyCooldown > 0f)
+        if (PauseMenuOpen() || PauseMenuClose() || MenuBack())
         {
             _escapeKeyCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
@@ -208,21 +219,21 @@ public static class InputManager
     public static bool GameMoveLeft()
     {
         bool keyboardLeft = _currentKeyboardState.IsKeyDown(Keys.A);
-        bool gamepadLeft = thumbstickX < -0.1f; 
+        bool gamepadLeft = thumbstickX < -0.3f; 
         return keyboardLeft || gamepadLeft;
     }
     // function for moving right in game (D key for keyboard and left thumbstick right for gamepad)
     public static bool GameMoveRight()
     {
         bool keyboardRight = _currentKeyboardState.IsKeyDown(Keys.D);
-        bool gamepadRight = thumbstickX > 0.1f; 
+        bool gamepadRight = thumbstickX > 0.3f; 
         return keyboardRight || gamepadRight;
     }
     // function for dropping through platforms in game (S key for keyboard and left thumbstick down for gamepad)
     public static bool GameDrop()
     {
         bool keyboardDrop = _currentKeyboardState.IsKeyDown(Keys.S);
-        bool gamepadDrop = thumbstickY < -0.1f; 
+        bool gamepadDrop = thumbstickY < -0.9f; 
         return keyboardDrop || gamepadDrop;
     }
     // function for aiming in game (mouse position for keyboard and right thumbstick for gamepad)
@@ -260,16 +271,19 @@ public static class InputManager
                             && _escapeKeyCooldown <= 0f;
         return keyboardPause || gamepadPause;
     }
-    //function for navigating up in menus (W key for keyboard and left thumbstick up for gamepad, and hovering over a button with mouse is already handled by GetMousePosition)
+    //function for navigating up in menus (W/Up key for keyboard and left thumbstick up for gamepad, and hovering over a button with mouse is already handled by GetMousePosition)
     public static bool MenuUp()
     {
-        bool keyboardUp = _currentKeyboardState.IsKeyDown(Keys.W)
-                          && _previousKeyboardState.IsKeyUp(Keys.W);
+        bool keyboardUp = (_currentKeyboardState.IsKeyDown(Keys.W) && _previousKeyboardState.IsKeyUp(Keys.W))
+                          || (_currentKeyboardState.IsKeyDown(Keys.Up) && _previousKeyboardState.IsKeyUp(Keys.Up));
         bool gamepadUp = thumbstickY > 0.3f
                           && _previousGamepadState.ThumbSticks.Left.Y <= 0.3f;
         bool dPadUp = _currentGamepadState.DPad.Up == ButtonState.Pressed
                       && _previousGamepadState.DPad.Up == ButtonState.Released;
-        bool menuUpCurrentlyHeld = _currentKeyboardState.IsKeyDown(Keys.W) || thumbstickY > 0.3f || _currentGamepadState.DPad.Up == ButtonState.Pressed;
+        bool menuUpCurrentlyHeld = _currentKeyboardState.IsKeyDown(Keys.W)
+                                   || _currentKeyboardState.IsKeyDown(Keys.Up)
+                                   || thumbstickY > 0.3f
+                                   || _currentGamepadState.DPad.Up == ButtonState.Pressed;
         bool autoRepeat = menuUpCurrentlyHeld &&
                   _menuUpHoldTimer >= 1.0f &&
                   _menuUpAutoRepeatTimer >= MENU_AUTO_REPEAT_INTERVAL;
@@ -341,19 +355,37 @@ public static class InputManager
         }
         return keyboardRight || gamepadRight || dPadRight || autoRepeat;
     }
-    //function for selecting a menu option (Enter key for keyboard, mouse left click, and A button for gamepad)
+
+    //function for selecting a menu option with the mouse only (left click)
+    public static bool MenuMouseConfirm()
+    {
+        return _currentMouseState.LeftButton == ButtonState.Pressed
+               && _previousMouseState.LeftButton == ButtonState.Released
+               && _mouseClickCooldown <= 0f;
+    }
+    //function for selecting a menu option without the mouse (Enter key for keyboard and A button for gamepad)
+    public static bool MenuNonPointerConfirm()
+    {
+        bool keyboardConfirm = _currentKeyboardState.IsKeyDown(Keys.Enter)
+                               && _previousKeyboardState.IsKeyUp(Keys.Enter)
+                               && _escapeKeyCooldown <= 0f;
+        bool gamepadConfirm = _currentGamepadState.Buttons.A == ButtonState.Pressed
+                              && _previousGamepadState.Buttons.A == ButtonState.Released
+                              && _mouseClickCooldown <= 0f;
+        return keyboardConfirm || gamepadConfirm;
+    }
+    //function for selecting a menu option from any supported input source
     public static bool MenuConfirm()
     {
-        bool keyboardConfirm = _currentKeyboardState.IsKeyDown(Keys.Enter) 
-                               && _previousKeyboardState.IsKeyUp(Keys.Enter) 
-                               && _escapeKeyCooldown <= 0f;
+        return MenuMouseConfirm() || MenuNonPointerConfirm();
+    }
+
+    public static bool MenuConfirmMouseClick()
+    {
         bool mouseConfirm = _currentMouseState.LeftButton == ButtonState.Pressed
                             && _previousMouseState.LeftButton == ButtonState.Released
                             && _mouseClickCooldown <= 0f;
-        bool gamepadConfirm = _currentGamepadState.Buttons.A == ButtonState.Pressed 
-                              && _previousGamepadState.Buttons.A == ButtonState.Released 
-                              && _mouseClickCooldown <= 0f;
-        return keyboardConfirm || mouseConfirm || gamepadConfirm;
+        return mouseConfirm;
     }
     //function for going back in menus (Escape key for keyboard, and B button for gamepad)
     public static bool MenuBack()

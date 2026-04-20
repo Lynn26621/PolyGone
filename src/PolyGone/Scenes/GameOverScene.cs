@@ -59,7 +59,7 @@ internal class GameOverScene : IScene
                 {
                     selectedIndex = i;
 
-                    if (InputManager.MenuConfirm())
+                    if (InputManager.MenuConfirmMouseClick())
                     {
                         ExecuteSelection();
                         InputManager.ConsumeClick();

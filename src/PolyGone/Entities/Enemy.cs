@@ -31,7 +31,7 @@ class Enemy : Entity
         {
             case Projectile projectile:
                 // Only take damage from player projectiles
-                if (projectile.Owner == Owner.Player)
+                if (projectile.FiredBy == Owner.Player)
                 {
                     HandleProjectileHit(projectile);
                 }

@@ -127,7 +127,7 @@ namespace PolyGone.Entities
                 }
             }
             
-            this.friction = 0.8f; // Player has more friction for tighter control
+            this.Friction = 0.8f; // Player has more friction for tighter control
             this.audioManager = audioManager; // Store reference to AudioManager for playing audio
         }
 
@@ -230,7 +230,7 @@ namespace PolyGone.Entities
                     break;
                 case Projectile projectile:
                     // Only take damage from enemy projectiles
-                    if (projectile.Owner == Owner.Enemy && InvincibilityFrames <= 0f)
+                    if (projectile.FiredBy == Owner.Enemy && InvincibilityFrames <= 0f)
                     {
 #if DEBUG
                         if (GetDevModeItem()?.IsActive == true) break;
@@ -267,7 +267,6 @@ namespace PolyGone.Entities
                         {
                             break;
                         }
-                        if (GetDevModeItem()?.IsActive == true) break;
 
                         audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 #endif
@@ -407,7 +406,7 @@ namespace PolyGone.Entities
         }
 
         // Public property to access current blaster for backward compatibility
-        public Blaster Blaster => GetBlaster();
+        public Blaster blaster => GetBlaster();
 
         // Public method to access item inventory for UI
         public List<Item> GetAllItems()
@@ -422,7 +421,6 @@ namespace PolyGone.Entities
 
         public void Update(GameTime gameTime, Vector2 cameraOffset)
         {
-            Console.WriteLine("Player Update called");
             HandleInput();
             
             base.Update(gameTime);

@@ -267,7 +267,7 @@ namespace PolyGone
 
         private void HandleMouseNavigation()
         {
-            if (_font == null || !InputManager.MenuConfirm())
+            if (_font == null || !InputManager.MenuConfirm() || Mouse.GetState().LeftButton != ButtonState.Pressed)
             {
                 return;
             }
@@ -277,8 +277,6 @@ namespace PolyGone
 
             if (GetStartButtonRect(viewport).Contains(mousePos))
             {
-                _currentMode = SelectionMode.Confirm;
-                _confirmCursor = 0;
                 StartGame();
                 InputManager.ConsumeClick();
                 return;
@@ -286,8 +284,6 @@ namespace PolyGone
 
             if (GetBackButtonRect(viewport).Contains(mousePos))
             {
-                _currentMode = SelectionMode.Confirm;
-                _confirmCursor = 1;
                 _sceneManager.PopScene(this);
                 InputManager.ConsumeClick();
                 return;
@@ -521,84 +517,81 @@ namespace PolyGone
         }
 
         private void HandleEquippedItemSelection()
-{
-    var equippedEntries = GetEquippedEntries();
-    if (_equippedListCursor >= 0 && _equippedListCursor < equippedEntries.Count)
-    {
-        var entry = equippedEntries[_equippedListCursor];
-        
-        // Remove the selected item (same logic as your mouse click)
-        if (entry.IsAttachment)
         {
-            var attachment = _attachmentTypes[entry.DefinitionIndex];
-            _selectedAttachments.Remove(attachment);
-        }
-        else
-        {
-            var item = _playerItemTypes[entry.DefinitionIndex];
-            _selectedPlayerItems.Remove(item);
-        }
-        
-        // Adjust cursor if we removed the last item
-        if (_equippedListCursor >= GetEquippedEntries().Count && _equippedListCursor > 0)
-        {
-            _equippedListCursor--;
-        }
-    }
-}
-
-private void HandleUnequippedItemSelection()
-{
-    var unequippedEntries = GetUnequippedEntries();
-    if (_unequippedListCursor >= 0 && _unequippedListCursor < unequippedEntries.Count)
-    {
-        var entry = unequippedEntries[_unequippedListCursor];
-        
-        // Add the selected item (same logic as your mouse click)
-        if (entry.IsAttachment)
-        {
-            var attachment = _attachmentTypes[entry.DefinitionIndex];
-            if (!UnlockTracker.IsAttachmentUnlocked(attachment))
+            var equippedEntries = GetEquippedEntries();
+            if (_equippedListCursor >= 0 && _equippedListCursor < equippedEntries.Count)
             {
-                return; // Can't equip locked items
+                var entry = equippedEntries[_equippedListCursor];
+                // Remove the selected item (same logic as your mouse click)
+                if (entry.IsAttachment)
+                {
+                    var attachment = _attachmentTypes[entry.DefinitionIndex];
+                    _selectedAttachments.Remove(attachment);
+                }
+                else
+                {
+                    var item = _playerItemTypes[entry.DefinitionIndex];
+                    _selectedPlayerItems.Remove(item);
+                }
+                // Adjust cursor if we removed the last item
+                if (_equippedListCursor >= GetEquippedEntries().Count && _equippedListCursor > 0)
+                {
+                    _equippedListCursor--;
+                }
             }
-
-            int cost = GetAttachmentSlotCost(attachment);
-            int used = GetTotalUsedSlots();
-            int max = GetSharedSlotCount();
-            if (used + cost > max)
-            {
-                return; // Not enough slots
-            }
-
-            _selectedAttachments.Add(attachment);
         }
-        else
+        private void HandleUnequippedItemSelection()
         {
-            var itemType = _playerItemTypes[entry.DefinitionIndex];
-            if (!UnlockTracker.IsItemUnlocked(itemType))
+            var unequippedEntries = GetUnequippedEntries();
+            if (_unequippedListCursor >= 0 && _unequippedListCursor < unequippedEntries.Count)
             {
-                return; // Can't equip locked items
-            }
-
-            int itemCost = GetPlayerItemSlotCost(itemType);
-            int totalUsed = GetTotalUsedSlots();
-            int sharedMax = GetSharedSlotCount();
-            if (totalUsed + itemCost > sharedMax)
-            {
-                return; // Not enough slots
-            }
-
-            _selectedPlayerItems.Add(itemType);
-        }
+                var entry = unequippedEntries[_unequippedListCursor];
         
-        // Adjust cursor if we moved the last item
-        if (_unequippedListCursor >= GetUnequippedEntries().Count && _unequippedListCursor > 0)
-        {
-            _unequippedListCursor--;
+                // Add the selected item (same logic as your mouse click)
+                if (entry.IsAttachment)
+                {
+                    var attachment = _attachmentTypes[entry.DefinitionIndex];
+                    if (!UnlockTracker.IsAttachmentUnlocked(attachment))
+                    {
+                        return; // Can't equip locked items
+                    }
+
+                    int cost = GetAttachmentSlotCost(attachment);
+                    int used = GetTotalUsedSlots();
+                    int max = GetSharedSlotCount();
+                    if (used + cost > max)
+                    {
+                        return; // Not enough slots
+                    }
+
+                    _selectedAttachments.Add(attachment);
+                }
+                else
+                {
+                    var itemType = _playerItemTypes[entry.DefinitionIndex];
+                    if (!UnlockTracker.IsItemUnlocked(itemType))
+                    {
+                        return; // Can't equip locked items
+                    }
+
+                    int itemCost = GetPlayerItemSlotCost(itemType);
+                    int totalUsed = GetTotalUsedSlots();
+                    int sharedMax = GetSharedSlotCount();
+                    if (totalUsed + itemCost > sharedMax)
+                    {
+                        return; // Not enough slots
+                    }
+
+                    _selectedPlayerItems.Add(itemType);
+                }
+        
+                // Adjust cursor if we moved the last item
+                if (_unequippedListCursor >= GetUnequippedEntries().Count && _unequippedListCursor > 0)
+                {
+                    _unequippedListCursor--;
+                }
+            }
         }
-    }
-}
 
 private void HandleActionButtonSelection()
 {
@@ -712,7 +705,18 @@ private void HandleActionButtonSelection()
 
         private void DrawButton(SpriteBatch spriteBatch, Rectangle rect, string text, bool active)
         {
-            spriteBatch.Draw(_pixel, rect, active ? new Color(255, 255, 255, 60) : new Color(15, 18, 26, 70));
+            Color fill = new Color(15, 18, 26, 70); // Your base color
+
+            if (active)
+            {
+                fill = new Color(
+                    Math.Min(255, fill.R + 40),
+                    Math.Min(255, fill.G + 40),
+                    Math.Min(255, fill.B + 40),
+                    fill.A);
+            }
+
+            spriteBatch.Draw(_pixel, rect, fill);
             DrawRectOutline(spriteBatch, rect, active ? Color.Yellow : Color.White, 2);
             Vector2 size = _font!.MeasureString(text) * UiScale;
             Vector2 pos = new Vector2(rect.X + (rect.Width - size.X) / 2f, rect.Y + (rect.Height - size.Y) / 2f);

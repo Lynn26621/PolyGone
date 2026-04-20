@@ -18,7 +18,7 @@ namespace PolyGone
         public readonly float XSpeed;
         public readonly float YSpeed;
         public float Lifetime; // Separate from Entity health for projectiles
-        public readonly Owner Owner; // Who fired this projectile
+        public readonly Owner FiredBy; // Who fired this projectile
         public readonly int Damage; // Fixed damage for now
         /// <summary>When true, the projectile passes through enemies instead of being destroyed on hit.</summary>
         public bool IsPiercing { get; }
@@ -32,7 +32,7 @@ namespace PolyGone
             this.XSpeed = xSpeed;
             this.YSpeed = ySpeed;
             this.Lifetime = lifetime;
-            this.Owner = owner;
+            this.FiredBy = owner;
             this.Damage = damage;
             this.IsPiercing = isPiercing;
         }
