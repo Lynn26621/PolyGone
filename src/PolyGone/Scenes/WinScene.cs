@@ -143,7 +143,7 @@ public class WinScene : IScene
         else if (selectedOption == "Hub")
         {
             sceneManager.PopScene(this); // Remove WinScene
-
+            sceneManager.PopScene(sceneManager.GetCurrentScene()); // Remove old GameScene
             sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, "Hub", selectedItems, selectedAttachments));
         }
         else if (selectedOption == "Main Menu")
