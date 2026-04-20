@@ -40,11 +40,11 @@ public class WinScene : IScene
         string? nextLevel = GetNextLevel(currentLevel);
         if (nextLevel != null)
         {
-            options = new[] { "Next Level", "Level Select", "Main Menu" };
+            options = new[] { "Hub", "Next Level", "Main Menu" };
         }
         else
         {
-            options = new[] { "Level Select", "Main Menu" };
+            options = new[] { "Hub", "Main Menu" };
         }
         
         previousKeyboardState = Keyboard.GetState();
@@ -140,18 +140,11 @@ public class WinScene : IScene
                 InputManager.ResetClickCooldown();
             }
         }
-        else if (selectedOption == "Level Select")
+        else if (selectedOption == "Hub")
         {
             sceneManager.PopScene(this); // Remove WinScene
-            
-            // Keep popping until we reach LevelSelect
-            while (sceneManager.GetCurrentScene() != null && sceneManager.GetCurrentScene() is not LevelSelect)
-            {
-                sceneManager.PopScene(sceneManager.GetCurrentScene());
-            }
-            
-            InputManager.ResetClickCooldown();
-            audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
+            sceneManager.PopScene(sceneManager.GetCurrentScene()); // Remove old GameScene
+            sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, "Hub", selectedItems, selectedAttachments));
         }
         else if (selectedOption == "Main Menu")
         {
