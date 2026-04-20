@@ -15,9 +15,11 @@ class FactoryEnemy : Enemy
     private AudioManager audioManager;
     private float spawnCooldown = 0f;
     private const float SPAWN_COOLDOWN = 180f; // 3 seconds at 60 fps
+    private const int MAX_SPAWNS = 5; // Max number of alive enemies this factory can have spawned at once
     private const float VIEW_RANGE = 1200f;    // Max viewing range in pixels
 
     public readonly List<Enemy> SpawnedEnemies = new();
+    private readonly List<Enemy> activeSpawnedEnemies = new();
 
 
     public FactoryEnemy(
@@ -39,6 +41,13 @@ class FactoryEnemy : Enemy
 
     private void SpawnEnemy()
     {
+        CleanupActiveSpawnedEnemies();
+
+        if (activeSpawnedEnemies.Count >= MAX_SPAWNS)
+        {
+            return;
+        }
+
         Vector2 myCenter = new Vector2(position.X + size[0] / 2f, position.Y + size[1] / 2f);
         Vector2 playerCenter = new Vector2(player.position.X + player.size[0] / 2f, player.position.Y + player.size[1] / 2f);
         Vector2 direction = playerCenter - myCenter;
@@ -67,7 +76,13 @@ class FactoryEnemy : Enemy
         );
 
         SpawnedEnemies.Add(spawnedEnemy);
+        activeSpawnedEnemies.Add(spawnedEnemy);
  
+    }
+
+    private void CleanupActiveSpawnedEnemies()
+    {
+        activeSpawnedEnemies.RemoveAll(enemy => !enemy.IsAlive);
     }
 
     private bool IsPlayerInViewRange()
@@ -81,6 +96,8 @@ class FactoryEnemy : Enemy
 
     public override void Update(GameTime gameTime)
     {
+        CleanupActiveSpawnedEnemies();
+
         // Count down and spawn while player is nearby
         if (spawnCooldown > 0f)
         {
