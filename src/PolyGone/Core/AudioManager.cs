@@ -1,10 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net.Mime;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
@@ -33,6 +26,9 @@ namespace PolyGone.Core
 
         // Variable to track currently playing song
         private string currentSong;
+
+        // Shared volume value for both SFX and music.
+        public float MasterVolume { get; private set; } = 1f;
 
         // Constructor, gives access to content manager and calls method to load audio assets
         public AudioManager(ContentManager content)
@@ -77,7 +73,7 @@ namespace PolyGone.Core
         public void PlaySong(string song)
         {
             // Stops previous song before playing new one
-            if(MediaPlayer.State == MediaState.Playing)
+            if (MediaPlayer.State == MediaState.Playing)
             {
                 MediaPlayer.Stop();
             }
@@ -135,6 +131,13 @@ namespace PolyGone.Core
                 default:
                     break;
             }
+        }
+
+        public void SetMasterVolume(float volume)
+        {
+            MasterVolume = MathHelper.Clamp(volume, 0f, 1f);
+            SoundEffect.MasterVolume = MasterVolume;
+            MediaPlayer.Volume = MasterVolume;
         }
     }
 }

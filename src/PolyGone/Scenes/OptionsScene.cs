@@ -33,11 +33,20 @@ internal class OptionsScene : IScene
     private int _resetConfirmSelectedIndex;
     private int _resetProgressConfirmStep;   // 0 = off, 1 = first prompt, 2 = second prompt
     private int _resetProgressConfirmSelectedIndex;
+    private int _volume;
+    private float _volumeKeyRepeatTimer;
+    private float _mouseInputBlockTimer;
 
-    private const float RowSpacing   = 50f;
-    private const float ButtonWidth  = 200f;
+    private const float RowSpacing = 50f;
+    private const float ButtonWidth = 200f;
     private const float ButtonHeight = 45f;
-    private const float ButtonGap    = 24f;
+    private const float ButtonGap = 24f;
+    private const float VolumeSliderWidth = 240f;
+    private const float VolumeSliderHeight = 8f;
+    private const float VolumeSliderKnobRadius = 10f;
+    private const float VolumeKeyInitialDelay = 0.28f;
+    private const float VolumeKeyRepeatDelay = 0.06f;
+    private const float MouseInputBlockDuration = 0.2f;
 
     // Option labels are dynamic — they reflect current pending state
     private bool HasPendingChanges =>
@@ -46,18 +55,20 @@ internal class OptionsScene : IScene
 
     private string ResolutionLabel()
     {
-        if (_pendingIsFullScreen) { return "Resolution: (fullscreen)"; }
+        if (_pendingIsFullScreen)
+        { return "Resolution: (fullscreen)"; }
         var r = _availableResolutions[_pendingResolutionIndex];
         return $"Resolution: < {r.Width}x{r.Height} >";
     }
 
     // Row 0=Display, Row 1=Resolution, Row 2=Buttons (drawn separately),
-    // Row 3=Reset Purchases, Row 4=Reset Progress, Row 5 (DEBUG only)=Dev Menu, Row 5/6=Back
+    // Row 3=Volume, then reset/dev/back rows.
     private string[] GetRowLabels() =>
     [
         _pendingIsFullScreen ? "Display: Fullscreen" : "Display: Windowed",
         ResolutionLabel(),
         "",   // placeholder — button row is drawn separately
+        "",   // volume row is drawn as a slider
 #if DEBUG
         "Reset Purchases",
 #endif
@@ -79,17 +90,22 @@ internal class OptionsScene : IScene
         _availableResolutions = DisplaySettings.GetAvailableResolutions();
         var currentRes = (DisplaySettings.WindowedWidth, DisplaySettings.WindowedHeight);
         _pendingResolutionIndex = Array.IndexOf(_availableResolutions, currentRes);
-        if (_pendingResolutionIndex < 0) { _pendingResolutionIndex = 0; }
+        if (_pendingResolutionIndex < 0)
+        { _pendingResolutionIndex = 0; }
         _appliedResolutionIndex = _pendingResolutionIndex;
-        _pendingIsFullScreen  = DisplaySettings.IsFullScreen;
-        _appliedIsFullScreen  = DisplaySettings.IsFullScreen;
-        _confirmingDiscard         = false;
-        _confirmSelectedIndex      = 1;
-        _buttonIndex               = 0;
-        _resetConfirmStep                  = 0;
-        _resetConfirmSelectedIndex         = 1;
-        _resetProgressConfirmStep          = 0;
+        _pendingIsFullScreen = DisplaySettings.IsFullScreen;
+        _appliedIsFullScreen = DisplaySettings.IsFullScreen;
+        _confirmingDiscard = false;
+        _confirmSelectedIndex = 1;
+        _buttonIndex = 0;
+        _resetConfirmStep = 0;
+        _resetConfirmSelectedIndex = 1;
+        _resetProgressConfirmStep = 0;
         _resetProgressConfirmSelectedIndex = 1;
+        _volume = (int)MathF.Round(_audioManager.MasterVolume * 100f);
+        _volumeKeyRepeatTimer = 0f;
+        _mouseInputBlockTimer = MouseInputBlockDuration;
+        InputManager.ResetClickCooldown();
     }
 
     public void Load()
@@ -106,6 +122,16 @@ internal class OptionsScene : IScene
 
     public void Update(GameTime gameTime)
     {
+        if (_volumeKeyRepeatTimer > 0f)
+        {
+            _volumeKeyRepeatTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
+        if (_mouseInputBlockTimer > 0f)
+        {
+            _mouseInputBlockTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
         // Apply deferred window centering (must happen on the frame after ApplyChanges)
         if (_deferredCenterWidth > 0)
         {
@@ -129,7 +155,7 @@ internal class OptionsScene : IScene
                     var textSize = _font.MeasureString(confirmOpts[i]);
                     var pos = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
                     var bounds = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int)textSize.Y);
-                    if (bounds.Contains(InputManager.GetMousePosition()))
+                    if (CanProcessMouseInput() && bounds.Contains(InputManager.GetMousePosition()))
                     {
                         _confirmSelectedIndex = i;
                         if (InputManager.IsLeftMouseButtonClicked())
@@ -156,6 +182,7 @@ internal class OptionsScene : IScene
             {
                 _confirmingDiscard = false;
             }
+
             _previousKeyboardState = _keyboardState;
             return;
         }
@@ -178,18 +205,41 @@ internal class OptionsScene : IScene
 
         if (_font != null)
         {
-            var labels  = GetRowLabels();
+            var labels = GetRowLabels();
             var viewport = _graphics.GraphicsDevice.Viewport;
-            var startY   = viewport.Height / 2f - labels.Length * RowSpacing / 2f;
+            var startY = viewport.Height / 2f - labels.Length * RowSpacing / 2f;
 
             // Text rows — skip row 2 (button row)
             for (var i = 0; i < labels.Length; i++)
             {
-                if (i == 2) { continue; }
+                if (i == 2)
+                { continue; }
                 var textSize = _font.MeasureString(labels[i]);
                 var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * RowSpacing);
-                var bounds   = new Rectangle((int)position.X, (int)position.Y, (int)textSize.X, (int)textSize.Y);
-                if (bounds.Contains(InputManager.GetMousePosition()))
+                var bounds = new Rectangle((int)position.X, (int)position.Y, (int)textSize.X, (int)textSize.Y);
+                if (i == 3)
+                {
+                    var sliderRect = GetVolumeSliderRect(viewport, startY);
+                    var volumeRowBounds = new Rectangle(
+                        sliderRect.X - 120,
+                        sliderRect.Y - 18,
+                        sliderRect.Width + 240,
+                        sliderRect.Height + 36);
+
+                    if (CanProcessMouseInput() && volumeRowBounds.Contains(InputManager.GetMousePosition()))
+                    {
+                        _selectedIndex = i;
+                        if (InputManager.IsLeftMouseButtonClicked() || InputManager.IsLeftMouseButtonHeld())
+                        {
+                            SetVolumeFromMouseX(InputManager.GetMousePosition().X, sliderRect);
+                            if (InputManager.IsLeftMouseButtonClicked())
+                            {
+                                InputManager.ConsumeClick();
+                            }
+                        }
+                    }
+                }
+                else if (CanProcessMouseInput() && bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _selectedIndex = i;
                     if (InputManager.IsLeftMouseButtonClicked())
@@ -209,45 +259,67 @@ internal class OptionsScene : IScene
             }
 
             // Button row hit detection
-            var buttonRowY  = startY + 2 * RowSpacing;
-            var applyRect   = new Rectangle((int)(viewport.Width / 2f - ButtonGap / 2f - ButtonWidth), (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
-            var discardRect = new Rectangle((int)(viewport.Width / 2f + ButtonGap / 2f),               (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
+            var buttonRowY = startY + 2 * RowSpacing;
+            var applyRect = new Rectangle((int)(viewport.Width / 2f - ButtonGap / 2f - ButtonWidth), (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
+            var discardRect = new Rectangle((int)(viewport.Width / 2f + ButtonGap / 2f), (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
 
-            if (applyRect.Contains(InputManager.GetMousePosition()))
+            if (CanProcessMouseInput() && applyRect.Contains(InputManager.GetMousePosition()))
             {
-                _selectedIndex = 2; _buttonIndex = 0;
-                if (InputManager.IsLeftMouseButtonClicked()) { ExecuteSelection(); InputManager.ConsumeClick(); }
+                _selectedIndex = 2;
+                _buttonIndex = 0;
+                if (InputManager.IsLeftMouseButtonClicked())
+                { ExecuteSelection(); InputManager.ConsumeClick(); }
             }
-            else if (discardRect.Contains(InputManager.GetMousePosition()))
+            else if (CanProcessMouseInput() && discardRect.Contains(InputManager.GetMousePosition()))
             {
-                _selectedIndex = 2; _buttonIndex = 1;
-                if (InputManager.IsLeftMouseButtonClicked()) { ExecuteSelection(); InputManager.ConsumeClick(); }
+                _selectedIndex = 2;
+                _buttonIndex = 1;
+                if (InputManager.IsLeftMouseButtonClicked())
+                { ExecuteSelection(); InputManager.ConsumeClick(); }
             }
         }
 
         // Keyboard navigation
         int rowCount = GetRowLabels().Length;
-        if (IsKeyPressed(Keys.Up))   { _selectedIndex = (_selectedIndex - 1 + rowCount) % rowCount; }
-        if (IsKeyPressed(Keys.Down)) { _selectedIndex = (_selectedIndex + 1) % rowCount; }
+        if (IsKeyPressed(Keys.Up))
+        { _selectedIndex = (_selectedIndex - 1 + rowCount) % rowCount; }
+        if (IsKeyPressed(Keys.Down))
+        { _selectedIndex = (_selectedIndex + 1) % rowCount; }
 
         if (_selectedIndex == 1 && !_pendingIsFullScreen)
         {
-            if (IsKeyPressed(Keys.Left))  { CycleResolution(-1); }
-            if (IsKeyPressed(Keys.Right)) { CycleResolution(1); }
+            if (IsKeyPressed(Keys.Left))
+            { CycleResolution(-1); }
+            if (IsKeyPressed(Keys.Right))
+            { CycleResolution(1); }
+        }
+
+        if (_selectedIndex == 3)
+        {
+            HandleVolumeKeyboardInput();
+        }
+        else
+        {
+            _volumeKeyRepeatTimer = 0f;
         }
 
         if (_selectedIndex == 2)
         {
-            if (IsKeyPressed(Keys.Left))  { _buttonIndex = 0; }
-            if (IsKeyPressed(Keys.Right)) { _buttonIndex = 1; }
+            if (IsKeyPressed(Keys.Left))
+            { _buttonIndex = 0; }
+            if (IsKeyPressed(Keys.Right))
+            { _buttonIndex = 1; }
         }
 
-        if (IsKeyPressed(Keys.Enter)) { ExecuteSelection(); }
+        if (IsKeyPressed(Keys.Enter))
+        { ExecuteSelection(); }
 
         if (IsKeyPressed(Keys.Escape))
         {
-            if (HasPendingChanges) { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
-            else { _sceneManager.PopScene(this); }
+            if (HasPendingChanges)
+            { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
+            else
+            { _sceneManager.PopScene(this); }
         }
 
         _previousKeyboardState = _keyboardState;
@@ -265,7 +337,7 @@ internal class OptionsScene : IScene
         if (_pendingIsFullScreen)
         {
             var dm = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
-            _graphics.PreferredBackBufferWidth  = dm.Width;
+            _graphics.PreferredBackBufferWidth = dm.Width;
             _graphics.PreferredBackBufferHeight = dm.Height;
             _graphics.IsFullScreen = true;
             DisplaySettings.IsFullScreen = true;
@@ -276,20 +348,20 @@ internal class OptionsScene : IScene
             DisplaySettings.ResolutionIndex = Array.IndexOf(DisplaySettings.Resolutions, r);
             _graphics.IsFullScreen = false;
             DisplaySettings.IsFullScreen = false;
-            _graphics.PreferredBackBufferWidth  = r.Width;
+            _graphics.PreferredBackBufferWidth = r.Width;
             _graphics.PreferredBackBufferHeight = r.Height;
-            _deferredCenterWidth  = r.Width;
+            _deferredCenterWidth = r.Width;
             _deferredCenterHeight = r.Height;
         }
         _graphics.ApplyChanges();
         DisplaySettings.Save();
-        _appliedIsFullScreen      = _pendingIsFullScreen;
-        _appliedResolutionIndex   = _pendingResolutionIndex;
+        _appliedIsFullScreen = _pendingIsFullScreen;
+        _appliedResolutionIndex = _pendingResolutionIndex;
     }
 
     private void DiscardChanges()
     {
-        _pendingIsFullScreen    = _appliedIsFullScreen;
+        _pendingIsFullScreen = _appliedIsFullScreen;
         _pendingResolutionIndex = _appliedResolutionIndex;
     }
 
@@ -313,33 +385,41 @@ internal class OptionsScene : IScene
                 _pendingIsFullScreen = !_pendingIsFullScreen;
                 break;
             case 1:
-                if (!_pendingIsFullScreen) { CycleResolution(1); }
+                if (!_pendingIsFullScreen)
+                { CycleResolution(1); }
                 break;
             case 2:
-                if (_buttonIndex == 0 && HasPendingChanges) { ApplyChanges(); }
-                else if (_buttonIndex == 1 && HasPendingChanges) { DiscardChanges(); }
+                if (_buttonIndex == 0 && HasPendingChanges)
+                { ApplyChanges(); }
+                else if (_buttonIndex == 1 && HasPendingChanges)
+                { DiscardChanges(); }
+                break;
+            case 3:
+                // Volume is adjusted with left/right input and mouse drag.
                 break;
 #if DEBUG
-            case 3:
+            case 4:
                 _resetConfirmStep = 1;
                 _resetConfirmSelectedIndex = 1; // default cursor on Cancel
                 break;
-            case 4:
+            case 5:
                 _resetProgressConfirmStep = 1;
                 _resetProgressConfirmSelectedIndex = 1; // default cursor on Cancel
                 break;
-            case 5:
+            case 6:
                 _sceneManager.AddScene(new DevMenuScene(_content, _sceneManager, _graphics));
                 break;
 #else
-            case 3:
+            case 4:
                 _resetProgressConfirmStep = 1;
                 _resetProgressConfirmSelectedIndex = 1; // default cursor on Cancel
                 break;
 #endif
             default: // Back — always the last row
-                if (HasPendingChanges) { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
-                else { _sceneManager.PopScene(this); }
+                if (HasPendingChanges)
+                { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
+                else
+                { _sceneManager.PopScene(this); }
                 break;
         }
     }
@@ -353,13 +433,13 @@ internal class OptionsScene : IScene
             var viewport = _graphics.GraphicsDevice.Viewport;
             string[] opts = _resetConfirmStep == 1
                 ? ["Yes, continue", "Cancel"]
-                : ["Confirm Reset",  "Cancel"];
+                : ["Confirm Reset", "Cancel"];
             var confirmStartY = viewport.Height / 2f - 20f;
             for (var i = 0; i < opts.Length; i++)
             {
                 var textSize = _font.MeasureString(opts[i]);
-                var pos      = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
-                var bounds   = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int)textSize.Y);
+                var pos = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
+                var bounds = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int)textSize.Y);
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _resetConfirmSelectedIndex = i;
@@ -372,30 +452,34 @@ internal class OptionsScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left))  { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex - 1 + 2) % 2; }
-        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right)) { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex + 1) % 2; }
-        if (IsKeyPressed(Keys.Enter))  { ExecuteResetConfirm(); }
-        if (IsKeyPressed(Keys.Escape)) { _resetConfirmStep = 0; _resetConfirmSelectedIndex = 1; }
+        if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Left))
+        { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex - 1 + 2) % 2; }
+        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right))
+        { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex + 1) % 2; }
+        if (IsKeyPressed(Keys.Enter))
+        { ExecuteResetConfirm(); }
+        if (IsKeyPressed(Keys.Escape))
+        { _resetConfirmStep = 0; _resetConfirmSelectedIndex = 1; }
     }
 
     private void ExecuteResetConfirm()
     {
         if (_resetConfirmSelectedIndex == 1) // Cancel
         {
-            _resetConfirmStep          = 0;
+            _resetConfirmStep = 0;
             _resetConfirmSelectedIndex = 1;
             return;
         }
         // Selected index 0 = Yes / Confirm
         if (_resetConfirmStep == 1)
         {
-            _resetConfirmStep          = 2;   // advance to second prompt
+            _resetConfirmStep = 2;   // advance to second prompt
             _resetConfirmSelectedIndex = 1;   // keep cursor on Cancel for safety
         }
         else
         {
             PurchaseTracker.Reset();
-            _resetConfirmStep          = 0;
+            _resetConfirmStep = 0;
             _resetConfirmSelectedIndex = 1;
             _sceneManager.PopScene(this);
             _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _audioManager, _graphics));
@@ -414,12 +498,12 @@ internal class OptionsScene : IScene
 
         if (_font != null)
         {
-            var labels   = GetRowLabels();
+            var labels = GetRowLabels();
             var viewport = spriteBatch.GraphicsDevice.Viewport;
-            var startY   = viewport.Height / 2f - labels.Length * RowSpacing / 2f;
+            var startY = viewport.Height / 2f - labels.Length * RowSpacing / 2f;
 
             // Title
-            var title     = "Options";
+            var title = "Options";
             var titleSize = _font.MeasureString(title);
             spriteBatch.DrawString(_font, title,
                 new Vector2(viewport.Width / 2f - titleSize.X / 2f, startY - 60f),
@@ -428,45 +512,85 @@ internal class OptionsScene : IScene
             // Text rows — skip row 2 (button row)
             for (var i = 0; i < labels.Length; i++)
             {
-                if (i == 2) { continue; }
+                if (i == 2)
+                { continue; }
                 Color color;
-                if (_confirmingDiscard || _resetConfirmStep > 0 || _resetProgressConfirmStep > 0) { color = Color.DimGray; }
-                else if (i == 1 && _pendingIsFullScreen)             { color = Color.DarkGray; }
+                if (_confirmingDiscard || _resetConfirmStep > 0 || _resetProgressConfirmStep > 0)
+                { color = Color.DimGray; }
+                else if (i == 1 && _pendingIsFullScreen)
+                { color = Color.DarkGray; }
 #if DEBUG
-                else if (i == 3 || i == 4)                           { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
-                else if (i == 5)                                     { color = i == _selectedIndex ? Color.Cyan : Color.DarkCyan; }
+                else if (i == 4 || i == 5)
+                { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
+                else if (i == 6)
+                { color = i == _selectedIndex ? Color.Cyan : Color.DarkCyan; }
 #else
-                else if (i == 3)                                     { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
+                else if (i == 4)                                     { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
 #endif
-                else                                                 { color = i == _selectedIndex ? Color.Yellow : Color.White; }
-                var textSize = _font.MeasureString(labels[i]);
-                var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * RowSpacing);
-                spriteBatch.DrawString(_font, labels[i], position, color);
+                else
+                { color = i == _selectedIndex ? Color.Yellow : Color.White; }
+                if (i == 3)
+                {
+                    var sliderRect = GetVolumeSliderRect(viewport, startY);
+                    var sliderY = sliderRect.Y + sliderRect.Height / 2f;
+                    var fillWidth = sliderRect.Width * (_volume / 100f);
+
+                    var label = "Volume";
+                    var labelSize = _font.MeasureString(label);
+                    var labelPosition = new Vector2(sliderRect.X - labelSize.X - 16f, sliderY - labelSize.Y / 2f);
+                    spriteBatch.DrawString(_font, label, labelPosition, color);
+
+                    spriteBatch.Draw(_pixel, sliderRect, new Color(65, 65, 65));
+                    spriteBatch.Draw(_pixel, new Rectangle(sliderRect.X, sliderRect.Y, (int)fillWidth, sliderRect.Height), new Color(90, 180, 90));
+
+                    var knobX = sliderRect.X + fillWidth;
+                    var knobRect = new Rectangle(
+                        (int)(knobX - VolumeSliderKnobRadius),
+                        (int)(sliderY - VolumeSliderKnobRadius),
+                        (int)(VolumeSliderKnobRadius * 2f),
+                        (int)(VolumeSliderKnobRadius * 2f));
+
+                    spriteBatch.Draw(_pixel, knobRect, i == _selectedIndex ? Color.Yellow : Color.White);
+
+                    var volumeText = $"{_volume}%";
+                    var volumeTextSize = _font.MeasureString(volumeText);
+                    spriteBatch.DrawString(_font, volumeText,
+                        new Vector2(sliderRect.Right + 14f, sliderY - volumeTextSize.Y / 2f),
+                        color);
+                }
+                else
+                {
+                    var textSize = _font.MeasureString(labels[i]);
+                    var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, startY + i * RowSpacing);
+                    spriteBatch.DrawString(_font, labels[i], position, color);
+                }
             }
 
             // Button row
-            var buttonRowY  = startY + 2 * RowSpacing;
-            var applyRect   = new Rectangle((int)(viewport.Width / 2f - ButtonGap / 2f - ButtonWidth), (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
-            var discardRect = new Rectangle((int)(viewport.Width / 2f + ButtonGap / 2f),               (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
+            var buttonRowY = startY + 2 * RowSpacing;
+            var applyRect = new Rectangle((int)(viewport.Width / 2f - ButtonGap / 2f - ButtonWidth), (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
+            var discardRect = new Rectangle((int)(viewport.Width / 2f + ButtonGap / 2f), (int)buttonRowY, (int)ButtonWidth, (int)ButtonHeight);
 
             void DrawButton(Rectangle rect, string text, bool isSelected, bool enabled, bool isDanger)
             {
                 Color fill, border, textColor;
                 if (_confirmingDiscard || _resetConfirmStep > 0 || _resetProgressConfirmStep > 0 || !enabled)
                 {
-                    fill = new Color(55, 55, 55); border = new Color(85, 85, 85); textColor = new Color(110, 110, 110);
+                    fill = new Color(55, 55, 55);
+                    border = new Color(85, 85, 85);
+                    textColor = new Color(110, 110, 110);
                 }
                 else if (isDanger)
                 {
-                    fill      = isSelected ? new Color(130, 40, 40) : new Color(85, 25, 25);
-                    border    = isSelected ? Color.Tomato            : new Color(160, 60, 60);
-                    textColor = isSelected ? Color.Yellow            : Color.Tomato;
+                    fill = isSelected ? new Color(130, 40, 40) : new Color(85, 25, 25);
+                    border = isSelected ? Color.Tomato : new Color(160, 60, 60);
+                    textColor = isSelected ? Color.Yellow : Color.Tomato;
                 }
                 else
                 {
-                    fill      = isSelected ? new Color(40, 110, 40)  : new Color(25, 70, 25);
-                    border    = isSelected ? Color.LightGreen         : new Color(55, 130, 55);
-                    textColor = isSelected ? Color.Yellow            : Color.White;
+                    fill = isSelected ? new Color(40, 110, 40) : new Color(25, 70, 25);
+                    border = isSelected ? Color.LightGreen : new Color(55, 130, 55);
+                    textColor = isSelected ? Color.Yellow : Color.White;
                 }
                 // Border rect (2px on each side)
                 spriteBatch.Draw(_pixel, new Rectangle(rect.X - 2, rect.Y - 2, rect.Width + 4, rect.Height + 4), border);
@@ -477,7 +601,7 @@ internal class OptionsScene : IScene
                     textColor);
             }
 
-            DrawButton(applyRect,   "Apply",   _selectedIndex == 2 && _buttonIndex == 0, HasPendingChanges, false);
+            DrawButton(applyRect, "Apply", _selectedIndex == 2 && _buttonIndex == 0, HasPendingChanges, false);
             DrawButton(discardRect, "Discard", _selectedIndex == 2 && _buttonIndex == 1, HasPendingChanges, true);
 
             // Confirm-discard overlay
@@ -507,7 +631,7 @@ internal class OptionsScene : IScene
             {
                 spriteBatch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, viewport.Height), Color.Black * 0.6f);
 
-                var overlayTitle     = "Reset Purchases";
+                var overlayTitle = "Reset Purchases";
                 var overlayTitleSize = _font.MeasureString(overlayTitle);
                 spriteBatch.DrawString(_font, overlayTitle,
                     new Vector2(viewport.Width / 2f - overlayTitleSize.X / 2f, viewport.Height / 2f - 120f),
@@ -523,11 +647,11 @@ internal class OptionsScene : IScene
 
                 string[] resetOpts = _resetConfirmStep == 1
                     ? ["Yes, continue", "Cancel"]
-                    : ["Confirm Reset",  "Cancel"];
+                    : ["Confirm Reset", "Cancel"];
                 var resetStartY = viewport.Height / 2f - 10f;
                 for (var i = 0; i < resetOpts.Length; i++)
                 {
-                    var color    = i == _resetConfirmSelectedIndex ? Color.Yellow : Color.White;
+                    var color = i == _resetConfirmSelectedIndex ? Color.Yellow : Color.White;
                     var textSize = _font.MeasureString(resetOpts[i]);
                     var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, resetStartY + i * 50f);
                     spriteBatch.DrawString(_font, resetOpts[i], position, color);
@@ -539,7 +663,7 @@ internal class OptionsScene : IScene
             {
                 spriteBatch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, viewport.Height), Color.Black * 0.6f);
 
-                var overlayTitle     = "Reset Progress";
+                var overlayTitle = "Reset Progress";
                 var overlayTitleSize = _font.MeasureString(overlayTitle);
                 spriteBatch.DrawString(_font, overlayTitle,
                     new Vector2(viewport.Width / 2f - overlayTitleSize.X / 2f, viewport.Height / 2f - 120f),
@@ -555,11 +679,11 @@ internal class OptionsScene : IScene
 
                 string[] resetOpts = _resetProgressConfirmStep == 1
                     ? ["Yes, continue", "Cancel"]
-                    : ["Confirm Reset",  "Cancel"];
+                    : ["Confirm Reset", "Cancel"];
                 var resetStartY = viewport.Height / 2f - 10f;
                 for (var i = 0; i < resetOpts.Length; i++)
                 {
-                    var color    = i == _resetProgressConfirmSelectedIndex ? Color.Yellow : Color.White;
+                    var color = i == _resetProgressConfirmSelectedIndex ? Color.Yellow : Color.White;
                     var textSize = _font.MeasureString(resetOpts[i]);
                     var position = new Vector2(viewport.Width / 2f - textSize.X / 2f, resetStartY + i * 50f);
                     spriteBatch.DrawString(_font, resetOpts[i], position, color);
@@ -577,13 +701,13 @@ internal class OptionsScene : IScene
             var viewport = _graphics.GraphicsDevice.Viewport;
             string[] opts = _resetProgressConfirmStep == 1
                 ? ["Yes, continue", "Cancel"]
-                : ["Confirm Reset",  "Cancel"];
+                : ["Confirm Reset", "Cancel"];
             var confirmStartY = viewport.Height / 2f - 20f;
             for (var i = 0; i < opts.Length; i++)
             {
                 var textSize = _font.MeasureString(opts[i]);
-                var pos      = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
-                var bounds   = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int)textSize.Y);
+                var pos = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
+                var bounds = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int)textSize.Y);
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _resetProgressConfirmSelectedIndex = i;
@@ -596,30 +720,34 @@ internal class OptionsScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up)   || IsKeyPressed(Keys.Left))  { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex - 1 + 2) % 2; }
-        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right)) { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex + 1) % 2; }
-        if (IsKeyPressed(Keys.Enter))  { ExecuteResetProgressConfirm(); }
-        if (IsKeyPressed(Keys.Escape)) { _resetProgressConfirmStep = 0; _resetProgressConfirmSelectedIndex = 1; }
+        if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Left))
+        { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex - 1 + 2) % 2; }
+        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right))
+        { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex + 1) % 2; }
+        if (IsKeyPressed(Keys.Enter))
+        { ExecuteResetProgressConfirm(); }
+        if (IsKeyPressed(Keys.Escape))
+        { _resetProgressConfirmStep = 0; _resetProgressConfirmSelectedIndex = 1; }
     }
 
     private void ExecuteResetProgressConfirm()
     {
         if (_resetProgressConfirmSelectedIndex == 1) // Cancel
         {
-            _resetProgressConfirmStep          = 0;
+            _resetProgressConfirmStep = 0;
             _resetProgressConfirmSelectedIndex = 1;
             return;
         }
         if (_resetProgressConfirmStep == 1)
         {
-            _resetProgressConfirmStep          = 2;
+            _resetProgressConfirmStep = 2;
             _resetProgressConfirmSelectedIndex = 1;
         }
         else
         {
             UnlockTracker.Reset();
             InventoryManagement.ResetSavedLoadout();
-            _resetProgressConfirmStep          = 0;
+            _resetProgressConfirmStep = 0;
             _resetProgressConfirmSelectedIndex = 1;
         }
     }
@@ -627,5 +755,69 @@ internal class OptionsScene : IScene
     private bool IsKeyPressed(Keys key)
     {
         return _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
+    }
+
+    private void AdjustVolume(int deltaPercent)
+    {
+        SetVolume(_volume + deltaPercent);
+    }
+
+    private void HandleVolumeKeyboardInput()
+    {
+        var leftHeld = _keyboardState.IsKeyDown(Keys.Left);
+        var rightHeld = _keyboardState.IsKeyDown(Keys.Right);
+
+        if (leftHeld == rightHeld)
+        {
+            _volumeKeyRepeatTimer = 0f;
+            return;
+        }
+
+        var direction = leftHeld ? -1 : 1;
+        var tapped = IsKeyPressed(leftHeld ? Keys.Left : Keys.Right);
+
+        if (tapped)
+        {
+            AdjustVolume(direction);
+            _volumeKeyRepeatTimer = VolumeKeyInitialDelay;
+            return;
+        }
+
+        if (_volumeKeyRepeatTimer <= 0f)
+        {
+            AdjustVolume(direction);
+            _volumeKeyRepeatTimer = VolumeKeyRepeatDelay;
+        }
+    }
+
+    private void SetVolumeFromMouseX(int mouseX, Rectangle sliderRect)
+    {
+        var t = MathHelper.Clamp((mouseX - sliderRect.Left) / (float)sliderRect.Width, 0f, 1f);
+        SetVolume((int)MathF.Round(t * 100f));
+    }
+
+    private void SetVolume(int newVolume)
+    {
+        var clampedVolume = Math.Clamp(newVolume, 0, 100);
+        if (clampedVolume == _volume)
+        { return; }
+
+        _volume = clampedVolume;
+        _audioManager.SetMasterVolume(_volume / 100f);
+    }
+
+    private Rectangle GetVolumeSliderRect(Viewport viewport, float startY)
+    {
+        var sliderY = startY + 3 * RowSpacing + 22f;
+        return new Rectangle(
+            (int)(viewport.Width / 2f - VolumeSliderWidth / 2f),
+            (int)sliderY,
+            (int)VolumeSliderWidth,
+            (int)VolumeSliderHeight);
+    }
+
+    private bool CanProcessMouseInput()
+    {
+        return _mouseInputBlockTimer <= 0f;
     }
 }
