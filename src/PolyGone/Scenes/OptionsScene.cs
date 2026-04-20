@@ -394,6 +394,9 @@ internal class OptionsScene : IScene
                 else if (_buttonIndex == 1 && HasPendingChanges)
                 { DiscardChanges(); }
                 break;
+            case 3:
+                // Volume is adjusted with left/right input and mouse drag.
+                break;
 #if DEBUG
             case 4:
                 _resetConfirmStep = 1;
