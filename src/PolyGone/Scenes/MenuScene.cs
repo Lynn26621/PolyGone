@@ -169,8 +169,7 @@ namespace PolyGone
         {
             if (_selectedIndex == 0)
             {
-                // Level Select
-                _sceneManager.AddScene(new LevelSelect(_content, _sceneManager, _audioManager, _graphics));
+
             }
             else if (_selectedIndex == 1)
             {

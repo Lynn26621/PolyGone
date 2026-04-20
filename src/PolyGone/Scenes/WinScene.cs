@@ -134,14 +134,6 @@ public class WinScene : IScene
         {
             sceneManager.PopScene(this); // Remove WinScene
             
-            // Keep popping until we reach LevelSelect
-            while (sceneManager.GetCurrentScene() != null && sceneManager.GetCurrentScene() is not LevelSelect)
-            {
-                sceneManager.PopScene(sceneManager.GetCurrentScene());
-            }
-            
-            InputManager.ResetClickCooldown();
-            audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
         }
         else if (selectedOption == "Main Menu")
         {
