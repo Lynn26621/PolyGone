@@ -13,9 +13,6 @@ namespace PolyGone.Core
         public string ConnectedLevel { get; private set; }
         public int LoadX;
         public int LoadY;
-        private KeyboardState keyboardState;
-        private KeyboardState prevKeyboardState;
-        private AudioManager audioManager;
 
         public LevelDoor(Vector2 position, int width, int height, AudioManager audioManager, string connectedLevel, int loadX, int loadY)
         : base(position, width, height, audioManager)
@@ -23,7 +20,6 @@ namespace PolyGone.Core
             ConnectedLevel = connectedLevel;
             LoadX = loadX;
             LoadY = loadY;
-            this.audioManager = audioManager;
         }
     }
 }

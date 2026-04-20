@@ -24,8 +24,8 @@ namespace PolyGone
 {
     internal class MenuScene : IScene
     {
-        private Texture2D _pixel;
-        private SpriteFont _font;
+        private Texture2D? _pixel;
+        private SpriteFont? _font;
         private KeyboardState keyboardState;
         private KeyboardState previousKeyboardState;
         private readonly ContentManager _content;
@@ -35,13 +35,12 @@ namespace PolyGone
         private readonly string[] _options = { "Play", "Options", "Log Out", "Exit to Desktop" };
         private int _selectedIndex;
         private bool _confirmingAction;
-        private string _confirmMessage;
-        private Action _confirmedAction;
+        private string? _confirmMessage;
+        private Action? _confirmedAction;
         private int _confirmSelectedIndex; // 0 = Yes, 1 = No
 
         public MenuScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)
         {
-            _pixel = null;
             _content = content;
             _sceneManager = sceneManager;
             _audioManager = audioManager;
@@ -270,8 +269,9 @@ namespace PolyGone
                 var centerY = viewport.Height / 2f;
 
                 // Message
-                var msgSize = _font.MeasureString(_confirmMessage);
-                spriteBatch.DrawString(_font, _confirmMessage,
+                var confirmMessage = _confirmMessage ?? string.Empty;
+                var msgSize = _font.MeasureString(confirmMessage);
+                spriteBatch.DrawString(_font, confirmMessage,
                     new Vector2(centerX - msgSize.X / 2f, centerY - msgSize.Y - 10f), Color.White);
 
                 // Yes / No buttons

@@ -18,21 +18,21 @@ namespace PolyGone.Core
         private ContentManager content;
 
         // Setup for sound effects
-        private SoundEffect jumpSfx;
-        private SoundEffect shootSfx;
-        private SoundEffect collisionSfx;
-        private SoundEffect deathSfx;
+        private SoundEffect jumpSfx = null!;
+        private SoundEffect shootSfx = null!;
+        private SoundEffect collisionSfx = null!;
+        private SoundEffect deathSfx = null!;
 
         // Setup for songs
-        private Song menuSong;
-        private Song level1Song;
-        private Song level2Song;
-        private Song level3Song;
-        private Song gameOverSong;
-        private Song goalAchievedSong;
+        private Song menuSong = null!;
+        private Song level1Song = null!;
+        private Song level2Song = null!;
+        private Song level3Song = null!;
+        private Song gameOverSong = null!;
+        private Song goalAchievedSong = null!;
 
         // Variable to track currently playing song
-        private string currentSong;
+        private string currentSong = string.Empty;
 
         // Constructor, gives access to content manager and calls method to load audio assets
         public AudioManager(ContentManager content)
