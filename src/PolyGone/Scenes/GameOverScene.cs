@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -11,8 +12,6 @@ internal class GameOverScene : IScene
 {
     private Texture2D? pixel;
     private SpriteFont? font;
-    private KeyboardState keyboardState;
-    private KeyboardState previousKeyboardState;
     private readonly ContentManager content;
     private readonly SceneManager sceneManager;
     private AudioManager audioManager;
@@ -28,7 +27,6 @@ internal class GameOverScene : IScene
         this.graphics = graphics;
         this.gameScene = gameScene;
         this.audioManager = audioManager;
-        previousKeyboardState = Keyboard.GetState();
         selectedIndex = 0;
     }
 
@@ -43,7 +41,6 @@ internal class GameOverScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        keyboardState = Keyboard.GetState();
 
         // Mouse navigation
         if (font != null)
@@ -62,7 +59,7 @@ internal class GameOverScene : IScene
                 {
                     selectedIndex = i;
 
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirmMouseClick())
                     {
                         ExecuteSelection();
                         InputManager.ConsumeClick();
@@ -72,22 +69,20 @@ internal class GameOverScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up))
+        if (InputManager.MenuUp())
         {
             selectedIndex = (selectedIndex - 1 + options.Length) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Down))
+        if (InputManager.MenuDown())
         {
             selectedIndex = (selectedIndex + 1) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Enter))
+        if (InputManager.MenuConfirm())
         {
             ExecuteSelection();
         }
-
-        previousKeyboardState = keyboardState;
     }
 
     private void ExecuteSelection()
@@ -176,10 +171,5 @@ internal class GameOverScene : IScene
     {
         pixel?.Dispose();
         pixel = null!;
-    }
-
-    private bool IsKeyPressed(Keys key)
-    {
-        return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
     }
 }

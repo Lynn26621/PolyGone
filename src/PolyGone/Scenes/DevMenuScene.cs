@@ -10,8 +10,6 @@ internal class DevMenuScene : IScene
 {
     private Texture2D? _pixel;
     private SpriteFont? _font;
-    private KeyboardState _keyboardState;
-    private KeyboardState _previousKeyboardState;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
@@ -28,7 +26,6 @@ internal class DevMenuScene : IScene
         _content               = content;
         _sceneManager          = sceneManager;
         _graphics              = graphics;
-        _previousKeyboardState = Keyboard.GetState();
     }
 
     public void Load()
@@ -42,7 +39,6 @@ internal class DevMenuScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        _keyboardState = Keyboard.GetState();
 
         if (_font != null)
         {
@@ -60,7 +56,7 @@ internal class DevMenuScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _cursor = i;
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         UnlockTracker.ToggleLevelComplete(LevelFiles[i]);
                         InputManager.ConsumeClick();
@@ -76,7 +72,7 @@ internal class DevMenuScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _cursor = LevelFiles.Length + i;
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         ExecuteAction(_cursor);
                         InputManager.ConsumeClick();
@@ -85,12 +81,10 @@ internal class DevMenuScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up))   _cursor = (_cursor - 1 + EntryCount) % EntryCount;
-        if (IsKeyPressed(Keys.Down)) _cursor = (_cursor + 1) % EntryCount;
-        if (IsKeyPressed(Keys.Enter) || IsKeyPressed(Keys.Space)) ExecuteAction(_cursor);
-        if (InputManager.IsEscapeKeyPressed()) _sceneManager.PopScene(this);
-
-        _previousKeyboardState = _keyboardState;
+        if (InputManager.MenuUp()) _cursor = (_cursor - 1 + EntryCount) % EntryCount;
+        if (InputManager.MenuDown()) _cursor = (_cursor + 1) % EntryCount;
+        if (InputManager.MenuConfirm()) ExecuteAction(_cursor);
+        if (InputManager.MenuBack()) _sceneManager.PopScene(this);
     }
 
     private void ExecuteAction(int index)
@@ -208,8 +202,5 @@ internal class DevMenuScene : IScene
                 new Vector2(rightX, attY + i * 40), color);
         }
     }
-
-    private bool IsKeyPressed(Keys key) =>
-        _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
 }
 #endif

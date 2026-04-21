@@ -36,9 +36,6 @@ internal class FormbarLoginScene : IScene
     private HttpListener? _listener;
     private Task<HttpListenerContext>? _callbackTask;
 
-    private KeyboardState _keyboardState;
-    private KeyboardState _previousKeyboardState;
-
     private const int CallbackPort = 59200;
 
     // Vertical spacing between UI rows (pixels)
@@ -50,7 +47,6 @@ internal class FormbarLoginScene : IScene
         _sceneManager = sceneManager;
         _audioManager = audioManager;
         _graphics = graphics;
-        _previousKeyboardState = Keyboard.GetState();
     }
 
     public void Load()
@@ -70,7 +66,6 @@ internal class FormbarLoginScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        _keyboardState = Keyboard.GetState();
 
         if (_callbackTask != null && _callbackTask.IsCompleted)
             ProcessCallbackResult();
@@ -79,11 +74,9 @@ internal class FormbarLoginScene : IScene
             HandleIdleInput();
         else
         {
-            if (InputManager.IsEscapeKeyPressed() || IsCancelButtonClicked())
+            if (InputManager.MenuBack() || IsCancelButtonClicked())
                 CancelOAuth();
         }
-
-        _previousKeyboardState = _keyboardState;
     }
 
     // -----------------------------------------------------------------------
@@ -191,10 +184,10 @@ internal class FormbarLoginScene : IScene
 
     private void HandleIdleInput()
     {
-        if (IsKeyPressed(Keys.Enter))
+        if (InputManager.MenuConfirm())
             StartOAuth();
 
-        if (_font == null || !InputManager.IsLeftMouseButtonClicked()) return;
+        if (_font == null || !InputManager.MenuConfirm()) return;
 
         var viewport = _graphics.GraphicsDevice.Viewport;
         var mousePos = InputManager.GetMousePosition();
@@ -218,7 +211,7 @@ internal class FormbarLoginScene : IScene
 
     private bool IsCancelButtonClicked()
     {
-        if (_font == null || !InputManager.IsLeftMouseButtonClicked()) return false;
+        if (_font == null || !InputManager.MenuConfirm()) return false;
 
         var viewport = _graphics.GraphicsDevice.Viewport;
         var mousePos = InputManager.GetMousePosition();
@@ -364,7 +357,4 @@ internal class FormbarLoginScene : IScene
         }
         return null;
     }
-
-    private bool IsKeyPressed(Keys key) =>
-        _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
 }

@@ -11,21 +11,20 @@ namespace PolyGone;
 public class Entity : Sprite
 {
 
-    protected readonly Dictionary<Vector2, int>? collisionMap;
+    protected readonly Dictionary<Vector2, int>? CollisionMap;
+    protected float ChangeX;
+    protected float ChangeY;
+    protected bool IsOnGround;
+    public int Health;
+    public readonly int MaxHealth;
+    protected float InvincibilityFrames;
+    protected float Friction; // Horizontal friction multiplier in range [0, 1]; 1 keeps full velocity (no friction), 0 stops movement immediately (maximum friction)
+    protected readonly int[] VisualSize; // Visual size for drawing (can be larger than hitbox)
+    protected Vector2 HitboxOffset; // Offset to center the hitbox within the visual sprite
+    public bool IsAlive = true;
     private AudioManager audioManager;
-    protected float changeX;
-    protected float changeY;
-    protected bool isOnGround;
-    public int health;
-    public readonly int maxHealth;
-    protected float invincibilityFrames;
-    protected float friction; // Horizontal friction multiplier in range [0, 1]; 1 keeps full velocity (no friction), 0 stops movement immediately (maximum friction)
-    protected readonly int[] visualSize; // Visual size for drawing (can be larger than hitbox)
-    protected Vector2 hitboxOffset; // Offset to center the hitbox within the visual sprite
-    protected bool isAlive = true;
-    public bool IsAlive => isAlive;
     /// <summary>Multiplier applied to gravity each physics tick. 1 = normal, lower = floatier.</summary>
-    protected float gravityScale = 1f;
+    protected float GravityScale = 1f;
     
     // Constants for tile-based calculations
     protected const int TILE_SIZE = 64;
@@ -35,19 +34,19 @@ public class Entity : Sprite
     public Entity(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, int[]? visualSize = null)
         : base(texture, position, size, color, srcRect)
     {
-        this.collisionMap = collisionMap;
-        this.changeX = 0f;
-        this.changeY = 0f;
-        this.isOnGround = false;
-        this.health = health;
-        this.maxHealth = health; // Set max health to initial health
-        this.invincibilityFrames = 0f;
-        this.friction = 0.9f; // Default friction
-        this.visualSize = visualSize ?? size; // Use provided visual size or default to hitbox size
+        this.CollisionMap = collisionMap;
+        this.ChangeX = 0f;
+        this.ChangeY = 0f;
+        this.IsOnGround = false;
+        this.Health = health;
+        this.MaxHealth = health; // Set max health to initial health
+        this.InvincibilityFrames = 0f;
+        this.Friction = 0.9f; // Default friction
+        this.VisualSize = visualSize ?? size; // Use provided visual size or default to hitbox size
         // Calculate offset so hitbox bottom aligns with visual bottom
-        this.hitboxOffset = new Vector2(
-            (this.visualSize[0] - size[0]) / 2f, // Center horizontally
-            this.visualSize[1] - size[1] // Align bottom edges
+        this.HitboxOffset = new Vector2(
+            (this.VisualSize[0] - size[0]) / 2f, // Center horizontally
+            this.VisualSize[1] - size[1] // Align bottom edges
         );
         this.audioManager = audioManager;
     }
@@ -55,10 +54,18 @@ public class Entity : Sprite
     protected virtual List<(Rectangle, CollisionType)> GetIntersectingTiles(Rectangle target)
     {
         var intersectingTiles = new List<(Rectangle, CollisionType)>();
-        if (collisionMap == null) return intersectingTiles;
-        foreach (var tile in collisionMap)
+        if (CollisionMap == null)
         {
-            if (tile.Value == -1) continue;
+            return intersectingTiles;
+        }
+
+        foreach (var tile in CollisionMap)
+        {
+            if (tile.Value == -1)
+            {
+                continue;
+            }
+
             Rectangle tileRect = new Rectangle((int)tile.Key.X * TILE_SIZE, (int)tile.Key.Y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             CollisionType colType = CollisionTypeMapper.GetCollisionType(tile.Value);
             if (target.Intersects(tileRect))
@@ -72,9 +79,16 @@ public class Entity : Sprite
     // Helper method to check if a tile is a solid wall (not semi-solid platform)
     protected bool IsSolidWall(Vector2 tileKey)
     {
-        if (collisionMap == null) return false;
-        if (!collisionMap.TryGetValue(tileKey, out int tileId) || tileId == -1) return false;
-        
+        if (CollisionMap == null)
+        {
+            return false;
+        }
+
+        if (!CollisionMap.TryGetValue(tileKey, out int tileId) || tileId == -1)
+        {
+            return false;
+        }
+
         CollisionType colType = CollisionTypeMapper.GetCollisionType(tileId);
         return colType == CollisionType.Solid || colType == CollisionType.Rough || colType == CollisionType.Slippery;
     }
@@ -132,7 +146,11 @@ public class Entity : Sprite
         var intersectingEntities = new List<Entity>();
         foreach (var other in others)
         {
-            if (other == this) continue;
+            if (other == this)
+            {
+                continue;
+            }
+
             Rectangle otherRect = other.Rectangle;
             if (target.Intersects(otherRect))
             {
@@ -152,7 +170,7 @@ public class Entity : Sprite
     public virtual void HandleDeath()
     {
         // Default implementation marks entity as not alive
-        isAlive = false;
+        IsAlive = false;
         audioManager.PlayAudio("deathSfx", true, "null", false); //Play death sound effect
     }
 
@@ -160,8 +178,8 @@ public class Entity : Sprite
     protected virtual void PhysicsUpdate(float deltaTime)
     {
         // Apply gravity
-        changeY += 0.7f * gravityScale;
-        changeY = Math.Min(changeY, 14f);
+        ChangeY += 0.7f * GravityScale;
+        ChangeY = Math.Min(ChangeY, 14f);
 
         // Handle vertical movement and collisions
         HandleVerticalMovement(deltaTime);
@@ -175,18 +193,18 @@ public class Entity : Sprite
 
     protected virtual void HandleVerticalMovement(float deltaTime)
     {
-        isOnGround = false;
-        float nextY = position.Y + (changeY * deltaTime);
+        IsOnGround = false;
+        float nextY = position.Y + (ChangeY * deltaTime);
         Rectangle nextRectY = new Rectangle((int)position.X, (int)nextY, size[0], size[1]);
         var verticalCollisions = GetIntersectingTiles(nextRectY);
         
         if (verticalCollisions.Count > 0)
         {
             verticalCollisions = verticalCollisions
-                .OrderBy(c => Math.Abs(changeY > 0 ? c.Item1.Top - (position.Y + size[1]) : c.Item1.Bottom - position.Y))
+                .OrderBy(c => Math.Abs(ChangeY > 0 ? c.Item1.Top - (position.Y + size[1]) : c.Item1.Bottom - position.Y))
                 .ThenByDescending(c => c.Item2 == CollisionType.Solid ? 1 : 0)
                 .ToList();
-            HandleVerticalCollision(ref isOnGround, ref changeY, verticalCollisions.Take(1).ToList());
+            HandleVerticalCollision(ref IsOnGround, ref ChangeY, verticalCollisions.Take(1).ToList());
         }
         else
         {
@@ -197,7 +215,7 @@ public class Entity : Sprite
 
     protected virtual void HandleHorizontalMovement(float deltaTime)
     {
-        float nextX = position.X + (changeX * deltaTime);
+        float nextX = position.X + (ChangeX * deltaTime);
         Rectangle nextRectX = new Rectangle((int)nextX, (int)position.Y, size[0], size[1]);
         var horizontalCollisions = GetIntersectingTiles(nextRectX);
         
@@ -205,9 +223,9 @@ public class Entity : Sprite
         if (horizontalCollisions.Count > 0)
         {
             horizontalCollisions = horizontalCollisions
-                .OrderBy(c => Math.Abs(changeX > 0 ? c.Item1.Left - (position.X + size[0]) : c.Item1.Right - position.X))
+                .OrderBy(c => Math.Abs(ChangeX > 0 ? c.Item1.Left - (position.X + size[0]) : c.Item1.Right - position.X))
                 .ToList();
-            HandleHorizontalCollision(ref changeX, horizontalCollisions.Take(1).ToList());
+            HandleHorizontalCollision(ref ChangeX, horizontalCollisions.Take(1).ToList());
         }
         else
         {
@@ -225,7 +243,7 @@ public class Entity : Sprite
     protected virtual void OnHorizontalMovementComplete(float deltaTime)
     {
         // Gap centering: when moving horizontally through a 1-tile vertical gap, center the entity
-        if (Math.Abs(changeX) > 0.5f && collisionMap != null)
+        if (Math.Abs(ChangeX) > 0.5f && CollisionMap != null)
         {
             // Check for walls above and below to detect a 1-tile gap
             int tileAbove = (int)((position.Y - 1f) / TILE_SIZE);
@@ -261,10 +279,14 @@ public class Entity : Sprite
     protected virtual void ApplyFriction()
     {
         // Apply friction to horizontal movement
-        if (Math.Abs(changeX) > 0.5f)
-            changeX *= friction;
+        if (Math.Abs(ChangeX) > 0.5f)
+        {
+            ChangeX *= Friction;
+        }
         else
-            changeX = 0f;
+        {
+            ChangeX = 0f;
+        }
     }
 
     public void EntityCollisionUpdate(List<Entity> others)
@@ -280,8 +302,11 @@ public class Entity : Sprite
     // Check if there's ground ahead in the movement direction
     protected virtual bool IsGroundAhead(float direction)
     {
-        if (collisionMap == null) return true;
-        
+        if (CollisionMap == null)
+        {
+            return true;
+        }
+
         // Check from the bottom corner in the direction of movement
         float checkX = direction > 0
             ? position.X + size[0] + 1f   // Moving right: check from bottom-right corner, slightly ahead
@@ -298,10 +323,13 @@ public class Entity : Sprite
 
     public void TakeDamage(int damage, float invincibilityDuration = 60f)
     {
-        if (invincibilityFrames > 0) return; // Currently invincible, ignore damage
-        
-        health -= damage;
-        invincibilityFrames = invincibilityDuration; // Set invincibility frames after taking damage
+        if (InvincibilityFrames > 0)
+        {
+            return; // Currently invincible, ignore damage
+        }
+
+        Health -= damage;
+        InvincibilityFrames = invincibilityDuration; // Set invincibility frames after taking damage
     }
 
     public virtual void UseItems(List<Item> items)
@@ -314,8 +342,8 @@ public class Entity : Sprite
     {
         float deltaTime = (float)Math.Round(gameTime.ElapsedGameTime.TotalSeconds * 60f, 3);
         PhysicsUpdate(deltaTime);
-        invincibilityFrames = Math.Max(0f, invincibilityFrames - 1f);
-        if (health <= 0)
+        InvincibilityFrames = Math.Max(0f, InvincibilityFrames - 1f);
+        if (Health <= 0)
         {
             HandleDeath();
         }
@@ -327,17 +355,17 @@ public class Entity : Sprite
     {
         // Draw using visual size, offset by hitboxOffset to center the sprite on the hitbox
         // Round positions only for drawing to prevent sub-pixel rendering issues
-        float drawX = (float)Math.Floor(position.X - hitboxOffset.X - offset.X);
-        float drawY = (float)Math.Floor(position.Y - hitboxOffset.Y - offset.Y);
+        float drawX = (float)Math.Floor(position.X - HitboxOffset.X - offset.X);
+        float drawY = (float)Math.Floor(position.Y - HitboxOffset.Y - offset.Y);
         
         // Check if visual sprite would clip through tiles and adjust if needed
-        if (collisionMap != null)
+        if (CollisionMap != null)
         {
             Rectangle visualRect = new Rectangle(
-                (int)(position.X - hitboxOffset.X),
-                (int)(position.Y - hitboxOffset.Y),
-                visualSize[0],
-                visualSize[1]
+                (int)(position.X - HitboxOffset.X),
+                (int)(position.Y - HitboxOffset.Y),
+                VisualSize[0],
+                VisualSize[1]
             );
             
             var visualCollisions = GetIntersectingTiles(visualRect);
@@ -353,15 +381,15 @@ public class Entity : Sprite
                     if (!hitboxRect.Intersects(tileRect))
                     {
                         // Adjust Y if visual top extends above the tile
-                        float visualTop = position.Y - hitboxOffset.Y;
+                        float visualTop = position.Y - HitboxOffset.Y;
                         if (visualTop < tileRect.Bottom && position.Y >= tileRect.Bottom)
                         {
                             drawY = tileRect.Bottom - offset.Y;
                         }
                         
                         // Adjust X if visual extends into tile horizontally
-                        float visualLeft = position.X - hitboxOffset.X;
-                        float visualRight = visualLeft + visualSize[0];
+                        float visualLeft = position.X - HitboxOffset.X;
+                        float visualRight = visualLeft + VisualSize[0];
                         
                         if (visualLeft < tileRect.Right && position.X >= tileRect.Right)
                         {
@@ -369,7 +397,7 @@ public class Entity : Sprite
                         }
                         else if (visualRight > tileRect.Left && (position.X + size[0]) <= tileRect.Left)
                         {
-                            drawX = tileRect.Left - visualSize[0] - offset.X;
+                            drawX = tileRect.Left - VisualSize[0] - offset.X;
                         }
                     }
                 }
@@ -379,8 +407,8 @@ public class Entity : Sprite
         Rectangle adjustedRectangle = new Rectangle(
             (int)drawX,
             (int)drawY,
-            visualSize[0],
-            visualSize[1]
+            VisualSize[0],
+            VisualSize[1]
         );
         spriteBatch.Draw(texture, adjustedRectangle, srcRect, color);
     }

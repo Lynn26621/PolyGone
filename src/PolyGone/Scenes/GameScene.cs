@@ -353,9 +353,9 @@ public class GameScene : IScene
     {
         // Reset player
         player.position = playerPos;
-        player.health = 100;
-        player.bullets.Clear();
-
+        player.Health = 100;
+        player.Bullets.Clear();
+        
         // Reset turret enemies
         orphanedTurretBullets.Clear();
         turretEnemies.Clear();
@@ -513,14 +513,14 @@ public class GameScene : IScene
         for (int i = orphanedTurretBullets.Count - 1; i >= 0; i--)
         {
             orphanedTurretBullets[i].Update(gameTime);
-            if (orphanedTurretBullets[i].lifetime <= 0)
+            if (orphanedTurretBullets[i].Lifetime <= 0)
             {
                 orphanedTurretBullets.RemoveAt(i);
             }
         }
 
         // Gather all entities for collision detection after all updates
-        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. player.bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. orphanedTurretBullets];
+        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. player.Bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. orphanedTurretBullets];
 
         // Handle entity-to-entity collisions
         player.EntityCollisionUpdate(allEntities);

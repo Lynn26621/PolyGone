@@ -40,17 +40,47 @@ namespace PolyGone.Weapons
 
         public void Follow(Rectangle target, Vector2 cameraOffset)
         {
-            // Get mouse position from InputManager
-            Vector2 mousePosition = InputManager.GetMousePosition().ToVector2();
-
-            // Convert mouse position from screen space to world space
-            Vector2 worldMousePosition = mousePosition + cameraOffset;
-
-            // Calculate angle to mouse from player center
             Vector2 targetCenter = new Vector2(target.Center.X, target.Center.Y);
-            float angle = (float)Math.Atan2(worldMousePosition.Y - targetCenter.Y, worldMousePosition.X - targetCenter.X);
+            float angle;
 
-            // Set rotation to point at mouse
+            if (InputManager.UsingController)
+            {
+                // Controller aiming: use right thumbstick direction
+                Vector2 rightStick = InputManager.RightThumbstick;
+
+                if (rightStick.Length() > 0.1f) // Lower threshold for smoother response
+                {
+                    float targetAngle = (float)Math.Atan2(rightStick.Y, rightStick.X);
+
+                    // Fix angle wrapping by finding the shortest rotation path
+                    float angleDifference = targetAngle - rotation;
+
+                    // Wrap the difference to [-π, π] range
+                    while (angleDifference > Math.PI)
+                        angleDifference -= 2f * (float)Math.PI;
+                    while (angleDifference < -Math.PI)
+                        angleDifference += 2f * (float)Math.PI;
+
+                    // Smooth interpolation using the corrected difference
+                    float lerpSpeed = 0.2f;
+                    angle = rotation + angleDifference * lerpSpeed;
+                }
+                else
+                {
+                    // Keep current rotation when stick is in deadzone
+                    angle = rotation;
+                }
+            }
+
+            else
+            {
+                // Mouse aiming: calculate angle to mouse from player center
+                Vector2 mousePosition = InputManager.GetMousePosition().ToVector2();
+                Vector2 worldMousePosition = mousePosition + cameraOffset;
+                angle = (float)Math.Atan2(worldMousePosition.Y - targetCenter.Y, worldMousePosition.X - targetCenter.X);
+            }
+
+            // Set rotation to calculated angle
             rotation = angle;
 
             // Position blaster in circle around target center
@@ -66,8 +96,8 @@ namespace PolyGone.Weapons
 
         public override void Use()
         {
-            // Handle shooting — hold-fire when auto, click otherwise
-            if ((IsAutoFire ? InputManager.IsLeftMouseButtonHeld() : InputManager.IsLeftMouseButtonClicked()) && cooldown <= 0f)
+            // Handle shooting with InputManager to prevent click carryover
+            if (InputManager.GameShootSingle() && cooldown <= 0f)
             {
                 int baseDamage = (int)(40 * DamageMultiplier);
 
