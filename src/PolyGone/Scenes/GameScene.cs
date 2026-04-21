@@ -52,7 +52,6 @@ public class GameScene : IScene
     private List<LevelDoor> levelDoors = new(); // Doors connecting levels to hub
     private bool levelComplete = false;
     private bool gameOver = false;
-    private Texture2D texture;
     private readonly List<ItemType> selectedItems;
     private readonly List<BlasterAttachmentType> selectedAttachments;
     private readonly string levelName;
