@@ -39,7 +39,10 @@ namespace PolyGone.Entities
 
         // Jump velocity — scaled by LowGravityItem to keep peak height constant
         public float JumpStrength { get; set; } = -16.75f;
-        
+
+        // Dash velocity boost applied when dashing
+        public float DashStrength { get; set; } = 64f;
+
         public Player(
             Texture2D texture, 
             Vector2 position, 
@@ -215,6 +218,16 @@ namespace PolyGone.Entities
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #endif
+            }
+
+            // Dashing with coyote time
+            bool dashPressed = keyboardState.IsKeyDown(Keys.LeftShift);
+            bool dashJustPressed = dashPressed && !previousKeyboardState.IsKeyDown(Keys.LeftShift);
+
+            if ((isOnGround || coyoteTime > 0f) && (dashPressed && !dashJustPressed))
+            {
+                changeX += DashStrength * moveDirection;           
+                coyoteTime = 0f; // Reset coyote time after dashing
             }
         }
 
