@@ -380,6 +380,14 @@ public static class InputManager
         return MenuMouseConfirm() || MenuNonPointerConfirm();
     }
 
+    public static bool MenuConfirmHold()
+    {
+        bool mouseHold = _currentMouseState.LeftButton == ButtonState.Pressed;
+        bool keyboardHold = _currentKeyboardState.IsKeyDown(Keys.Enter);
+        bool gamepadHold = _currentGamepadState.Buttons.A == ButtonState.Pressed;
+        return mouseHold || keyboardHold || gamepadHold;
+    }
+
     public static bool MenuConfirmMouseClick()
     {
         bool mouseConfirm = _currentMouseState.LeftButton == ButtonState.Pressed

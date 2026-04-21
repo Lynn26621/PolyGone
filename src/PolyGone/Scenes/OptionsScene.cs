@@ -220,10 +220,10 @@ internal class OptionsScene : IScene
                     if (CanProcessMouseInput() && volumeRowBounds.Contains(InputManager.GetMousePosition()))
                     {
                         _selectedIndex = i;
-                        if (InputManager.IsLeftMouseButtonClicked() || InputManager.IsLeftMouseButtonHeld())
+                        if (InputManager.MenuConfirmHold())
                         {
                             SetVolumeFromMouseX(InputManager.GetMousePosition().X, sliderRect);
-                            if (InputManager.IsLeftMouseButtonClicked())
+                            if (InputManager.MenuConfirm())
                             {
                                 InputManager.ConsumeClick();
                             }
@@ -710,5 +710,57 @@ internal class OptionsScene : IScene
             _resetProgressConfirmStep = 0;
             _resetProgressConfirmSelectedIndex = 1;
         }
+    }
+    private void SetVolumeFromMouseX(int mouseX, Rectangle sliderRect)
+
+    {
+
+        var t = MathHelper.Clamp((mouseX - sliderRect.Left) / (float)sliderRect.Width, 0f, 1f);
+
+        SetVolume((int)MathF.Round(t * 100f));
+
+    }
+
+    private void SetVolume(int newVolume)
+
+    {
+
+        var clampedVolume = Math.Clamp(newVolume, 0, 100);
+
+        if (clampedVolume == _volume)
+
+        { return; }
+
+
+        _volume = clampedVolume;
+
+        _audioManager.SetMasterVolume(_volume / 100f);
+
+    }
+
+    private Rectangle GetVolumeSliderRect(Viewport viewport, float startY)
+
+    {
+
+        var sliderY = startY + 3 * RowSpacing + 22f;
+
+        return new Rectangle(
+
+            (int)(viewport.Width / 2f - VolumeSliderWidth / 2f),
+
+            (int)sliderY,
+
+            (int)VolumeSliderWidth,
+
+            (int)VolumeSliderHeight);
+
+    }
+
+    private bool CanProcessMouseInput()
+
+    {
+
+        return _mouseInputBlockTimer <= 0f;
+
     }
 }
