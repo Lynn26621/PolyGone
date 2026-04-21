@@ -78,7 +78,7 @@ csharp_preserve_single_line_blocks = true
 csharp_preserve_single_line_statements = false
 
 # Code style rules
-csharp_prefer_braces = true:warning
+csharp_prefer_braces = true:suggestion
 csharp_prefer_simple_using_statement = true:suggestion
 
 # Naming conventions

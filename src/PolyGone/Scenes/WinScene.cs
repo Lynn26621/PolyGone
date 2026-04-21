@@ -18,15 +18,15 @@ public class WinScene : IScene
     private readonly string currentLevel;
     private readonly List<ItemType> selectedItems;
     private readonly List<BlasterAttachmentType> selectedAttachments;
-    private SpriteFont font;
-    private Texture2D pixel;
+    private SpriteFont? font;
+    private Texture2D? pixel;
     private KeyboardState keyboardState;
     private KeyboardState previousKeyboardState;
     private readonly string[] options;
     private int selectedIndex;
     private static List<string>? levelOrder;
 
-    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType> selectedItems = null, List<BlasterAttachmentType> selectedAttachments = null)
+    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
     {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
@@ -40,11 +40,11 @@ public class WinScene : IScene
         string? nextLevel = GetNextLevel(currentLevel);
         if (nextLevel != null)
         {
-            options = new[] { "Next Level", "Level Select", "Main Menu" };
+            options = new[] { "Hub", "Next Level", "Main Menu" };
         }
         else
         {
-            options = new[] { "Level Select", "Main Menu" };
+            options = new[] { "Hub", "Main Menu" };
         }
         
         previousKeyboardState = Keyboard.GetState();
@@ -140,18 +140,11 @@ public class WinScene : IScene
                 InputManager.ResetClickCooldown();
             }
         }
-        else if (selectedOption == "Level Select")
+        else if (selectedOption == "Hub")
         {
             sceneManager.PopScene(this); // Remove WinScene
-            
-            // Keep popping until we reach LevelSelect
-            while (sceneManager.GetCurrentScene() != null && sceneManager.GetCurrentScene() is not LevelSelect)
-            {
-                sceneManager.PopScene(sceneManager.GetCurrentScene());
-            }
-            
-            InputManager.ResetClickCooldown();
-            audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
+            sceneManager.PopScene(sceneManager.GetCurrentScene()); // Remove old GameScene
+            sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, "Hub", selectedItems, selectedAttachments));
         }
         else if (selectedOption == "Main Menu")
         {

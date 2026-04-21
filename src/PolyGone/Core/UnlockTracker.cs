@@ -96,10 +96,11 @@ public static class UnlockTracker
     {
 #if DEBUG
         return true; // All attachments available in dev builds
-#endif
+#else
         if (!_attachmentUnlockRequirements.TryGetValue(attachment, out var requiredLevel))
             return true;
         return _completedLevels.Contains(requiredLevel);
+#endif
     }
 
     /// <summary>Returns a human-readable hint describing how to unlock the attachment, or null if always unlocked.</summary>

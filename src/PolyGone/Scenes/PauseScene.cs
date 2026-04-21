@@ -16,8 +16,8 @@ using PolyGone.Core;
 namespace PolyGone;
 internal class PauseScene : IScene
 {
-    private Texture2D _pixel;
-    private SpriteFont _font;
+    private Texture2D? _pixel;
+    private SpriteFont? _font;
     private KeyboardState keyboardState;
     private KeyboardState previousKeyboardState;
     private readonly ContentManager _content;
@@ -25,12 +25,11 @@ internal class PauseScene : IScene
     private readonly AudioManager _audioManager;
     private readonly GraphicsDeviceManager _graphics;
     private readonly GameScene _gameScene;
-    private readonly string[] _options = { "Continue", "Restart Level", "Change Loadout (Restarts Level)", "Exit to Menu" };
+    private readonly string[] _options = { "Continue", "Restart Level", "Exit to Menu" };
     private int _selectedIndex;
 
     public PauseScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, GameScene gameScene)
     {
-        _pixel = null;
         _content = content;
         _sceneManager = sceneManager;
         _audioManager = audioManager;
@@ -120,18 +119,6 @@ internal class PauseScene : IScene
             InputManager.ResetClickCooldown();
         }
         else if (_selectedIndex == 2)
-        {
-            // Change Loadout (Restarts Level) - go back to inventory management
-            // The original Menu and LevelSelect should still be in the stack from initial navigation
-            string levelName = _gameScene.GetLevelName();
-            _sceneManager.PopScene(this); // Pop pause scene
-            _sceneManager.PopScene(_gameScene); // Pop game scene
-            // Stack is now: Menu → LevelSelect
-            // Just add InventoryManagement on top
-            _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _audioManager, _graphics, levelName));
-            InputManager.ResetClickCooldown();
-        }
-        else if (_selectedIndex == 3)
         {
             // Exit to Menu - clear all and go to menu
             _sceneManager.PopScene(this);

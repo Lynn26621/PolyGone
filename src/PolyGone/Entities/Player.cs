@@ -425,7 +425,7 @@ namespace PolyGone.Entities
         }
 
         // Public property to access current blaster for backward compatibility
-        public Blaster blaster => GetBlaster();
+        public Blaster? blaster => GetBlaster();
 
         // Public method to access item inventory for UI
         public List<Item> GetAllItems()
@@ -502,9 +502,7 @@ namespace PolyGone.Entities
         {
             // Check if we should draw with healing glow
             var healingGlow = GetActiveHealingGlowItem();
-            bool shouldGlow = healingGlow?.ShouldGlow() ?? false;
-            
-            if (shouldGlow)
+            if (healingGlow?.ShouldGlow() == true)
             {
                 // Draw glow outline first (behind the player) - 68x68 total size
                 Color glowColor = healingGlow.GetGlowColor();
