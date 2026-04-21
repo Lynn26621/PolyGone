@@ -172,7 +172,7 @@ public class WinScene : IScene
         catch
         {
             // Fallback to hardcoded levels if file doesn't exist
-            levelOrder = new List<string> { "TestLevel", "TestLevel2", "TestLevel3" };
+            levelOrder = new List<string> { "TestLevel", "TestLevel2", "TestLevel3", "TestLevel4" };
         }
     }
     
