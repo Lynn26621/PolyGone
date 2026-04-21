@@ -307,7 +307,7 @@ public class GameScene : IScene
         player = new Player(
             texture: playerSheet,
             position: playerPos,
-            size: new int[2] { 60, 60 },
+            size: new int[2] { 40, 60 },
             health: 100,
             color: Color.White,
             srcRect: textureStore[0],
