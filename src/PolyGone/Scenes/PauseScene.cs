@@ -16,8 +16,8 @@ using PolyGone.Core;
 namespace PolyGone;
 internal class PauseScene : IScene
 {
-    private Texture2D _pixel;
-    private SpriteFont _font;
+    private Texture2D? _pixel;
+    private SpriteFont? _font;
     private KeyboardState keyboardState;
     private KeyboardState previousKeyboardState;
     private readonly ContentManager _content;
@@ -30,7 +30,6 @@ internal class PauseScene : IScene
 
     public PauseScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, GameScene gameScene)
     {
-        _pixel = null;
         _content = content;
         _sceneManager = sceneManager;
         _audioManager = audioManager;

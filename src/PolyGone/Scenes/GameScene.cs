@@ -17,19 +17,19 @@ namespace PolyGone;
 public class GameScene : IScene
 {
     private ContentManager contentManager;
-    private Texture2D playerSheet;
-    private Texture2D enemySheet;
-    private Texture2D miscSheet;
-    private Texture2D textureSheet;
-    private Texture2D foregroundSheet;
-    private Texture2D backgroundSheet;
-    private Texture2D collisionSheet;
+    private Texture2D playerSheet = null!;
+    private Texture2D enemySheet = null!;
+    private Texture2D miscSheet = null!;
+    private Texture2D textureSheet = null!;
+    private Texture2D foregroundSheet = null!;
+    private Texture2D backgroundSheet = null!;
+    private Texture2D collisionSheet = null!;
     private AudioManager audioManager;
-    private SpriteFont hudFont;
+    private SpriteFont hudFont = null!;
     private SceneManager sceneManager;
-    private Player player;
-    private FollowCamera camera;
-    private GameUI gameUI;
+    private Player player = null!;
+    private FollowCamera camera = null!;
+    private GameUI gameUI = null!;
     private readonly GraphicsDeviceManager graphics;
     private Dictionary<Vector2, int> tileMap = null!;
     private Dictionary<Vector2, int> collisionMap = null!;
@@ -41,8 +41,8 @@ public class GameScene : IScene
     private readonly List<Entity> enemies = new(); // Placeholder for enemy list
     private readonly List<TurretEnemy> turretEnemies = new(); // Stationary blaster enemies
     private readonly List<Projectile> orphanedTurretBullets = new(); // Bullets that outlive their turret
-    private GoalTrigger goalTrigger; // Win condition trigger
-    private SwitchTrigger inventoryAccess; // Inventory access trigger
+    private GoalTrigger goalTrigger = null!; // Win condition trigger
+    private SwitchTrigger inventoryAccess = null!; // Inventory access trigger
     private List<LevelDoor> levelDoors = new(); // Doors connecting levels to hub
     private bool levelComplete = false;
     private bool gameOver = false;

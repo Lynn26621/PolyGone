@@ -18,15 +18,15 @@ public class WinScene : IScene
     private readonly string currentLevel;
     private readonly List<ItemType> selectedItems;
     private readonly List<BlasterAttachmentType> selectedAttachments;
-    private SpriteFont font;
-    private Texture2D pixel;
+    private SpriteFont? font;
+    private Texture2D? pixel;
     private KeyboardState keyboardState;
     private KeyboardState previousKeyboardState;
     private readonly string[] options;
     private int selectedIndex;
     private static List<string>? levelOrder;
 
-    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType> selectedItems = null, List<BlasterAttachmentType> selectedAttachments = null)
+    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
     {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
