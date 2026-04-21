@@ -18,10 +18,8 @@ public class WinScene : IScene
     private readonly string currentLevel;
     private readonly List<ItemType> selectedItems;
     private readonly List<BlasterAttachmentType> selectedAttachments;
-    private SpriteFont? font;
-    private Texture2D? pixel;
-    private KeyboardState keyboardState;
-    private KeyboardState previousKeyboardState;
+    private SpriteFont font;
+    private Texture2D pixel;
     private readonly string[] options;
     private int selectedIndex;
     private static List<string>? levelOrder;
@@ -47,7 +45,6 @@ public class WinScene : IScene
             options = new[] { "Hub", "Main Menu" };
         }
         
-        previousKeyboardState = Keyboard.GetState();
         selectedIndex = 0;
 
         // Record this level as completed so locked items can be unlocked
@@ -72,7 +69,6 @@ public class WinScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        keyboardState = Keyboard.GetState();
 
         // Mouse navigation
         if (font != null)
@@ -92,7 +88,7 @@ public class WinScene : IScene
                     selectedIndex = i;
                     
                     // Mouse click with InputManager
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         ExecuteSelection();
                         InputManager.ConsumeClick();
@@ -102,29 +98,23 @@ public class WinScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up))
+        if (InputManager.MenuUp())
         {
             selectedIndex = (selectedIndex - 1 + options.Length) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Down))
+        if (InputManager.MenuDown())
         {
             selectedIndex = (selectedIndex + 1) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Enter))
+        if (InputManager.MenuConfirm())
         {
             ExecuteSelection();
         }
 
-        previousKeyboardState = keyboardState;
     }
-    
-    private bool IsKeyPressed(Keys key)
-    {
-        return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
-    }
-    
+
     private void ExecuteSelection()
     {
         string selectedOption = options[selectedIndex];

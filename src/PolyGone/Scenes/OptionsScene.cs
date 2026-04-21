@@ -12,8 +12,6 @@ internal class OptionsScene : IScene
 {
     private Texture2D? _pixel;
     private SpriteFont? _font;
-    private KeyboardState _keyboardState;
-    private KeyboardState _previousKeyboardState;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly AudioManager _audioManager;
@@ -85,7 +83,6 @@ internal class OptionsScene : IScene
         _sceneManager = sceneManager;
         _audioManager = audioManager;
         _graphics = graphics;
-        _previousKeyboardState = Keyboard.GetState();
         _selectedIndex = 0;
         _availableResolutions = DisplaySettings.GetAvailableResolutions();
         var currentRes = (DisplaySettings.WindowedWidth, DisplaySettings.WindowedHeight);
@@ -140,8 +137,6 @@ internal class OptionsScene : IScene
             _deferredCenterHeight = 0;
         }
 
-        _keyboardState = Keyboard.GetState();
-
         // Handle the confirm-discard overlay independently
         if (_confirmingDiscard)
         {
@@ -158,7 +153,7 @@ internal class OptionsScene : IScene
                     if (CanProcessMouseInput() && bounds.Contains(InputManager.GetMousePosition()))
                     {
                         _confirmSelectedIndex = i;
-                        if (InputManager.IsLeftMouseButtonClicked())
+                        if (InputManager.MenuConfirm())
                         {
                             ExecuteConfirm();
                             InputManager.ConsumeClick();
@@ -166,38 +161,34 @@ internal class OptionsScene : IScene
                     }
                 }
             }
-            if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Left))
+            if (InputManager.MenuUp() || InputManager.MenuLeft())
             {
                 _confirmSelectedIndex = (_confirmSelectedIndex - 1 + 2) % 2;
             }
-            if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right))
+            if (InputManager.MenuDown() || InputManager.MenuRight())
             {
                 _confirmSelectedIndex = (_confirmSelectedIndex + 1) % 2;
             }
-            if (IsKeyPressed(Keys.Enter))
+            if (InputManager.MenuConfirm())
             {
                 ExecuteConfirm();
             }
-            if (IsKeyPressed(Keys.Escape))
+            if (InputManager.MenuBack())
             {
                 _confirmingDiscard = false;
             }
-
-            _previousKeyboardState = _keyboardState;
             return;
         }
 
         if (_resetConfirmStep > 0)
         {
             HandleResetConfirmInput();
-            _previousKeyboardState = _keyboardState;
             return;
         }
 
         if (_resetProgressConfirmStep > 0)
         {
             HandleResetProgressConfirmInput();
-            _previousKeyboardState = _keyboardState;
             return;
         }
 
@@ -242,7 +233,7 @@ internal class OptionsScene : IScene
                 else if (CanProcessMouseInput() && bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _selectedIndex = i;
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         if (i == 1 && !_pendingIsFullScreen)
                         {
@@ -265,64 +256,41 @@ internal class OptionsScene : IScene
 
             if (CanProcessMouseInput() && applyRect.Contains(InputManager.GetMousePosition()))
             {
-                _selectedIndex = 2;
-                _buttonIndex = 0;
-                if (InputManager.IsLeftMouseButtonClicked())
-                { ExecuteSelection(); InputManager.ConsumeClick(); }
+                _selectedIndex = 2; _buttonIndex = 0;
+                if (InputManager.MenuConfirm()) { ExecuteSelection(); InputManager.ConsumeClick(); }
             }
             else if (CanProcessMouseInput() && discardRect.Contains(InputManager.GetMousePosition()))
             {
-                _selectedIndex = 2;
-                _buttonIndex = 1;
-                if (InputManager.IsLeftMouseButtonClicked())
-                { ExecuteSelection(); InputManager.ConsumeClick(); }
+                _selectedIndex = 2; _buttonIndex = 1;
+                if (InputManager.MenuConfirm()) { ExecuteSelection(); InputManager.ConsumeClick(); }
             }
         }
 
         // Keyboard navigation
         int rowCount = GetRowLabels().Length;
-        if (IsKeyPressed(Keys.Up))
-        { _selectedIndex = (_selectedIndex - 1 + rowCount) % rowCount; }
-        if (IsKeyPressed(Keys.Down))
-        { _selectedIndex = (_selectedIndex + 1) % rowCount; }
+        if (InputManager.MenuUp())   { _selectedIndex = (_selectedIndex - 1 + rowCount) % rowCount; }
+        if (InputManager.MenuDown()) { _selectedIndex = (_selectedIndex + 1) % rowCount; }
 
         if (_selectedIndex == 1 && !_pendingIsFullScreen)
         {
-            if (IsKeyPressed(Keys.Left))
-            { CycleResolution(-1); }
-            if (IsKeyPressed(Keys.Right))
-            { CycleResolution(1); }
-        }
-
-        if (_selectedIndex == 3)
-        {
-            HandleVolumeKeyboardInput();
-        }
-        else
-        {
-            _volumeKeyRepeatTimer = 0f;
+            if (InputManager.MenuLeft())  { CycleResolution(-1); }
+            if (InputManager.MenuRight()) { CycleResolution(1); }
         }
 
         if (_selectedIndex == 2)
         {
-            if (IsKeyPressed(Keys.Left))
-            { _buttonIndex = 0; }
-            if (IsKeyPressed(Keys.Right))
-            { _buttonIndex = 1; }
+            if (InputManager.MenuLeft())  { _buttonIndex = 0; }
+            if (InputManager.MenuRight()) { _buttonIndex = 1; }
         }
 
-        if (IsKeyPressed(Keys.Enter))
-        { ExecuteSelection(); }
-
-        if (IsKeyPressed(Keys.Escape))
+        if (InputManager.MenuConfirm()) { ExecuteSelection(); }
+        if (InputManager.MenuBack())
         {
             if (HasPendingChanges)
             { _confirmingDiscard = true; _confirmSelectedIndex = 1; }
             else
             { _sceneManager.PopScene(this); }
         }
-
-        _previousKeyboardState = _keyboardState;
     }
 
     // Only updates the pending index — does not touch graphics until Apply is pressed
@@ -443,7 +411,7 @@ internal class OptionsScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _resetConfirmSelectedIndex = i;
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         ExecuteResetConfirm();
                         InputManager.ConsumeClick();
@@ -452,14 +420,10 @@ internal class OptionsScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Left))
-        { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex - 1 + 2) % 2; }
-        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right))
-        { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex + 1) % 2; }
-        if (IsKeyPressed(Keys.Enter))
-        { ExecuteResetConfirm(); }
-        if (IsKeyPressed(Keys.Escape))
-        { _resetConfirmStep = 0; _resetConfirmSelectedIndex = 1; }
+        if (InputManager.MenuUp()   || InputManager.MenuLeft())  { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex - 1 + 2) % 2; }
+        if (InputManager.MenuDown() || InputManager.MenuRight()) { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex + 1) % 2; }
+        if (InputManager.MenuConfirm())  { ExecuteResetConfirm(); }
+        if (InputManager.MenuBack()) { _resetConfirmStep = 0; _resetConfirmSelectedIndex = 1; }
     }
 
     private void ExecuteResetConfirm()
@@ -711,7 +675,7 @@ internal class OptionsScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _resetProgressConfirmSelectedIndex = i;
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         ExecuteResetProgressConfirm();
                         InputManager.ConsumeClick();
@@ -720,14 +684,10 @@ internal class OptionsScene : IScene
             }
         }
 
-        if (IsKeyPressed(Keys.Up) || IsKeyPressed(Keys.Left))
-        { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex - 1 + 2) % 2; }
-        if (IsKeyPressed(Keys.Down) || IsKeyPressed(Keys.Right))
-        { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex + 1) % 2; }
-        if (IsKeyPressed(Keys.Enter))
-        { ExecuteResetProgressConfirm(); }
-        if (IsKeyPressed(Keys.Escape))
-        { _resetProgressConfirmStep = 0; _resetProgressConfirmSelectedIndex = 1; }
+        if (InputManager.MenuUp()   || InputManager.MenuLeft())  { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex - 1 + 2) % 2; }
+        if (InputManager.MenuDown() || InputManager.MenuRight()) { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex + 1) % 2; }
+        if (InputManager.MenuConfirm())  { ExecuteResetProgressConfirm(); }
+        if (InputManager.MenuBack()) { _resetProgressConfirmStep = 0; _resetProgressConfirmSelectedIndex = 1; }
     }
 
     private void ExecuteResetProgressConfirm()
@@ -750,74 +710,5 @@ internal class OptionsScene : IScene
             _resetProgressConfirmStep = 0;
             _resetProgressConfirmSelectedIndex = 1;
         }
-    }
-
-    private bool IsKeyPressed(Keys key)
-    {
-        return _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
-    }
-
-    private void AdjustVolume(int deltaPercent)
-    {
-        SetVolume(_volume + deltaPercent);
-    }
-
-    private void HandleVolumeKeyboardInput()
-    {
-        var leftHeld = _keyboardState.IsKeyDown(Keys.Left);
-        var rightHeld = _keyboardState.IsKeyDown(Keys.Right);
-
-        if (leftHeld == rightHeld)
-        {
-            _volumeKeyRepeatTimer = 0f;
-            return;
-        }
-
-        var direction = leftHeld ? -1 : 1;
-        var tapped = IsKeyPressed(leftHeld ? Keys.Left : Keys.Right);
-
-        if (tapped)
-        {
-            AdjustVolume(direction);
-            _volumeKeyRepeatTimer = VolumeKeyInitialDelay;
-            return;
-        }
-
-        if (_volumeKeyRepeatTimer <= 0f)
-        {
-            AdjustVolume(direction);
-            _volumeKeyRepeatTimer = VolumeKeyRepeatDelay;
-        }
-    }
-
-    private void SetVolumeFromMouseX(int mouseX, Rectangle sliderRect)
-    {
-        var t = MathHelper.Clamp((mouseX - sliderRect.Left) / (float)sliderRect.Width, 0f, 1f);
-        SetVolume((int)MathF.Round(t * 100f));
-    }
-
-    private void SetVolume(int newVolume)
-    {
-        var clampedVolume = Math.Clamp(newVolume, 0, 100);
-        if (clampedVolume == _volume)
-        { return; }
-
-        _volume = clampedVolume;
-        _audioManager.SetMasterVolume(_volume / 100f);
-    }
-
-    private Rectangle GetVolumeSliderRect(Viewport viewport, float startY)
-    {
-        var sliderY = startY + 3 * RowSpacing + 22f;
-        return new Rectangle(
-            (int)(viewport.Width / 2f - VolumeSliderWidth / 2f),
-            (int)sliderY,
-            (int)VolumeSliderWidth,
-            (int)VolumeSliderHeight);
-    }
-
-    private bool CanProcessMouseInput()
-    {
-        return _mouseInputBlockTimer <= 0f;
     }
 }
