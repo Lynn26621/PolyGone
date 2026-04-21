@@ -196,7 +196,7 @@ internal class FormbarLoginScene : IScene
         // Login button  (same Y as drawn below)
         float btnY = cy;
         string btnLabel = "Login with Formbar";
-        var btnSize = _font.MeasureString(btnLabel);
+        var btnSize = _font!.MeasureString(btnLabel);
         var btnBounds = new Rectangle(
             (int)(viewport.Width / 2f - btnSize.X / 2f) - 10,
             (int)btnY - 5,
@@ -271,7 +271,7 @@ internal class FormbarLoginScene : IScene
 
         // Row 2  (cy): "Login with Formbar" button — centred on cy
         string btnLabel = "Login with Formbar";
-        var btnSize = _font.MeasureString(btnLabel);
+        var btnSize = _font!.MeasureString(btnLabel);
         float btnY = cy;
         float btnX = cx - btnSize.X / 2f;
         spriteBatch.Draw(_pixel!,

@@ -10,25 +10,26 @@ using System;
 using PolyGone.Entities;
 using PolyGone.Graphics;
 using PolyGone.Core;
+using System.Diagnostics;
 
 namespace PolyGone;
 
 public class GameScene : IScene
 {
     private ContentManager contentManager;
-    private Texture2D playerSheet;
-    private Texture2D enemySheet;
-    private Texture2D miscSheet;
-    private Texture2D textureSheet;
-    private Texture2D foregroundSheet;
-    private Texture2D backgroundSheet;
-    private Texture2D collisionSheet;
+    private Texture2D playerSheet = null!;
+    private Texture2D enemySheet = null!;
+    private Texture2D miscSheet = null!;
+    private Texture2D textureSheet = null!;
+    private Texture2D foregroundSheet = null!;
+    private Texture2D backgroundSheet = null!;
+    private Texture2D collisionSheet = null!;
     private AudioManager audioManager;
-    private SpriteFont hudFont;
+    private SpriteFont hudFont = null!;
     private SceneManager sceneManager;
-    private Player player;
-    private FollowCamera camera;
-    private GameUI gameUI;
+    private Player player = null!;
+    private FollowCamera camera = null!;
+    private GameUI gameUI = null!;
     private readonly GraphicsDeviceManager graphics;
     private Dictionary<Vector2, int> tileMap = null!;
     private Dictionary<Vector2, int> collisionMap = null!;
@@ -40,15 +41,19 @@ public class GameScene : IScene
     private readonly List<Entity> enemies = new(); // Placeholder for enemy list
     private readonly List<TurretEnemy> turretEnemies = new(); // Stationary blaster enemies
     private readonly List<Projectile> orphanedTurretBullets = new(); // Bullets that outlive their turret
-    private GoalTrigger goalTrigger; // Win condition trigger
+    private GoalTrigger goalTrigger = null!; // Win condition trigger
+    private SwitchTrigger inventoryAccess = null!; // Inventory access trigger
+    private List<LevelDoor> levelDoors = new(); // Doors connecting levels to hub
     private bool levelComplete = false;
     private bool gameOver = false;
     private readonly List<ItemType> selectedItems;
     private readonly List<BlasterAttachmentType> selectedAttachments;
     private readonly string levelName;
+    private int? loadX;
+    private int? loadY;
 
-    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
-    {       
+    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null, int? loadX = null, int? loadY = null)
+    {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
         this.audioManager = audioManager;
@@ -56,13 +61,16 @@ public class GameScene : IScene
         this.selectedItems = selectedItems ?? new List<ItemType>();
         this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
         this.levelName = levelName;
+        this.loadX = loadX;
+        this.loadY = loadY;
+
         LoadMapFromJson("Maps/" + levelName + ".json");
         textureStore = GetTextureStore(32, new int[2] { 2, 2 });
     }
 
     // Public method to get the level name for restart functionality
     public string GetLevelName() => levelName;
-    
+
     // Public methods to get the current loadout for restart functionality
     public List<ItemType> GetSelectedItems() => new List<ItemType>(selectedItems);
     public List<BlasterAttachmentType> GetSelectedAttachments() => new List<BlasterAttachmentType>(selectedAttachments);
@@ -95,16 +103,16 @@ public class GameScene : IScene
         // Read and parse JSON file
         string jsonContent = File.ReadAllText(filepath);
         using JsonDocument doc = JsonDocument.Parse(jsonContent);
-        
+
         // Get root and layers
         JsonElement root = doc.RootElement;
         JsonElement layers = root.GetProperty("layers");
-        
+
         int width = root.GetProperty("width").GetInt32();
-        
+
         tileMap = new Dictionary<Vector2, int>();
         collisionMap = new Dictionary<Vector2, int>();
-        
+
         foreach (JsonElement layer in layers.EnumerateArray())
         {
             string? layerName = layer.GetProperty("name").GetString();
@@ -112,28 +120,28 @@ public class GameScene : IScene
             if (layerName != "Objects")
             {
                 JsonElement dataArray = layer.GetProperty("data");
-                
+
                 int index = 0;
                 foreach (JsonElement tile in dataArray.EnumerateArray())
                 {
                     int tileValue = tile.GetInt32();
                     int x = index % width;
                     int y = index / width;
-                    
+
                     if (tileValue > 0)
                     {
                         // Tiled's firstgid is 1, so we subtract 1 to convert to 0-based index.
                         // Wrap tileValue to fit within our texture store (assuming 16 tiles per layer in Tiled)
                         if (layerName == "Tiles")
                         {
-                            tileMap[new Vector2(x, y)] = tileValue % 16 - 1; 
+                            tileMap[new Vector2(x, y)] = tileValue % 16 - 1;
                         }
                         else if (layerName == "Collisions")
                         {
                             collisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
                         }
                     }
-                    
+
                     index++;
                 }
             }
@@ -147,9 +155,22 @@ public class GameScene : IScene
                     switch (objType)
                     {
                         case "Player":
+                        case "PlayerSpawn":
+                            int playerX;
+                            int playerY;
+                            if (loadX.HasValue && loadY.HasValue)
+                            {
+                                playerX = loadX.Value;
+                                playerY = loadY.Value;
+                            }
+                            else
+                            {
+                                playerX = (int)obj.GetProperty("x").GetSingle();
+                                playerY = (int)obj.GetProperty("y").GetSingle();
+                            }
                             playerPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
+                                playerX,
+                                playerY
                             );
                             playerSpawnFound = true;
                             break;
@@ -176,19 +197,67 @@ public class GameScene : IScene
                             int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
                             goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight);
                             break;
+                        case "Door":
+                            Vector2 doorPos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            int doorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                            int doorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                            string connectedLevel = "Hub";
+                            int playerLoadX = 0;
+                            int playerLoadY = 0;
+                            List<JsonElement> properties = obj.GetProperty("properties").EnumerateArray().ToList();
+                            foreach (JsonElement prop in properties)
+                            {
+                                string? propName = prop.GetProperty("name").GetString();
+                                switch (propName)
+                                {
+                                    case "connectedLevel":
+                                        connectedLevel = (string)(prop.GetProperty("value").GetString() ?? "Hub");
+                                        break;
+                                    case "loadX":
+                                        playerLoadX = (int)prop.GetProperty("value").GetSingle();
+                                        break;
+                                    case "loadY":
+                                        playerLoadY = (int)prop.GetProperty("value").GetSingle();
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                            levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connectedLevel, playerLoadX, playerLoadY));
+                            break;
+                        case "Inventory":
+                            Vector2 inventoryPos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            int inventoryWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                            int inventoryHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                            inventoryAccess = new SwitchTrigger(inventoryPos, inventoryWidth, inventoryHeight, audioManager);
+                            break;
                         default:
                             break;
                     }
                 }
-            } 
+            }
         }
-        
+
+        // If no player marker exists in the map, allow door-provided coordinates.
+        if (!playerSpawnFound && loadX.HasValue && loadY.HasValue)
+        {
+            playerPos = AdjustCoordinates(loadX.Value, loadY.Value);
+            playerSpawnFound = true;
+        }
+
         // Validate that a player spawn was found
         if (!playerSpawnFound)
         {
             throw new InvalidOperationException(
-                $"Map file '{filepath}' is missing a required PlayerSpawn object in the Objects layer. " +
-                "Please ensure the map contains exactly one object with type='PlayerSpawn'."
+                $"Map file '{filepath}' is missing a required player spawn in the Objects layer. " +
+                "Please ensure the map contains exactly one object with type='Player' or type='PlayerSpawn', " +
+                "or provide door load coordinates when transitioning into this level."
             );
         }
     }
@@ -216,7 +285,7 @@ public class GameScene : IScene
                     break;
             }
         }
-        
+
         // Load texture atlas and initialize camera
         playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
         enemySheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneEnemySheet");
@@ -249,7 +318,7 @@ public class GameScene : IScene
             audioManager: audioManager,
             visualSize: new int[2] { 64, 64 }
         );
-        
+
         // Initialize GameUI
         gameUI = new GameUI(player, textureSheet, textureStore[2], hudFont);
         // Initialize turret enemies
@@ -279,7 +348,7 @@ public class GameScene : IScene
             visualSize: new int[2] { 64, 64 }
         )));
     }
-    
+
     private void Reset()
     {
         // Reset player
@@ -316,7 +385,7 @@ public class GameScene : IScene
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 }
         )));
-        
+
         // Reset goal trigger and level completion
         if (goalTrigger != null)
         {
@@ -324,8 +393,20 @@ public class GameScene : IScene
         }
         levelComplete = false;
         gameOver = false;
+
+        // Reset inventory access trigger
+        if (inventoryAccess != null)
+        {
+            inventoryAccess.Reset();
+        }
+
+        // Reset Doors
+        foreach (var door in levelDoors)
+        {
+            door.Reset();
+        }
     }
-    
+
     public void Update(GameTime gameTime)
     {
         // Check if level is complete or game over
@@ -333,15 +414,15 @@ public class GameScene : IScene
         {
             return;
         }
-        
+
         // Update player and camera
         player.Update(gameTime, camera.position);
-        camera.Follow(player.Rectangle, new Vector2(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight), new Vector2( tileMap.Keys.Max(k => k.X + 1) * 64, tileMap.Keys.Max(k => k.Y + 1) * 64));
-        
+        camera.Follow(player.Rectangle, new Vector2(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight), new Vector2(tileMap.Keys.Max(k => k.X + 1) * 64, tileMap.Keys.Max(k => k.Y + 1) * 64));
+
         // Check all entities for out-of-bounds
         float worldMaxY = tileMap.Keys.Max(k => k.Y + 1) * 64;
         float worldMaxX = tileMap.Keys.Max(k => k.X + 1) * 64;
-        
+
         // Check player bounds
         if (player.position.Y > worldMaxY)
         {
@@ -363,7 +444,7 @@ public class GameScene : IScene
             sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, audioManager, graphics, this));
             return;
         }
-        
+
         // Check enemies for falling out of bounds
         foreach (var enemy in enemies)
         {
@@ -397,6 +478,23 @@ public class GameScene : IScene
         {
             if (turret.IsAlive)
                 turret.Update(gameTime);
+        }
+
+        // Update Doors Input
+        foreach (var door in levelDoors)
+        {
+            door.Update();
+        }
+
+        //Update Inventory Access Input
+        if (inventoryAccess != null)
+        {
+            inventoryAccess.Update();
+            inventoryAccess.CheckTrigger(player.Rectangle);
+            if (inventoryAccess.IsTriggered && inventoryAccess.IsActivated)
+            {
+                sceneManager.AddScene(new InventoryManagement(contentManager, sceneManager, audioManager, graphics, levelName));
+            }
         }
 
         // Before removing dead turrets, rescue any live bullets they still own
@@ -434,7 +532,7 @@ public class GameScene : IScene
         {
             turret.EntityCollisionUpdate(allEntities);
         }
-        
+
         // Check for goal trigger
         if (goalTrigger != null && !levelComplete)
         {
@@ -444,6 +542,17 @@ public class GameScene : IScene
                 levelComplete = true;
                 // Transition to win scene with current loadout
                 sceneManager.AddScene(new WinScene(contentManager, sceneManager, audioManager, graphics, levelName, selectedItems, selectedAttachments));
+            }
+        }
+
+        //Check if player enters door
+        foreach (var door in levelDoors)
+        {
+            door.CheckTrigger(player.Rectangle);
+            if (door.IsTriggered && door.IsActivated)
+            {
+                sceneManager.PopScene(this);
+                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.ConnectedLevel, selectedItems, selectedAttachments, door.LoadX, door.LoadY));
             }
         }
     }
@@ -472,8 +581,35 @@ public class GameScene : IScene
         {
             bullet.Draw(spriteBatch, camera.position);
         }
+        foreach (var door in levelDoors)
+        {
+            Rectangle doorRect = door.GetBounds();
+            Rectangle doorDest = new Rectangle(
+                (int)(doorRect.X - camera.position.X),
+                (int)(doorRect.Y - camera.position.Y),
+                doorRect.Width,
+                doorRect.Height
+            );
+            Color doorColor = door.IsTriggered ? Color.Gold : Color.SaddleBrown;
+            spriteBatch.Draw(textureSheet, doorDest, textureStore[0], doorColor * 0.5f);
+        }
+
+        //Draw inventory access trigger (if it exists)
+        if (inventoryAccess != null)
+        {
+            Rectangle inventoryRect = inventoryAccess.GetBounds();
+            Rectangle inventoryDest = new Rectangle(
+                (int)(inventoryRect.X - camera.position.X),
+                (int)(inventoryRect.Y - camera.position.Y),
+                inventoryRect.Width,
+                inventoryRect.Height
+            );
+            Color inventoryColor = inventoryAccess.IsTriggered ? Color.Gold : Color.SaddleBrown;
+            spriteBatch.Draw(textureSheet, inventoryDest, textureStore[0], inventoryColor * 0.5f);
+        }
+
         player.Draw(spriteBatch, camera.position);
-        
+
         // Draw goal trigger (if it exists)
         if (goalTrigger != null)
         {
@@ -488,7 +624,7 @@ public class GameScene : IScene
             Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
             spriteBatch.Draw(textureSheet, goalDest, textureStore[0], goalColor * 0.5f);
         }
-        
+
         // Draw new GameUI (health, cooldown, and active items)
         gameUI.Draw(spriteBatch);
     }

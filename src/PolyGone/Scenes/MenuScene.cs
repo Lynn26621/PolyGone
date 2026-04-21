@@ -30,16 +30,15 @@ namespace PolyGone
         private readonly SceneManager _sceneManager;
         private readonly AudioManager _audioManager;
         private readonly GraphicsDeviceManager _graphics;
-        private readonly string[] _options = { "Level Select", "Options", "Log Out", "Exit to Desktop" };
+        private readonly string[] _options = { "Play", "Options", "Log Out", "Exit to Desktop" };
         private int _selectedIndex;
         private bool _confirmingAction;
-        private string _confirmMessage;
-        private Action _confirmedAction;
+        private string? _confirmMessage;
+        private Action? _confirmedAction;
         private int _confirmSelectedIndex; // 0 = Yes, 1 = No
 
         public MenuScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)
         {
-            _pixel = null;
             _content = content;
             _sceneManager = sceneManager;
             _audioManager = audioManager;
@@ -169,8 +168,16 @@ namespace PolyGone
         {
             if (_selectedIndex == 0)
             {
-                // Level Select
-                _sceneManager.AddScene(new LevelSelect(_content, _sceneManager, _audioManager, _graphics));
+                // If the player has already paid for all levels, go straight to loadout selection
+                if (PurchaseTracker.HasPurchased(FormbarSession.UserId, FormbarSession.AllLevelsKey))
+                {
+                    _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _audioManager, _graphics, "Hub"));
+                }
+                else
+                {
+                    // Safety net: payment should have happened upfront, but if not, require it now
+                    _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _audioManager, _graphics));
+                }
             }
             else if (_selectedIndex == 1)
             {
@@ -254,8 +261,9 @@ namespace PolyGone
                 var centerY = viewport.Height / 2f;
 
                 // Message
-                var msgSize = _font.MeasureString(_confirmMessage);
-                spriteBatch.DrawString(_font, _confirmMessage,
+                var confirmMessage = _confirmMessage ?? string.Empty;
+                var msgSize = _font.MeasureString(confirmMessage);
+                spriteBatch.DrawString(_font, confirmMessage,
                     new Vector2(centerX - msgSize.X / 2f, centerY - msgSize.Y - 10f), Color.White);
 
                 // Yes / No buttons

@@ -17,7 +17,7 @@ internal class GameOverScene : IScene
     private AudioManager audioManager;
     private readonly GraphicsDeviceManager graphics;
     private readonly GameScene gameScene;
-    private readonly string[] options = { "Restart Level", "Change Loadout", "Level Select", "Main Menu" };
+    private readonly string[] options = { "Hub","Restart Level", "Main Menu" };
     private int selectedIndex;
 
     public GameOverScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, GameScene gameScene)
@@ -100,28 +100,11 @@ internal class GameOverScene : IScene
                 InputManager.ResetClickCooldown();
                 break;
 
-            case "Change Loadout":
+            case "Hub":
                 sceneManager.PopScene(this);
                 sceneManager.PopScene(gameScene);
-                sceneManager.AddScene(new InventoryManagement(content, sceneManager, audioManager, graphics, levelName));
+                sceneManager.AddScene(new GameScene(content, sceneManager, audioManager, graphics, "Hub", currentItems, currentAttachments));
                 InputManager.ResetClickCooldown();
-                break;
-
-            case "Level Select":
-                sceneManager.PopScene(this);
-                sceneManager.PopScene(gameScene);
-                // Pop any scenes between here and LevelSelect
-                while (sceneManager.GetCurrentScene() != null && sceneManager.GetCurrentScene() is not LevelSelect)
-                {
-                    sceneManager.PopScene(sceneManager.GetCurrentScene());
-                }
-                // If no LevelSelect found in the stack, push one
-                if (sceneManager.GetCurrentScene() is not LevelSelect)
-                {
-                    sceneManager.AddScene(new LevelSelect(content, sceneManager, audioManager, graphics));
-                }
-                InputManager.ResetClickCooldown();
-                audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
                 break;
 
             case "Main Menu":
