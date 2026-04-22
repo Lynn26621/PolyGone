@@ -234,23 +234,11 @@ internal class OptionsScene : IScene
                     {
                         if (InputManager.MenuLeft())
                         {
-                            if (_volumeKeyRepeatTimer <= 0f)
-                            {
-                                _volumeKeyRepeatTimer = VolumeKeyInitialDelay;
-                                SetVolume(_volume - 1);
-                            }
+                            SetVolume(_volume - 1);
                         }
                         else if (InputManager.MenuRight())
                         {
-                            if (_volumeKeyRepeatTimer <= 0f)
-                            {
-                                _volumeKeyRepeatTimer = VolumeKeyInitialDelay;
-                                SetVolume(_volume + 1);
-                            }
-                        }
-                        else
-                        {
-                            _volumeKeyRepeatTimer = 0f;
+                            SetVolume(_volume + 1);
                         }
                     }
                 }

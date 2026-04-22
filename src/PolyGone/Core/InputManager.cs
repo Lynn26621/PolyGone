@@ -382,9 +382,12 @@ public static class InputManager
 
     public static bool MenuConfirmHold()
     {
-        bool mouseHold = _currentMouseState.LeftButton == ButtonState.Pressed;
-        bool keyboardHold = _currentKeyboardState.IsKeyDown(Keys.Enter);
-        bool gamepadHold = _currentGamepadState.Buttons.A == ButtonState.Pressed;
+        bool mouseHold = _currentMouseState.LeftButton == ButtonState.Pressed
+                         && _mouseClickCooldown <= 0f;
+        bool keyboardHold = _currentKeyboardState.IsKeyDown(Keys.Enter)
+                            && _escapeKeyCooldown <= 0f;
+        bool gamepadHold = _currentGamepadState.Buttons.A == ButtonState.Pressed
+                           && _mouseClickCooldown <= 0f;
         return mouseHold || keyboardHold || gamepadHold;
     }
 
