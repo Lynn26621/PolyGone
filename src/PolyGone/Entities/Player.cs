@@ -229,8 +229,8 @@ namespace PolyGone.Entities
                 default:
                     break;
                 case Projectile projectile:
-                    // Only take damage from enemy projectiles
-                    if (projectile.FiredBy == Owner.Enemy && InvincibilityFrames <= 0f)
+                    // Only take damage from non-player projectiles
+                    if (projectile.owner != Owner.Player && invincibilityFrames <= 0f)
                     {
 #if DEBUG
                         if (GetDevModeItem()?.IsActive == true) break;
@@ -256,6 +256,37 @@ namespace PolyGone.Entities
 
                         // Despawn the projectile on contact
                         projectile.Lifetime = 0f;
+                    }
+                    break;
+                case BerserkEnemy:
+                    // Only take damage if not invincible
+                    if (invincibilityFrames <= 0f)
+                    {
+#if DEBUG
+                        if (GetDevModeItem()?.IsActive == true)
+                        {
+                            break;
+                        }
+
+                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
+#endif
+                        // Take 40 damage
+                        health -= 40;
+                        if (health <= 0)
+                        {
+                            TryAbsorbLethalHit();
+                        }
+                        
+                        // Calculate knockback direction (away from enemy)
+                        float knockbackX = position.X < other.position.X ? -10f : 10f;
+                        float knockbackY = -20f;
+                        
+                        // Apply knockback
+                        changeX = knockbackX;
+                        changeY = knockbackY / 2; // Reduced vertical knockback for better feel
+                        
+                        // Set invincibility frames (roughly 1 second at 60fps)
+                        invincibilityFrames = 60f;
                     }
                     break;
                 case Enemy:

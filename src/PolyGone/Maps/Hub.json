@@ -123,7 +123,7 @@
                  "y":480
                 }, 
                 {
-                 "gid":25,
+                 "gid":21,
                  "height":32,
                  "id":20,
                  "name":"",
@@ -136,19 +136,6 @@
                  "y":608
                 }, 
                 {
-                 "gid":29,
-                 "height":32,
-                 "id":23,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"Enemy",
-                 "visible":true,
-                 "width":32,
-                 "x":96,
-                 "y":96
-                }, 
-                {
                  "height":32,
                  "id":24,
                  "name":"Inventory",
@@ -159,6 +146,34 @@
                  "width":32,
                  "x":512,
                  "y":608
+                }, 
+                {
+                 "height":32,
+                 "id":26,
+                 "name":"Level4Door",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connectedLevel",
+                         "type":"string",
+                         "value":"TestLevel4"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":32
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":608
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":96,
+                 "y":96
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -198,7 +213,7 @@
          "y":0
         }],
  "nextlayerid":4,
- "nextobjectid":26,
+ "nextobjectid":27,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",
@@ -209,15 +224,14 @@
          "source":"..\/..\/..\/TiledAssets\/TiledSets\/BasicTiles.tsx"
         }, 
         {
-         "firstgid":9,
+         "firstgid":5,
          "source":"..\/..\/..\/TiledAssets\/TiledSets\/CollisionTiles.tsx"
         }, 
         {
-         "firstgid":25,
+         "firstgid":21,
          "source":"..\/..\/..\/TiledAssets\/TiledSets\/PlayerSheet.tsx"
         }, 
         {
-         "firstgid":29,
          "source":"..\/..\/..\/TiledAssets\/TiledSets\/EnemySheet.tsx"
         }],
  "tilewidth":32,
