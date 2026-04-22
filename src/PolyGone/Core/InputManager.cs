@@ -62,7 +62,7 @@ public static class InputManager
     private static float _menuDownAutoRepeatTimer = 0f;
     private static float _menuLeftAutoRepeatTimer = 0f;
     private static float _menuRightAutoRepeatTimer = 0f;
-    private const float MENU_AUTO_REPEAT_INTERVAL = 0.25f;
+    private const float MENU_AUTO_REPEAT_INTERVAL = 0.1f;
     private const float CLICK_COOLDOWN = 0.01f; // 10ms between clicks
     private const float ESCAPE_COOLDOWN = 0.2f; // 200ms between escape presses
 
@@ -102,16 +102,20 @@ public static class InputManager
 
         bool menuUpHeld = _currentKeyboardState.IsKeyDown(Keys.W) ||
                           thumbstickY > 0.3f ||
-                          _currentGamepadState.DPad.Up == ButtonState.Pressed;
+                          _currentGamepadState.DPad.Up == ButtonState.Pressed ||
+                            _currentKeyboardState.IsKeyDown(Keys.Up);
         bool menuDownHeld = _currentKeyboardState.IsKeyDown(Keys.S) ||
                             thumbstickY < -0.3f ||
-                            _currentGamepadState.DPad.Down == ButtonState.Pressed;
+                            _currentGamepadState.DPad.Down == ButtonState.Pressed ||
+                            _currentKeyboardState.IsKeyDown(Keys.Down);
         bool menuLeftHeld = _currentKeyboardState.IsKeyDown(Keys.A) ||
                             thumbstickX < -0.3f ||
-                            _currentGamepadState.DPad.Left == ButtonState.Pressed;
+                            _currentGamepadState.DPad.Left == ButtonState.Pressed ||
+                            _currentKeyboardState.IsKeyDown(Keys.Left);
         bool menuRightHeld = _currentKeyboardState.IsKeyDown(Keys.D) ||
                              thumbstickX > 0.3f ||
-                             _currentGamepadState.DPad.Right == ButtonState.Pressed;
+                             _currentGamepadState.DPad.Right == ButtonState.Pressed ||
+                                _currentKeyboardState.IsKeyDown(Keys.Right);
 
         if (controllerInput && !mouseInput)
         {
@@ -298,13 +302,13 @@ public static class InputManager
     //function for navigating down in menus (S key for keyboard and left thumbstick down for gamepad, and hovering over a button with mouse is already handled by GetMousePosition)
     public static bool MenuDown()
     {
-        bool keyboardDown = _currentKeyboardState.IsKeyDown(Keys.S)
-                            && _previousKeyboardState.IsKeyUp(Keys.S);
+        bool keyboardDown = (_currentKeyboardState.IsKeyDown(Keys.S) && _previousKeyboardState.IsKeyUp(Keys.S))
+                          || (_currentKeyboardState.IsKeyDown(Keys.Down) && _previousKeyboardState.IsKeyUp(Keys.Down));
         bool gamepadDown = thumbstickY < -0.3f
                             && _previousGamepadState.ThumbSticks.Left.Y >= -0.3f;
         bool dPadDown = _currentGamepadState.DPad.Down == ButtonState.Pressed
                         && _previousGamepadState.DPad.Down == ButtonState.Released;
-        bool menuDownCurrentlyHeld = _currentKeyboardState.IsKeyDown(Keys.S) || thumbstickY < -0.3f || _currentGamepadState.DPad.Down == ButtonState.Pressed;
+        bool menuDownCurrentlyHeld = _currentKeyboardState.IsKeyDown(Keys.S) || _currentKeyboardState.IsKeyDown(Keys.Down) || thumbstickY < -0.3f || _currentGamepadState.DPad.Down == ButtonState.Pressed;
         bool autoRepeat = menuDownCurrentlyHeld &&
                   _menuDownHoldTimer >= 1.0f &&
                   _menuDownAutoRepeatTimer >= MENU_AUTO_REPEAT_INTERVAL;
@@ -318,13 +322,13 @@ public static class InputManager
     //function for navigating left in menus (A key for keyboard and left thumbstick left for gamepad, and hovering over a button with mouse is already handled by GetMousePosition)
     public static bool MenuLeft()
     {
-        bool keyboardLeft = _currentKeyboardState.IsKeyDown(Keys.A)
-                            && _previousKeyboardState.IsKeyUp(Keys.A);
+        bool keyboardLeft = (_currentKeyboardState.IsKeyDown(Keys.A) && _previousKeyboardState.IsKeyUp(Keys.A))
+                          || (_currentKeyboardState.IsKeyDown(Keys.Left) && _previousKeyboardState.IsKeyUp(Keys.Left));
         bool gamepadLeft = thumbstickX < -0.3f
                             && _previousGamepadState.ThumbSticks.Left.X >= -0.3f;
         bool dPadLeft = _currentGamepadState.DPad.Left == ButtonState.Pressed
                         && _previousGamepadState.DPad.Left == ButtonState.Released;
-        bool menuLeftCurrentlyHeld = _currentKeyboardState.IsKeyDown(Keys.A) || thumbstickX < -0.3f || _currentGamepadState.DPad.Left == ButtonState.Pressed;
+        bool menuLeftCurrentlyHeld = _currentKeyboardState.IsKeyDown(Keys.A) || _currentKeyboardState.IsKeyDown(Keys.Left) || thumbstickX < -0.3f || _currentGamepadState.DPad.Left == ButtonState.Pressed;
         bool autoRepeat = menuLeftCurrentlyHeld &&
                   _menuLeftHoldTimer >= 1.0f &&
                   _menuLeftAutoRepeatTimer >= MENU_AUTO_REPEAT_INTERVAL;
@@ -338,13 +342,13 @@ public static class InputManager
     //function for navigating right in menus (D key for keyboard and left thumbstick right for gamepad, and hovering over a button with mouse is already handled by GetMousePosition)
     public static bool MenuRight()
     {
-        bool keyboardRight = _currentKeyboardState.IsKeyDown(Keys.D)
-                              && _previousKeyboardState.IsKeyUp(Keys.D);
+        bool keyboardRight = (_currentKeyboardState.IsKeyDown(Keys.D) && _previousKeyboardState.IsKeyUp(Keys.D))
+                           || (_currentKeyboardState.IsKeyDown(Keys.Right) && _previousKeyboardState.IsKeyUp(Keys.Right));
         bool gamepadRight = thumbstickX > 0.3f
                             && _previousGamepadState.ThumbSticks.Left.X <= 0.3f;
         bool dPadRight = _currentGamepadState.DPad.Right == ButtonState.Pressed
                         && _previousGamepadState.DPad.Right == ButtonState.Released;
-        bool menuRightCurrentlyHeld = _currentKeyboardState.IsKeyDown(Keys.D) || thumbstickX > 0.3f || _currentGamepadState.DPad.Right == ButtonState.Pressed;
+        bool menuRightCurrentlyHeld = _currentKeyboardState.IsKeyDown(Keys.D) || _currentKeyboardState.IsKeyDown(Keys.Right) || thumbstickX > 0.3f || _currentGamepadState.DPad.Right == ButtonState.Pressed;
         bool autoRepeat = menuRightCurrentlyHeld &&
                   _menuRightHoldTimer >= 1.0f &&
                   _menuRightAutoRepeatTimer >= MENU_AUTO_REPEAT_INTERVAL;

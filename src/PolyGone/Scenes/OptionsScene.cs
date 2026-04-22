@@ -230,6 +230,8 @@ internal class OptionsScene : IScene
                         }
                     }
                     // same thing as above, but for keyboard and gamepad input (use MenuLeft and MenuRight to adjust)
+                    // also increments every 0.1f while held down instead of the 0.25f for other menu options (refer to InputManager.cs for the current increment)
+                    
                     else if (_selectedIndex == i)
                     {
                         if (InputManager.MenuLeft())
