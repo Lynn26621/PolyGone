@@ -41,6 +41,16 @@ public static class UnlockTracker
     };
 
     /// <summary>
+    /// Maps each locked ability to the level name required to unlock it.
+    /// Abilities not listed here are always unlocked.
+    /// </summary>
+    private static readonly Dictionary<AbilityType, string> _abilityUnlockRequirements = new()
+    {
+        { AbilityType.Dash,   "TestLevel"  },
+        { AbilityType.WallJump,    "TestLevel2" }
+    };
+
+    /// <summary>
     /// The ordered list of level file names. Index 0 is always unlocked;
     /// every subsequent level requires the one before it to be completed.
     /// </summary>
@@ -106,6 +116,22 @@ public static class UnlockTracker
     public static string? GetAttachmentUnlockHint(BlasterAttachmentType attachment)
     {
         if (!_attachmentUnlockRequirements.TryGetValue(attachment, out var level))
+            return null;
+        return $"Complete {GetLevelDisplayName(level)} to unlock";
+    }
+
+    /// <summary>Returns true if the ability is available for use.</summary>
+    public static bool IsAbilityUnlocked(AbilityType ability)
+    {
+        if (!_abilityUnlockRequirements.TryGetValue(ability, out var requiredLevel))
+            return true; // No requirement — always unlocked
+        return _completedLevels.Contains(requiredLevel);
+    }
+
+    /// <summary>Returns a human-readable hint describing how to unlock the ability, or null if always unlocked.</summary>
+    public static string? GetAbilityUnlockHint(AbilityType ability)
+    {
+        if (!_abilityUnlockRequirements.TryGetValue(ability, out var level))
             return null;
         return $"Complete {GetLevelDisplayName(level)} to unlock";
     }

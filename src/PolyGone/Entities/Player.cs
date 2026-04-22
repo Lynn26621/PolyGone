@@ -13,6 +13,10 @@ using PolyGone.Core;
 namespace PolyGone.Entities
 {
 
+    // ---------------------------------------------------------------------------
+    // Player Ability Types (Dash, Wall Jump, etc.)
+    // ---------------------------------------------------------------------------
+
     public class Player : Entity
     {
         // Constants for gap centering nudge strengths
@@ -27,7 +31,28 @@ namespace PolyGone.Entities
         public readonly List<Projectile> bullets = new List<Projectile>(); // Shared projectile list for all weapons
         private float ffCooldown = 0f;
         private float coyoteTime = 0f; // Allows jumping shortly after leaving a platform
-        
+
+        // -----------------------------------------------------------------------
+        // Player Ability Definitions
+        // -----------------------------------------------------------------------
+        private readonly string[] playerAbilityNames =
+        {
+            "Dash",
+            "Wall Jump"
+        };
+
+        private readonly AbilityType[] playerAbilityTypes =
+        {
+            AbilityType.Dash,
+            AbilityType.WallJump
+        };
+
+        private readonly string[] playerAbilityDescriptions =
+        {
+            "Quickly moves the player 5 blocks in the direction they're moving with a cooldown of 2.5 seconds",
+            "Allows the player to cling to a wall, slowing their descent and giving them a chance to jump from the wall"
+        };
+
         // Public property to access changeY for items
         public float ChangeY => changeY;
         
@@ -41,7 +66,7 @@ namespace PolyGone.Entities
         public float JumpStrength { get; set; } = -16.75f;
 
         // Dash velocity boost applied when dashing
-        public float DashStrength { get; set; } = 256f;
+        public float DashStrength { get; set; } = 288f;
 
         public Player(
             Texture2D texture, 
@@ -226,9 +251,13 @@ namespace PolyGone.Entities
 
             if ((isOnGround || coyoteTime > 0f) && InputManager.IsDashKeyPressed())
             {
-                moveDirection = -1;
-                changeX += DashStrength * moveDirection;           
-                coyoteTime = 0f; // Reset coyote time after dashing
+                var dash = playerAbilityTypes[0];
+                if (UnlockTracker.IsAbilityUnlocked(dash))
+                {
+                    changeX += DashStrength * moveDirection;
+                    coyoteTime = 0f; // Reset coyote time after dashing
+                    InputManager.ConsumeDash();
+                }
             }
         }
 

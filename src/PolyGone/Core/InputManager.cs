@@ -45,7 +45,7 @@ public static class InputManager
     private static float _dashCooldown = 0f;
     private const float CLICK_COOLDOWN = 0.01f; // 10ms between clicks
     private const float ESCAPE_COOLDOWN = 0.2f; // 200ms between escape presses
-    private const float DASH_COOLDOWN = 1.0f; // 1 second between dashes
+    private const float DASH_COOLDOWN = 2.5f; // 2500ms between dashes
 
     public static MouseState CurrentMouseState => _currentMouseState;
     public static MouseState PreviousMouseState => _previousMouseState;
@@ -68,8 +68,12 @@ public static class InputManager
         // Update escape key cooldown
         if (_escapeKeyCooldown > 0f)
             _escapeKeyCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        // Update dash cooldown
+        if (_dashCooldown > 0f)
+            _dashCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
     }
-    
+
     /// <summary>
     /// Checks if the left mouse button was just clicked (pressed and released since last frame)
     /// and the cooldown has expired. This prevents double-clicks and scene transition issues.

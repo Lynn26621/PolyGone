@@ -40,6 +40,15 @@ namespace PolyGone
     }
 
     // ---------------------------------------------------------------------------
+    // Player ability types (permanent upgrades: Dash, Wall Jump, etc.)
+    // ---------------------------------------------------------------------------
+    public enum AbilityType
+    {
+        Dash,
+        WallJump
+    }
+
+    // ---------------------------------------------------------------------------
     // Inventory management scene
     // ---------------------------------------------------------------------------
     internal class InventoryManagement : IScene
