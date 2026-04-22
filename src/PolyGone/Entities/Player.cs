@@ -18,17 +18,20 @@ namespace PolyGone.Entities
         // Constants for gap centering nudge strengths
         private const float VERTICAL_GAP_NUDGE_STRENGTH = 20f; // Strong nudge for vertical movement through gaps
         private const float HORIZONTAL_GAP_NUDGE_STRENGTH = 15f; // Medium nudge for horizontal gap funneling
-        
+
         private AudioManager audioManager;
         private Item? currentWeapon; // Single selected weapon
         private readonly List<Item> itemInventory = new List<Item>(); // Pre-selected items (max 2)
         public readonly List<Projectile> Bullets = new List<Projectile>(); // Shared projectile list for all weapons
         private float ffCooldown = 0f;
         private float coyoteTime = 0f; // Allows jumping shortly after leaving a platform
-        
+
         // Public property to access changeY for items
-        public new float ChangeY => base.ChangeY;
-        
+        public new float ChangeY
+        {
+            get => base.ChangeY; set => base.ChangeY = value;
+        }
+
         // Public property to access current weapon's cooldown for HUD
         public float Cooldown => GetBlaster()?.Cooldown ?? 0f;
 
@@ -37,17 +40,17 @@ namespace PolyGone.Entities
 
         // Jump velocity — scaled by LowGravityItem to keep peak height constant
         public float JumpStrength { get; set; } = -16.75f;
-        
+
         public Player(
-            Texture2D texture, 
-            Vector2 position, 
-            int[] size, 
-            int health, 
-            Color color, 
-            Rectangle? srcRect, 
-            Dictionary<Vector2, int> collisionMap, 
-            Texture2D blasterTexture, 
-            List<ItemType> selectedItems, 
+            Texture2D texture,
+            Vector2 position,
+            int[] size,
+            int health,
+            Color color,
+            Rectangle? srcRect,
+            Dictionary<Vector2, int> collisionMap,
+            Texture2D blasterTexture,
+            List<ItemType> selectedItems,
             List<BlasterAttachmentType> selectedAttachments,
             AudioManager audioManager,
             int[]? visualSize = null
@@ -119,14 +122,14 @@ namespace PolyGone.Entities
                         break;
 #endif
                 }
-                
+
                 if (item != null)
                 {
                     itemInventory.Add(item);
                     item.Apply(this); // Automatically activate all selected items
                 }
             }
-            
+
             this.Friction = 0.8f; // Player has more friction for tighter control
             this.audioManager = audioManager; // Store reference to AudioManager for playing audio
         }
@@ -186,7 +189,7 @@ namespace PolyGone.Entities
             {
                 moveDirection = 1;
             }
-            
+
             // Apply acceleration with speed boost
             float speedMultiplier = GetSpeedBoostMultiplier();
             ChangeX += moveDirection * 1f * speedMultiplier;
@@ -229,11 +232,12 @@ namespace PolyGone.Entities
                 default:
                     break;
                 case Projectile projectile:
-                    // Only take damage from enemy projectiles
-                    if (projectile.FiredBy == Owner.Enemy && InvincibilityFrames <= 0f)
+                    // Only take damage from non-player projectiles
+                    if (InvincibilityFrames <= 0f)
                     {
 #if DEBUG
-                        if (GetDevModeItem()?.IsActive == true) break;
+                        if (GetDevModeItem()?.IsActive == true)
+                            break;
 
                         audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 #endif
@@ -258,6 +262,37 @@ namespace PolyGone.Entities
                         projectile.Lifetime = 0f;
                     }
                     break;
+                case BerserkEnemy:
+                    // Only take damage if not invincible
+                    if (InvincibilityFrames <= 0f)
+                    {
+#if DEBUG
+                        if (GetDevModeItem()?.IsActive == true)
+                        {
+                            break;
+                        }
+
+                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
+#endif
+                        // Take 40 damage
+                        Health -= 40;
+                        if (Health <= 0)
+                        {
+                            TryAbsorbLethalHit();
+                        }
+
+                        // Calculate knockback direction (away from enemy)
+                        float knockbackX = position.X < other.position.X ? -10f : 10f;
+                        float knockbackY = -20f;
+
+                        // Apply knockback
+                        ChangeX = knockbackX;
+                        ChangeY = knockbackY / 2; // Reduced vertical knockback for better feel
+
+                        // Set invincibility frames (roughly 1 second at 60fps)
+                        InvincibilityFrames = 60f;
+                    }
+                    break;
                 case Enemy:
                     // Only take damage if not invincible
                     if (InvincibilityFrames <= 0f)
@@ -280,11 +315,11 @@ namespace PolyGone.Entities
                         // Calculate knockback direction (away from enemy)
                         float knockbackX = position.X < other.position.X ? -10f : 10f;
                         float knockbackY = -20f;
-                        
+
                         // Apply knockback
                         ChangeX = knockbackX;
                         base.ChangeY = knockbackY / 2; // Reduced vertical knockback for better feel
-                        
+
                         // Set invincibility frames (roughly 1 second at 60fps)
                         InvincibilityFrames = 60f;
                     }
@@ -305,10 +340,10 @@ namespace PolyGone.Entities
             {
                 int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
                 int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);
-                
+
                 var keyLeft = new Vector2(playerTileX - 1, playerTileY);
                 var keyRight = new Vector2(playerTileX + 1, playerTileY);
-                
+
                 if (IsSolidWall(keyLeft) && IsSolidWall(keyRight))
                 {
                     ApplyGapCentering(playerTileX, VERTICAL_GAP_NUDGE_STRENGTH);
@@ -323,18 +358,18 @@ namespace PolyGone.Entities
             {
                 int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
                 int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);
-                
+
                 // Check if there's a semi-solid platform directly below
                 var keyBelow = new Vector2(playerTileX, playerTileY + 1);
                 bool semiSolidBelow = CollisionMap.TryGetValue(keyBelow, out int belowTileId) &&
                                       belowTileId != -1 &&
                                       CollisionTypeMapper.GetCollisionType(belowTileId) == CollisionType.SemiSolid;
-                
+
                 if (semiSolidBelow)
                 {
                     var keyLeft = new Vector2(playerTileX - 1, playerTileY);
                     var keyRight = new Vector2(playerTileX + 1, playerTileY);
-                    
+
                     if (IsSolidWall(keyLeft) && IsSolidWall(keyRight))
                     {
                         ApplyGapCentering(playerTileX, HORIZONTAL_GAP_NUDGE_STRENGTH);
@@ -348,7 +383,7 @@ namespace PolyGone.Entities
             float tileCenter = (float)tileX * TILE_SIZE + TILE_HALF_SIZE;
             float playerCenter = position.X + size[0] / 2f;
             float offset = tileCenter - playerCenter;
-            
+
             if (Math.Abs(offset) > 0.1f)
             {
                 float nudge = Math.Sign(offset) * nudgeStrength;
@@ -406,7 +441,7 @@ namespace PolyGone.Entities
         }
 
         // Public property to access current blaster for backward compatibility
-        public Blaster? blaster => GetBlaster();
+        public Blaster? Blaster => GetBlaster();
 
         // Public method to access item inventory for UI
         public List<Item> GetAllItems()
@@ -422,7 +457,7 @@ namespace PolyGone.Entities
         public void Update(GameTime gameTime, Vector2 cameraOffset)
         {
             HandleInput();
-            
+
             base.Update(gameTime);
 
             // Update coyote time after physics update to use current frame's ground state
@@ -450,7 +485,7 @@ namespace PolyGone.Entities
                 }
 #endif
             }
-            
+
             // Update all bullets (shared across all weapons) - iterate backwards for safe removal
             for (int i = Bullets.Count - 1; i >= 0; i--)
             {
@@ -465,19 +500,19 @@ namespace PolyGone.Entities
                     bullet.Update(gameTime);
                 }
             }
-            
+
             // Update active items
             foreach (var item in itemInventory.Where(item => item.IsActive))
             {
                 item.Update(gameTime);
-                
+
                 // Apply healing over time from HealingGlowItem
                 if (item is HealingGlowItem healingGlow)
                 {
                     healingGlow.ApplyHealingOverTime(this, (float)gameTime.ElapsedGameTime.TotalSeconds);
                 }
             }
-            
+
             ffCooldown = Math.Max(0f, ffCooldown - 1f);
         }
 
@@ -503,13 +538,13 @@ namespace PolyGone.Entities
                     }
                 }
             }
-            
+
             base.Draw(spriteBatch, offset);
-            
+
             // Draw only the currently equipped weapon
             var currentBlaster = GetBlaster();
             currentBlaster?.Draw(spriteBatch, offset);
-            
+
             // Draw all bullets (shared across all weapons)
             foreach (var bullet in Bullets)
             {
@@ -521,7 +556,7 @@ namespace PolyGone.Entities
         public void DrawItemIndicators(SpriteBatch spriteBatch, Texture2D itemTexture, Rectangle itemSrcRect)
         {
             const int MaxDisplayedItems = 3; // Maximum number of items to display
-            
+
             // Draw item indicators in fixed screen position (not affected by camera)
             Vector2 indicatorStart = new Vector2(20, 20); // Fixed top-left screen position
             int spacing = 25;
