@@ -220,7 +220,7 @@ internal class OptionsScene : IScene
                     if (CanProcessMouseInput() && volumeRowBounds.Contains(InputManager.GetMousePosition()))
                     {
                         _selectedIndex = i;
-                        if (InputManager.MenuConfirmHold())
+                        if (Mouse.GetState().LeftButton == ButtonState.Pressed)
                         {
                             SetVolumeFromMouseX(InputManager.GetMousePosition().X, sliderRect);
                             if (InputManager.MenuConfirm())
@@ -229,9 +229,9 @@ internal class OptionsScene : IScene
                             }
                         }
                     }
-                    // same thing as above, but for keyboard and gamepad input (use MenuLeft and MenuRight to adjust)
-                    // also increments every 0.1f while held down instead of the 0.25f for other menu options (refer to InputManager.cs for the current increment)
-                    
+                    // Keyboard/gamepad volume adjustment uses MenuLeft and MenuRight.
+                    // Each press/hold repeat changes the volume by 1, and hold-repeat timing is controlled globally by InputManager.
+
                     else if (_selectedIndex == i)
                     {
                         if (InputManager.MenuLeft())
@@ -726,54 +726,29 @@ internal class OptionsScene : IScene
         }
     }
     private void SetVolumeFromMouseX(int mouseX, Rectangle sliderRect)
-
     {
-
         var t = MathHelper.Clamp((mouseX - sliderRect.Left) / (float)sliderRect.Width, 0f, 1f);
-
         SetVolume((int)MathF.Round(t * 100f));
-
     }
-
     private void SetVolume(int newVolume)
-
     {
-
         var clampedVolume = Math.Clamp(newVolume, 0, 100);
-
         if (clampedVolume == _volume)
-
         { return; }
-
-
         _volume = clampedVolume;
-
         _audioManager.SetMasterVolume(_volume / 100f);
-
     }
-
     private Rectangle GetVolumeSliderRect(Viewport viewport, float startY)
-
     {
-
         var sliderY = startY + 3 * RowSpacing + 22f;
-
         return new Rectangle(
-
             (int)(viewport.Width / 2f - VolumeSliderWidth / 2f),
-
             (int)sliderY,
-
             (int)VolumeSliderWidth,
-
             (int)VolumeSliderHeight);
-
     }
-
     private bool CanProcessMouseInput()
-
     {
-
         return _mouseInputBlockTimer <= 0f;
 
     }
