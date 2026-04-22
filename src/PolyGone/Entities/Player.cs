@@ -41,7 +41,7 @@ namespace PolyGone.Entities
         public float JumpStrength { get; set; } = -16.75f;
 
         // Dash velocity boost applied when dashing
-        public float DashStrength { get; set; } = 64f;
+        public float DashStrength { get; set; } = 256f;
 
         public Player(
             Texture2D texture, 
@@ -224,8 +224,9 @@ namespace PolyGone.Entities
             bool dashPressed = keyboardState.IsKeyDown(Keys.LeftShift);
             bool dashJustPressed = dashPressed && !previousKeyboardState.IsKeyDown(Keys.LeftShift);
 
-            if ((isOnGround || coyoteTime > 0f) && (dashPressed && !dashJustPressed))
+            if ((isOnGround || coyoteTime > 0f) && InputManager.IsDashKeyPressed())
             {
+                moveDirection = -1;
                 changeX += DashStrength * moveDirection;           
                 coyoteTime = 0f; // Reset coyote time after dashing
             }

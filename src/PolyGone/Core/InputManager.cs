@@ -42,9 +42,11 @@ public static class InputManager
     private static KeyboardState _previousKeyboardState;
     private static float _mouseClickCooldown = 0f;
     private static float _escapeKeyCooldown = 0f;
+    private static float _dashCooldown = 0f;
     private const float CLICK_COOLDOWN = 0.01f; // 10ms between clicks
     private const float ESCAPE_COOLDOWN = 0.2f; // 200ms between escape presses
-    
+    private const float DASH_COOLDOWN = 1.0f; // 1 second between dashes
+
     public static MouseState CurrentMouseState => _currentMouseState;
     public static MouseState PreviousMouseState => _previousMouseState;
     
@@ -115,7 +117,36 @@ public static class InputManager
         return _currentKeyboardState.IsKeyDown(Keys.Escape) 
             && !_previousKeyboardState.IsKeyDown(Keys.Escape);
     }
-    
+
+    /// <summary>
+    /// Checks if the Escape key was just pressed (down now, up before).
+    /// This prevents the key press from being processed by multiple scenes by tracking state globally.
+    /// </summary>
+    public static bool IsDashKeyPressed()
+    {
+        return _currentKeyboardState.IsKeyDown(Keys.LeftShift)
+            && !_previousKeyboardState.IsKeyDown(Keys.LeftShift)
+            && _dashCooldown <= 0f;
+    }
+
+    /// <summary>
+    /// Consumes the dash by starting the cooldown timer.
+    /// Call this after handling a dash to prevent it from triggering multiple actions.
+    /// </summary>
+    public static void ConsumeDash()
+    {
+        _dashCooldown = DASH_COOLDOWN;
+    }
+
+    /// <summary>
+    /// Forces a reset of the dash cooldown. Useful when transitioning between scenes
+    /// to ensure old dashes don't carry over.
+    /// </summary>
+    public static void ResetDash()
+    {
+        _dashCooldown = DASH_COOLDOWN;
+    }
+
     /// <summary>
     /// Gets the current mouse position.
     /// </summary>
