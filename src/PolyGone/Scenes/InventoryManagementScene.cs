@@ -143,8 +143,6 @@ namespace PolyGone
         // Navigation state
         // -----------------------------------------------------------------------
         private enum SelectionMode { Loadout, Confirm }
-        private SelectionMode _currentMode = SelectionMode.Loadout;
-        private int _confirmCursor = 0; // 0 = Start Game, 1 = Back
         private enum NavigationSection { EquippedList, UnequippedList, ActionButtons }
         private NavigationSection _currentSection = NavigationSection.EquippedList;
         private int _equippedListCursor = 0;
@@ -440,7 +438,8 @@ namespace PolyGone
             {
                 var attachment = _attachmentTypes[entry.DefinitionIndex];
                 if (!UnlockTracker.IsAttachmentUnlocked(attachment))
-                {                    return true;
+                {
+                    return true;
                 }
 
                 int cost = GetAttachmentSlotCost(attachment);
@@ -546,7 +545,7 @@ namespace PolyGone
             if (_unequippedListCursor >= 0 && _unequippedListCursor < unequippedEntries.Count)
             {
                 var entry = unequippedEntries[_unequippedListCursor];
-        
+
                 // Add the selected item (same logic as your mouse click)
                 if (entry.IsAttachment)
                 {
@@ -584,7 +583,7 @@ namespace PolyGone
 
                     _selectedPlayerItems.Add(itemType);
                 }
-        
+
                 // Adjust cursor if we moved the last item
                 if (_unequippedListCursor >= GetUnequippedEntries().Count && _unequippedListCursor > 0)
                 {
@@ -593,17 +592,17 @@ namespace PolyGone
             }
         }
 
-private void HandleActionButtonSelection()
-{
-    if (_actionButtonCursor == 0)
-    {
-        StartGame(); // Start Game button
-    }
-    else
-    {
-        _sceneManager.PopScene(this); // Back button
-    }
-}
+        private void HandleActionButtonSelection()
+        {
+            if (_actionButtonCursor == 0)
+            {
+                StartGame(); // Start Game button
+            }
+            else
+            {
+                _sceneManager.PopScene(this); // Back button
+            }
+        }
 
         private int GetTotalUsedSlots()
         {
