@@ -229,6 +229,30 @@ internal class OptionsScene : IScene
                             }
                         }
                     }
+                    // same thing as above, but for keyboard and gamepad input (use MenuLeft and MenuRight to adjust)
+                    else if (_selectedIndex == i)
+                    {
+                        if (InputManager.MenuLeft())
+                        {
+                            if (_volumeKeyRepeatTimer <= 0f)
+                            {
+                                _volumeKeyRepeatTimer = VolumeKeyInitialDelay;
+                                SetVolume(_volume - 1);
+                            }
+                        }
+                        else if (InputManager.MenuRight())
+                        {
+                            if (_volumeKeyRepeatTimer <= 0f)
+                            {
+                                _volumeKeyRepeatTimer = VolumeKeyInitialDelay;
+                                SetVolume(_volume + 1);
+                            }
+                        }
+                        else
+                        {
+                            _volumeKeyRepeatTimer = 0f;
+                        }
+                    }
                 }
                 else if (CanProcessMouseInput() && bounds.Contains(InputManager.GetMousePosition()))
                 {
