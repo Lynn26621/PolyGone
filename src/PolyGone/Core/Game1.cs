@@ -6,12 +6,12 @@ using Microsoft.Xna.Framework.Input;
 using PolyGone.Core;
 
 namespace PolyGone;
+
 public class Game1 : Game
 {
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch = null!;
     private SceneManager sceneManager;
-    private KeyboardState _previousKeyboardState;
     private AudioManager audioManager = null!;
 
     public Game1()
@@ -26,13 +26,13 @@ public class Game1 : Game
         if (DisplaySettings.IsFullScreen)
         {
             var dm = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
-            _graphics.PreferredBackBufferWidth  = dm.Width;
+            _graphics.PreferredBackBufferWidth = dm.Width;
             _graphics.PreferredBackBufferHeight = dm.Height;
             _graphics.IsFullScreen = true;
         }
         else
         {
-            _graphics.PreferredBackBufferWidth  = DisplaySettings.WindowedWidth;
+            _graphics.PreferredBackBufferWidth = DisplaySettings.WindowedWidth;
             _graphics.PreferredBackBufferHeight = DisplaySettings.WindowedHeight;
             _graphics.IsFullScreen = false;
         }
@@ -108,7 +108,7 @@ public class Game1 : Game
         sceneManager.GetCurrentScene().Update(gameTime);
         base.Update(gameTime);
     }
-    
+
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(Color.White);

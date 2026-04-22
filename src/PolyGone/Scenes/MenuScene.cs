@@ -24,8 +24,8 @@ namespace PolyGone
 {
     internal class MenuScene : IScene
     {
-        private Texture2D _pixel;
-        private SpriteFont _font;
+        private Texture2D? _pixel;
+        private SpriteFont? _font;
         private readonly ContentManager _content;
         private readonly SceneManager _sceneManager;
         private readonly AudioManager _audioManager;

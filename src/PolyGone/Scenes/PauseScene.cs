@@ -14,10 +14,11 @@ using System;
 using PolyGone.Core;
 
 namespace PolyGone;
+
 internal class PauseScene : IScene
 {
-    private Texture2D _pixel;
-    private SpriteFont _font;
+    private Texture2D? _pixel;
+    private SpriteFont? _font;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly AudioManager _audioManager;
@@ -63,7 +64,7 @@ internal class PauseScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _selectedIndex = i;
-                    
+
                     // Mouse click with InputManager
                     if (InputManager.MenuConfirm())
                     {
@@ -105,7 +106,7 @@ internal class PauseScene : IScene
             string levelName = _gameScene.GetLevelName();
             List<ItemType> currentItems = _gameScene.GetSelectedItems();
             List<BlasterAttachmentType> currentAttachments = _gameScene.GetSelectedAttachments();
-            
+
             _sceneManager.PopScene(this); // Pop pause scene
             _sceneManager.PopScene(_gameScene); // Pop game scene
             // Create fresh game scene with same settings
