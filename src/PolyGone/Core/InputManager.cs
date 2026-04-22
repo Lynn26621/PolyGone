@@ -330,7 +330,7 @@ public static class InputManager
                         && _previousGamepadState.DPad.Left == ButtonState.Released;
         bool menuLeftCurrentlyHeld = _currentKeyboardState.IsKeyDown(Keys.A) || _currentKeyboardState.IsKeyDown(Keys.Left) || thumbstickX < -0.3f || _currentGamepadState.DPad.Left == ButtonState.Pressed;
         bool autoRepeat = menuLeftCurrentlyHeld &&
-                  _menuLeftHoldTimer >= 1.0f &&
+                  _menuLeftHoldTimer >= 0.5f &&
                   _menuLeftAutoRepeatTimer >= MENU_AUTO_REPEAT_INTERVAL;
 
         if (autoRepeat)
@@ -350,7 +350,7 @@ public static class InputManager
                         && _previousGamepadState.DPad.Right == ButtonState.Released;
         bool menuRightCurrentlyHeld = _currentKeyboardState.IsKeyDown(Keys.D) || _currentKeyboardState.IsKeyDown(Keys.Right) || thumbstickX > 0.3f || _currentGamepadState.DPad.Right == ButtonState.Pressed;
         bool autoRepeat = menuRightCurrentlyHeld &&
-                  _menuRightHoldTimer >= 1.0f &&
+                  _menuRightHoldTimer >= 0.5f &&
                   _menuRightAutoRepeatTimer >= MENU_AUTO_REPEAT_INTERVAL;
 
         if (autoRepeat)
