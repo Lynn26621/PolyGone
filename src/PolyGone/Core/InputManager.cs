@@ -75,17 +75,6 @@ public static class InputManager
     }
 
     /// <summary>
-    /// Checks if the left mouse button was just clicked (pressed and released since last frame)
-    /// and the cooldown has expired. This prevents double-clicks and scene transition issues.
-    /// </summary>
-    public static bool IsLeftMouseButtonClicked()
-    {
-        return _currentMouseState.LeftButton == ButtonState.Pressed 
-            && _previousMouseState.LeftButton == ButtonState.Released 
-            && _mouseClickCooldown <= 0f;
-    }
-
-    /// <summary>
     /// Checks if the left mouse button is currently held down (any frame, no cooldown check).
     /// Use this for automatic weapons that fire while the button is held.
     /// </summary>
