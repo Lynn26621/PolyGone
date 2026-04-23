@@ -27,9 +27,9 @@ namespace PolyGone.Weapons
 
         public override void Use()
         {
-            if (InputManager.GameShootSingle() && cooldown <= 0f)
+            if (InputManager.GameShootSingle() && CooldownRemaining <= 0f)
             {
-                bullets.Add(new Projectile(
+                Bullets.Add(new Projectile(
                     texture: texture,
                     position: new Vector2(position.X + size[0] / 2f - 7f, position.Y + size[1] / 2f - 7f),
                     audioManager: audioManager,
@@ -38,8 +38,8 @@ namespace PolyGone.Weapons
                     health: 99,                  // Won't die from health damage
                     damage: 40,                  // Same as base blaster
                     color: new Color(180, 0, 220), // Deep violet
-                    xSpeed: (float)(Math.Cos(rotation) * 700f),
-                    ySpeed: (float)(Math.Sin(rotation) * 700f),
+                    xSpeed: (float)(Math.Cos(Rotation) * 700f),
+                    ySpeed: (float)(Math.Sin(Rotation) * 700f),
                     owner: Owner.Player,
                     srcRect: srcRect,
                     CollisionMap: CollisionMap,
@@ -56,8 +56,8 @@ namespace PolyGone.Weapons
                     for (int i = 0; i < ExtraBulletsPerShot; i++)
                     {
                         float spreadOffset = (i - half + (ExtraBulletsPerShot % 2 == 0 ? 0.5f : 0f)) * SpreadStep;
-                        float angle = rotation + spreadOffset;
-                        bullets.Add(new Projectile(
+                        float angle = Rotation + spreadOffset;
+                        Bullets.Add(new Projectile(
                             texture: texture,
                             position: new Vector2(position.X + size[0] / 2f - 7f, position.Y + size[1] / 2f - 7f),
                             audioManager: audioManager,
@@ -76,7 +76,7 @@ namespace PolyGone.Weapons
                     }
                 }
 
-                cooldown = MaxCooldown * CooldownMultiplier;
+                CooldownRemaining = MaxCooldown * CooldownMultiplier;
                 InputManager.ConsumeClick();
             }
         }

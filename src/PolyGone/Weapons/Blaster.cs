@@ -12,11 +12,11 @@ namespace PolyGone.Weapons
 {
     public class Blaster : Item
     {
-        public float rotation = 0f;
-        protected readonly List<Projectile> bullets; // Reference to shared bullets list
-        protected float cooldown;
+        public float Rotation = 0f;
+        protected readonly List<Projectile> Bullets; // Reference to shared bullets list
+        protected float CooldownRemaining;
         private AudioManager audioManager;
-        public float Cooldown => cooldown;
+        public float Cooldown => CooldownRemaining;
         public virtual float MaxCooldown => 12f; // Default blaster cooldown
         /// <summary>Extra bullets fired per shot (in addition to the base bullet). Set by MultiShotItem.</summary>
         public int ExtraBulletsPerShot { get; set; } = 0;
@@ -29,12 +29,12 @@ namespace PolyGone.Weapons
         /// <summary>When true, holding the mouse button fires continuously. Set by RapidFireItem.</summary>
         public bool IsAutoFire { get; set; } = false;
         protected readonly Dictionary<Vector2, int> CollisionMap;
-        public Blaster(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> CollisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
+        public Blaster(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
             : base(texture, position, size, color, "Blaster", "Basic energy weapon", srcRect)
         {
-            this.bullets = sharedBullets; // Use shared bullets list
-            this.cooldown = 0f;
-            this.CollisionMap = CollisionMap;
+            this.Bullets = sharedBullets; // Use shared bullets list
+            this.CooldownRemaining = 0f;
+            this.CollisionMap = collisionMap;
             this.audioManager = audioManager;
         }
 
@@ -53,7 +53,7 @@ namespace PolyGone.Weapons
                     float targetAngle = (float)Math.Atan2(rightStick.Y, rightStick.X);
 
                     // Fix angle wrapping by finding the shortest rotation path
-                    float angleDifference = targetAngle - rotation;
+                    float angleDifference = targetAngle - Rotation;
 
                     // Wrap the difference to [-π, π] range
                     while (angleDifference > Math.PI)
@@ -63,12 +63,12 @@ namespace PolyGone.Weapons
 
                     // Smooth interpolation using the corrected difference
                     float lerpSpeed = 0.2f;
-                    angle = rotation + angleDifference * lerpSpeed;
+                    angle = Rotation + angleDifference * lerpSpeed;
                 }
                 else
                 {
                     // Keep current rotation when stick is in deadzone
-                    angle = rotation;
+                    angle = Rotation;
                 }
             }
 
@@ -81,7 +81,7 @@ namespace PolyGone.Weapons
             }
 
             // Set rotation to calculated angle
-            rotation = angle;
+            Rotation = angle;
 
             // Position blaster in circle around target center
             float radius = 50f; // Adjust this value to change orbit distance
@@ -97,12 +97,12 @@ namespace PolyGone.Weapons
         public override void Use()
         {
             // Handle shooting with InputManager to prevent click carryover
-            if (InputManager.GameShootSingle() && cooldown <= 0f)
+            if (InputManager.GameShootSingle() && CooldownRemaining <= 0f)
             {
                 int baseDamage = (int)(40 * DamageMultiplier);
 
                 // Central / base bullet
-                bullets.Add(new Projectile(
+                Bullets.Add(new Projectile(
                     texture: texture,
                     position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
                     audioManager: audioManager,
@@ -111,8 +111,8 @@ namespace PolyGone.Weapons
                     health: 1,
                     damage: baseDamage,
                     color: IsPiercing ? new Color(140, 0, 200) : Color.White,
-                    xSpeed: (float)(Math.Cos(rotation) * 750f),
-                    ySpeed: (float)(Math.Sin(rotation) * 750f),
+                    xSpeed: (float)(Math.Cos(Rotation) * 750f),
+                    ySpeed: (float)(Math.Sin(Rotation) * 750f),
                     owner: Owner.Player,
                     srcRect: srcRect,
                     CollisionMap: CollisionMap,
@@ -129,8 +129,8 @@ namespace PolyGone.Weapons
                     for (int i = 0; i < ExtraBulletsPerShot; i++)
                     {
                         float spreadOffset = (i - half + (ExtraBulletsPerShot % 2 == 0 ? 0.5f : 0f)) * SpreadStep;
-                        float angle = rotation + spreadOffset;
-                        bullets.Add(new Projectile(
+                        float angle = Rotation + spreadOffset;
+                        Bullets.Add(new Projectile(
                             texture: texture,
                             position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
                             audioManager: audioManager,
@@ -149,7 +149,7 @@ namespace PolyGone.Weapons
                     }
                 }
 
-                cooldown = MaxCooldown * CooldownMultiplier;
+                CooldownRemaining = MaxCooldown * CooldownMultiplier;
                 if (!IsAutoFire)
                     InputManager.ConsumeClick(); // Prevent multi-shot from same click press
             }
@@ -158,7 +158,7 @@ namespace PolyGone.Weapons
         public override void Update(GameTime gameTime)
         {
             // Update cooldown only - bullets are managed by Player
-            cooldown = Math.Max(0f, cooldown - 1f);
+            CooldownRemaining = Math.Max(0f, CooldownRemaining - 1f);
 
             base.Update(gameTime);
         }
@@ -168,7 +168,7 @@ namespace PolyGone.Weapons
             // Draw the blaster with rotation around its center
             Vector2 origin = new Vector2(size[0] / 2f, size[1] / 2f);
             Vector2 drawPosition = position - offset + origin;
-            spriteBatch.Draw(texture, drawPosition, srcRect, color, rotation, origin, 1f, SpriteEffects.None, 0f);
+            spriteBatch.Draw(texture, drawPosition, srcRect, color, Rotation, origin, 1f, SpriteEffects.None, 0f);
 
             // Bullets are drawn by Player
         }

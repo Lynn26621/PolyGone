@@ -24,10 +24,10 @@ namespace PolyGone.Weapons
         public override void Use()
         {
             // Handle shooting with spread using InputManager
-            if (InputManager.GameShootSingle() && cooldown <= 0f)
+            if (InputManager.GameShootSingle() && CooldownRemaining <= 0f)
             {
 
-                bullets.Add(new Projectile(
+                Bullets.Add(new Projectile(
                     texture: texture,
                     position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
                     audioManager: audioManager,
@@ -36,8 +36,8 @@ namespace PolyGone.Weapons
                     health: 3,
                     damage: 120, // Stronger than blaster
                     color: Color.Black, // Different color to distinguish
-                    xSpeed: (float)(Math.Cos(rotation) * 3000), // Fast
-                    ySpeed: (float)(Math.Sin(rotation) * 3000),
+                    xSpeed: (float)(Math.Cos(Rotation) * 3000), // Fast
+                    ySpeed: (float)(Math.Sin(Rotation) * 3000),
                     owner: Owner.Player,
                     srcRect: srcRect,
                     CollisionMap: CollisionMap
@@ -53,8 +53,8 @@ namespace PolyGone.Weapons
                     for (int i = 0; i < ExtraBulletsPerShot; i++)
                     {
                         float spreadOffset = (i - half + (ExtraBulletsPerShot % 2 == 0 ? 0.5f : 0f)) * SpreadStep;
-                        float angle = rotation + spreadOffset;
-                        bullets.Add(new Projectile(
+                        float angle = Rotation + spreadOffset;
+                        Bullets.Add(new Projectile(
                             texture: texture,
                             position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
                             audioManager: audioManager,
@@ -72,7 +72,7 @@ namespace PolyGone.Weapons
                     }
                 }
 
-                cooldown = MaxCooldown * CooldownMultiplier;
+                CooldownRemaining = MaxCooldown * CooldownMultiplier;
                 InputManager.ConsumeClick(); // Prevent multiple shots from same click
             }
         }

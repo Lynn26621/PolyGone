@@ -16,8 +16,8 @@ namespace PolyGone.Weapons
         public override float MaxCooldown => 4f; // Very fast fire rate
         private AudioManager audioManager;
 
-        public Automatic(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> CollisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
-            : base(texture, position, audioManager, size, color, CollisionMap, sharedBullets, srcRect)
+        public Automatic(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
+            : base(texture, position, audioManager, size, color, collisionMap, sharedBullets, srcRect)
         {
             Name = "Automatic";
             Description = "Hold to spray bullets. Fast rate, low damage per shot.";
@@ -27,9 +27,9 @@ namespace PolyGone.Weapons
         public override void Use()
         {
             // Fires while mouse button is held - no ConsumeClick needed (hold-fire weapon)
-            if (InputManager.GameShootHold() && cooldown <= 0f)
+            if (InputManager.GameShootHold() && CooldownRemaining <= 0f)
             {
-                bullets.Add(new Projectile(
+                Bullets.Add(new Projectile(
                     texture: texture,
                     position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
                     audioManager: audioManager,
@@ -38,8 +38,8 @@ namespace PolyGone.Weapons
                     health: 1,
                     damage: 15,
                     color: Color.Cyan,
-                    xSpeed: (float)(Math.Cos(rotation) * 900f),
-                    ySpeed: (float)(Math.Sin(rotation) * 900f),
+                    xSpeed: (float)(Math.Cos(Rotation) * 900f),
+                    ySpeed: (float)(Math.Sin(Rotation) * 900f),
                     owner: Owner.Player,
                     srcRect: srcRect,
                     CollisionMap: CollisionMap
@@ -55,8 +55,8 @@ namespace PolyGone.Weapons
                     for (int i = 0; i < ExtraBulletsPerShot; i++)
                     {
                         float spreadOffset = (i - half + (ExtraBulletsPerShot % 2 == 0 ? 0.5f : 0f)) * SpreadStep;
-                        float angle = rotation + spreadOffset;
-                        bullets.Add(new Projectile(
+                        float angle = Rotation + spreadOffset;
+                        Bullets.Add(new Projectile(
                             texture: texture,
                             position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
                             audioManager: audioManager,
@@ -74,7 +74,7 @@ namespace PolyGone.Weapons
                     }
                 }
 
-                cooldown = MaxCooldown * CooldownMultiplier;
+                CooldownRemaining = MaxCooldown * CooldownMultiplier;
             }
         }
     }
