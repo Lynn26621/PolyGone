@@ -84,7 +84,7 @@ public static class InputBindings
         MenuLeftKey = Keys.A,
         MenuRightKey = Keys.D,
         MenuConfirmKey = Keys.Enter,
-        MenuBackKey = Keys.Escape,
+        MenuBackKey = Keys.None,  // Escape is always active for MenuBack (hardcoded); set this for an additional key.
         PauseKey = Keys.Escape,
         MoveLeftKey = Keys.A,
         MoveRightKey = Keys.D,
@@ -180,35 +180,48 @@ public static class InputBindings
         }
     }
 
+    private static bool IsValidKey(Keys key)
+    {
+        // Keys.None (= 0) is not an actionable binding; reject it so the default is used instead.
+        return key != Keys.None && Enum.IsDefined(typeof(Keys), key);
+    }
+
+    private static bool IsValidButton(Buttons button)
+    {
+        // Value 0 means no button was set; reject it so the default is used instead.
+        return (int)button != 0 && Enum.IsDefined(typeof(Buttons), button);
+    }
+
     private static InputBindingProfile Sanitize(InputBindingProfile profile)
     {
         var defaults = Defaults;
         var sanitized = defaults.Clone();
 
-        sanitized.MenuUpKey = Enum.IsDefined(typeof(Keys), profile.MenuUpKey) ? profile.MenuUpKey : defaults.MenuUpKey;
-        sanitized.MenuDownKey = Enum.IsDefined(typeof(Keys), profile.MenuDownKey) ? profile.MenuDownKey : defaults.MenuDownKey;
-        sanitized.MenuLeftKey = Enum.IsDefined(typeof(Keys), profile.MenuLeftKey) ? profile.MenuLeftKey : defaults.MenuLeftKey;
-        sanitized.MenuRightKey = Enum.IsDefined(typeof(Keys), profile.MenuRightKey) ? profile.MenuRightKey : defaults.MenuRightKey;
-        sanitized.MenuConfirmKey = Enum.IsDefined(typeof(Keys), profile.MenuConfirmKey) ? profile.MenuConfirmKey : defaults.MenuConfirmKey;
+        sanitized.MenuUpKey = IsValidKey(profile.MenuUpKey) ? profile.MenuUpKey : defaults.MenuUpKey;
+        sanitized.MenuDownKey = IsValidKey(profile.MenuDownKey) ? profile.MenuDownKey : defaults.MenuDownKey;
+        sanitized.MenuLeftKey = IsValidKey(profile.MenuLeftKey) ? profile.MenuLeftKey : defaults.MenuLeftKey;
+        sanitized.MenuRightKey = IsValidKey(profile.MenuRightKey) ? profile.MenuRightKey : defaults.MenuRightKey;
+        sanitized.MenuConfirmKey = IsValidKey(profile.MenuConfirmKey) ? profile.MenuConfirmKey : defaults.MenuConfirmKey;
+        // MenuBackKey is optional (Keys.None = no extra binding; Esc is always on).
         sanitized.MenuBackKey = Enum.IsDefined(typeof(Keys), profile.MenuBackKey) ? profile.MenuBackKey : defaults.MenuBackKey;
-        sanitized.PauseKey = Enum.IsDefined(typeof(Keys), profile.PauseKey) ? profile.PauseKey : defaults.PauseKey;
-        sanitized.MoveLeftKey = Enum.IsDefined(typeof(Keys), profile.MoveLeftKey) ? profile.MoveLeftKey : defaults.MoveLeftKey;
-        sanitized.MoveRightKey = Enum.IsDefined(typeof(Keys), profile.MoveRightKey) ? profile.MoveRightKey : defaults.MoveRightKey;
-        sanitized.JumpKey = Enum.IsDefined(typeof(Keys), profile.JumpKey) ? profile.JumpKey : defaults.JumpKey;
-        sanitized.DropKey = Enum.IsDefined(typeof(Keys), profile.DropKey) ? profile.DropKey : defaults.DropKey;
-        sanitized.LoadoutSkipKey = Enum.IsDefined(typeof(Keys), profile.LoadoutSkipKey) ? profile.LoadoutSkipKey : defaults.LoadoutSkipKey;
+        sanitized.PauseKey = IsValidKey(profile.PauseKey) ? profile.PauseKey : defaults.PauseKey;
+        sanitized.MoveLeftKey = IsValidKey(profile.MoveLeftKey) ? profile.MoveLeftKey : defaults.MoveLeftKey;
+        sanitized.MoveRightKey = IsValidKey(profile.MoveRightKey) ? profile.MoveRightKey : defaults.MoveRightKey;
+        sanitized.JumpKey = IsValidKey(profile.JumpKey) ? profile.JumpKey : defaults.JumpKey;
+        sanitized.DropKey = IsValidKey(profile.DropKey) ? profile.DropKey : defaults.DropKey;
+        sanitized.LoadoutSkipKey = IsValidKey(profile.LoadoutSkipKey) ? profile.LoadoutSkipKey : defaults.LoadoutSkipKey;
 
-        sanitized.MenuUpButton = Enum.IsDefined(typeof(Buttons), profile.MenuUpButton) ? profile.MenuUpButton : defaults.MenuUpButton;
-        sanitized.MenuDownButton = Enum.IsDefined(typeof(Buttons), profile.MenuDownButton) ? profile.MenuDownButton : defaults.MenuDownButton;
-        sanitized.MenuLeftButton = Enum.IsDefined(typeof(Buttons), profile.MenuLeftButton) ? profile.MenuLeftButton : defaults.MenuLeftButton;
-        sanitized.MenuRightButton = Enum.IsDefined(typeof(Buttons), profile.MenuRightButton) ? profile.MenuRightButton : defaults.MenuRightButton;
-        sanitized.MenuConfirmButton = Enum.IsDefined(typeof(Buttons), profile.MenuConfirmButton) ? profile.MenuConfirmButton : defaults.MenuConfirmButton;
-        sanitized.MenuBackButton = Enum.IsDefined(typeof(Buttons), profile.MenuBackButton) ? profile.MenuBackButton : defaults.MenuBackButton;
-        sanitized.PauseButton = Enum.IsDefined(typeof(Buttons), profile.PauseButton) ? profile.PauseButton : defaults.PauseButton;
-        sanitized.JumpButton = Enum.IsDefined(typeof(Buttons), profile.JumpButton) ? profile.JumpButton : defaults.JumpButton;
-        sanitized.DropButton = Enum.IsDefined(typeof(Buttons), profile.DropButton) ? profile.DropButton : defaults.DropButton;
-        sanitized.ShootButton = Enum.IsDefined(typeof(Buttons), profile.ShootButton) ? profile.ShootButton : defaults.ShootButton;
-        sanitized.LoadoutSkipButton = Enum.IsDefined(typeof(Buttons), profile.LoadoutSkipButton) ? profile.LoadoutSkipButton : defaults.LoadoutSkipButton;
+        sanitized.MenuUpButton = IsValidButton(profile.MenuUpButton) ? profile.MenuUpButton : defaults.MenuUpButton;
+        sanitized.MenuDownButton = IsValidButton(profile.MenuDownButton) ? profile.MenuDownButton : defaults.MenuDownButton;
+        sanitized.MenuLeftButton = IsValidButton(profile.MenuLeftButton) ? profile.MenuLeftButton : defaults.MenuLeftButton;
+        sanitized.MenuRightButton = IsValidButton(profile.MenuRightButton) ? profile.MenuRightButton : defaults.MenuRightButton;
+        sanitized.MenuConfirmButton = IsValidButton(profile.MenuConfirmButton) ? profile.MenuConfirmButton : defaults.MenuConfirmButton;
+        sanitized.MenuBackButton = IsValidButton(profile.MenuBackButton) ? profile.MenuBackButton : defaults.MenuBackButton;
+        sanitized.PauseButton = IsValidButton(profile.PauseButton) ? profile.PauseButton : defaults.PauseButton;
+        sanitized.JumpButton = IsValidButton(profile.JumpButton) ? profile.JumpButton : defaults.JumpButton;
+        sanitized.DropButton = IsValidButton(profile.DropButton) ? profile.DropButton : defaults.DropButton;
+        sanitized.ShootButton = IsValidButton(profile.ShootButton) ? profile.ShootButton : defaults.ShootButton;
+        sanitized.LoadoutSkipButton = IsValidButton(profile.LoadoutSkipButton) ? profile.LoadoutSkipButton : defaults.LoadoutSkipButton;
 
         sanitized.MoveStick = Enum.IsDefined(typeof(StickBinding), profile.MoveStick) ? profile.MoveStick : defaults.MoveStick;
         sanitized.AimStick = Enum.IsDefined(typeof(StickBinding), profile.AimStick) ? profile.AimStick : defaults.AimStick;

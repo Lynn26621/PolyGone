@@ -420,10 +420,13 @@ public static class InputManager
                             && _mouseClickCooldown <= 0f;
         return mouseConfirm;
     }
-    //function for going back in menus (Escape key for keyboard, and B button for gamepad)
+    //function for going back in menus (Escape key always works; MenuBackKey is an optional additional binding; B button for gamepad)
     public static bool MenuBack()
     {
-        bool keyboardBack = IsKeyPressed(Bindings.MenuBackKey)
+        // Escape always triggers MenuBack regardless of the configured binding so the
+        // control remap screen (and every other menu) can always be exited with Escape.
+        bool keyboardBack = (IsKeyPressed(Keys.Escape) ||
+                             (Bindings.MenuBackKey != Keys.None && IsKeyPressed(Bindings.MenuBackKey)))
                             && _escapeKeyCooldown <= 0f;
         bool gamepadBack = IsButtonPressed(Bindings.MenuBackButton)
                            && _escapeKeyCooldown <= 0f;
