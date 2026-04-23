@@ -13,22 +13,16 @@ using PolyGone.Core;
 namespace PolyGone.Entities
 {
 
-    // ---------------------------------------------------------------------------
-    // Player Ability Types (Dash, Wall Jump, etc.)
-    // ---------------------------------------------------------------------------
-
     public class Player : Entity
     {
         // Constants for gap centering nudge strengths
         private const float VERTICAL_GAP_NUDGE_STRENGTH = 20f; // Strong nudge for vertical movement through gaps
         private const float HORIZONTAL_GAP_NUDGE_STRENGTH = 15f; // Medium nudge for horizontal gap funneling
-        
-        private KeyboardState keyboardState;
-        private KeyboardState previousKeyboardState;
+
         private AudioManager audioManager;
         private Item? currentWeapon; // Single selected weapon
         private readonly List<Item> itemInventory = new List<Item>(); // Pre-selected items (max 2)
-        public readonly List<Projectile> bullets = new List<Projectile>(); // Shared projectile list for all weapons
+        public readonly List<Projectile> Bullets = new List<Projectile>(); // Shared projectile list for all weapons
         private float ffCooldown = 0f;
         private float coyoteTime = 0f; // Allows jumping shortly after leaving a platform
 
@@ -54,13 +48,16 @@ namespace PolyGone.Entities
         };
 
         // Public property to access changeY for items
-        public float ChangeY => changeY;
-        
+        public new float ChangeY
+        {
+            get => base.ChangeY; set => base.ChangeY = value;
+        }
+
         // Public property to access current weapon's cooldown for HUD
         public float Cooldown => GetBlaster()?.Cooldown ?? 0f;
 
         // Public property to control gravity (used by LowGravityItem)
-        public float GravityScale { get => gravityScale; set => gravityScale = value; }
+        public new float GravityScale { get => base.GravityScale; set => base.GravityScale = value; }
 
         // Jump velocity — scaled by LowGravityItem to keep peak height constant
         public float JumpStrength { get; set; } = -16.75f;
@@ -69,23 +66,23 @@ namespace PolyGone.Entities
         public float DashStrength { get; set; } = 288f;
 
         public Player(
-            Texture2D texture, 
-            Vector2 position, 
-            int[] size, 
-            int health, 
-            Color color, 
-            Rectangle? srcRect, 
-            Dictionary<Vector2, int> collisionMap, 
-            Texture2D blasterTexture, 
-            List<ItemType> selectedItems, 
+            Texture2D texture,
+            Vector2 position,
+            int[] size,
+            int health,
+            Color color,
+            Rectangle? srcRect,
+            Dictionary<Vector2, int> CollisionMap,
+            Texture2D blasterTexture,
+            List<ItemType> selectedItems,
             List<BlasterAttachmentType> selectedAttachments,
             AudioManager audioManager,
             int[]? visualSize = null
         )
-            : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, visualSize)
+            : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, visualSize)
         {
             // Always use the Blaster as the base weapon
-            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, audioManager, new int[] { 32, 32 }, Color.White, collisionMap, bullets, srcRect);
+            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, audioManager, new int[] { 32, 32 }, Color.White, CollisionMap, Bullets, srcRect);
 
             // Apply blaster attachments to the freshly created blaster
             foreach (var attachmentType in selectedAttachments)
@@ -146,15 +143,15 @@ namespace PolyGone.Entities
                         break;
 #endif
                 }
-                
+
                 if (item != null)
                 {
                     itemInventory.Add(item);
                     item.Apply(this); // Automatically activate all selected items
                 }
             }
-            
-            this.friction = 0.8f; // Player has more friction for tighter control
+
+            this.Friction = 0.8f; // Player has more friction for tighter control
             this.audioManager = audioManager; // Store reference to AudioManager for playing audio
         }
 
@@ -179,7 +176,7 @@ namespace PolyGone.Entities
                     deltaY = 0;
                     break;
                 case CollisionType.SemiSolid:
-                    if (keyboardState.IsKeyDown(Keys.S))
+                    if (InputManager.GameDrop())
                     {
                         // Drop through platform
                         position.Y += deltaY;
@@ -202,27 +199,30 @@ namespace PolyGone.Entities
         // Handle player input and jumping
         private void HandleInput()
         {
-            previousKeyboardState = keyboardState;
-            keyboardState = Keyboard.GetState();
             int moveDirection = 0;
 
             // Horizontal movement with speed boost consideration
-            if (keyboardState.IsKeyDown(Keys.A) && !keyboardState.IsKeyDown(Keys.D)) moveDirection = -1;
-            else if (keyboardState.IsKeyDown(Keys.D) && !keyboardState.IsKeyDown(Keys.A)) moveDirection = 1;
+            if ((InputManager.GameMoveLeft() && !InputManager.GameMoveRight()))
+            {
+                moveDirection = -1;
+            }
+            else if ((InputManager.GameMoveRight() && !InputManager.GameMoveLeft()))
+            {
+                moveDirection = 1;
+            }
 
             // Apply acceleration with speed boost
-            float speedMultiplier = 1.5f; // Base speed multiplier
-            changeX += moveDirection * 1f * speedMultiplier;
-            changeX = MathHelper.Clamp(changeX, -5f * speedMultiplier, 5f * speedMultiplier);
+            float speedMultiplier = 1.5f;
+            ChangeX += moveDirection * 1f * speedMultiplier;
+            ChangeX = MathHelper.Clamp(ChangeX, -5f * speedMultiplier, 5f * speedMultiplier);
 
             // Jumping with coyote time and double jump
-            bool spacePressed = keyboardState.IsKeyDown(Keys.Space);
-            bool spaceJustPressed = spacePressed && !previousKeyboardState.IsKeyDown(Keys.Space);
-            bool wasOnGroundLastFrame = isOnGround;
-            
-            if ((isOnGround || coyoteTime > 0f) && spacePressed)
+            bool JumpTriggered = InputManager.GameJump();
+            bool wasOnGroundLastFrame = IsOnGround;
+
+            if ((IsOnGround || coyoteTime > 0f) && JumpTriggered)
             {
-                changeY = JumpStrength;
+                base.ChangeY = JumpStrength;
                 audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect                 
                 coyoteTime = 0f; // Reset coyote time after jumping
                 GetActiveDoubleJumpItem()?.Reset(); // Allow double jump in the new air phase
@@ -231,33 +231,18 @@ namespace PolyGone.Entities
             {
                 // Check for double jump
                 var doubleJumpItem = GetActiveDoubleJumpItem();
-                if (doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, spacePressed, wasOnGroundLastFrame))
+                if (doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, JumpTriggered, wasOnGroundLastFrame))
                 {
-                    changeY = JumpStrength; // Same jump strength for double jump
+                    base.ChangeY = JumpStrength; // Same jump strength for double jump
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #if DEBUG
-                else if (GetDevModeItem()?.IsActive == true && spaceJustPressed)
+                else if (GetDevModeItem()?.IsActive == true && JumpTriggered)
                 {
-                    changeY = JumpStrength; // DEV: infinite jumps
+                    base.ChangeY = JumpStrength; // DEV: infinite jumps
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #endif
-            }
-
-            // Dashing with coyote time
-            bool dashPressed = keyboardState.IsKeyDown(Keys.LeftShift);
-            bool dashJustPressed = dashPressed && !previousKeyboardState.IsKeyDown(Keys.LeftShift);
-
-            if ((isOnGround || coyoteTime > 0f) && InputManager.IsDashKeyPressed())
-            {
-                var dash = playerAbilityTypes[0];
-                if (UnlockTracker.IsAbilityUnlocked(dash))
-                {
-                    changeX += DashStrength * moveDirection;
-                    coyoteTime = 0f; // Reset coyote time after dashing
-                    InputManager.ConsumeDash();
-                }
             }
         }
 
@@ -268,58 +253,96 @@ namespace PolyGone.Entities
                 default:
                     break;
                 case Projectile projectile:
-                    // Only take damage from enemy projectiles
-                    if (projectile.owner == Owner.Enemy && invincibilityFrames <= 0f)
+                    // Only take damage from non-player projectiles
+                    if (InvincibilityFrames <= 0f)
                     {
 #if DEBUG
-                        if (GetDevModeItem()?.IsActive == true) break;
+                        if (GetDevModeItem()?.IsActive == true)
+                            break;
 
                         audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 #endif
-                        health -= projectile.damage;
-                        if (health <= 0)
+                        Health -= projectile.Damage;
+                        if (Health <= 0)
                         {
                             TryAbsorbLethalHit();
                         }
 
                         // Apply knockback in the direction the projectile was travelling
-                        Vector2 projectileVelocity = new Vector2(projectile.xSpeed, projectile.ySpeed);
+                        Vector2 projectileVelocity = new Vector2(projectile.XSpeed, projectile.YSpeed);
                         if (projectileVelocity != Vector2.Zero)
                         {
                             projectileVelocity.Normalize();
-                            changeX = projectileVelocity.X * 10f;
-                            changeY = projectileVelocity.Y * 10f - 5f; // extra upward bias
+                            ChangeX = projectileVelocity.X * 10f;
+                            base.ChangeY = projectileVelocity.Y * 10f - 5f; // extra upward bias
                         }
 
-                        invincibilityFrames = 60f;
+                        InvincibilityFrames = 60f;
 
                         // Despawn the projectile on contact
-                        projectile.lifetime = 0f;
+                        projectile.Lifetime = 0f;
                     }
                     break;
-                case Enemy:
+                case BerserkEnemy:
                     // Only take damage if not invincible
-                    if (invincibilityFrames <= 0f)
+                    if (InvincibilityFrames <= 0f)
                     {
 #if DEBUG
-                        if (GetDevModeItem()?.IsActive == true) break;
+                        if (GetDevModeItem()?.IsActive == true)
+                        {
+                            break;
+                        }
 
                         audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 #endif
                         // Take 40 damage
-                        health -= 40;
-                        if (health <= 0) TryAbsorbLethalHit();
-                        
+                        Health -= 40;
+                        if (Health <= 0)
+                        {
+                            TryAbsorbLethalHit();
+                        }
+
                         // Calculate knockback direction (away from enemy)
                         float knockbackX = position.X < other.position.X ? -10f : 10f;
                         float knockbackY = -20f;
-                        
+
                         // Apply knockback
-                        changeX = knockbackX;
-                        changeY = knockbackY / 2; // Reduced vertical knockback for better feel
-                        
+                        ChangeX = knockbackX;
+                        ChangeY = knockbackY / 2; // Reduced vertical knockback for better feel
+
                         // Set invincibility frames (roughly 1 second at 60fps)
-                        invincibilityFrames = 60f;
+                        InvincibilityFrames = 60f;
+                    }
+                    break;
+                case Enemy:
+                    // Only take damage if not invincible
+                    if (InvincibilityFrames <= 0f)
+                    {
+#if DEBUG
+                        if (GetDevModeItem()?.IsActive == true)
+                        {
+                            break;
+                        }
+
+                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
+#endif
+                        // Take 40 damage
+                        Health -= 40;
+                        if (Health <= 0)
+                        {
+                            TryAbsorbLethalHit();
+                        }
+
+                        // Calculate knockback direction (away from enemy)
+                        float knockbackX = position.X < other.position.X ? -10f : 10f;
+                        float knockbackY = -20f;
+
+                        // Apply knockback
+                        ChangeX = knockbackX;
+                        base.ChangeY = knockbackY / 2; // Reduced vertical knockback for better feel
+
+                        // Set invincibility frames (roughly 1 second at 60fps)
+                        InvincibilityFrames = 60f;
                     }
                     break;
             }
@@ -334,14 +357,14 @@ namespace PolyGone.Entities
         protected override void OnVerticalMovementComplete(float deltaTime)
         {
             // Player-specific vertical gap centering (stronger than base)
-            if (Math.Abs(changeY) > 0.1f && collisionMap != null)
+            if (Math.Abs(base.ChangeY) > 0.1f && CollisionMap != null)
             {
                 int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
                 int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);
-                
+
                 var keyLeft = new Vector2(playerTileX - 1, playerTileY);
                 var keyRight = new Vector2(playerTileX + 1, playerTileY);
-                
+
                 if (IsSolidWall(keyLeft) && IsSolidWall(keyRight))
                 {
                     ApplyGapCentering(playerTileX, VERTICAL_GAP_NUDGE_STRENGTH);
@@ -352,22 +375,22 @@ namespace PolyGone.Entities
         protected override void OnHorizontalMovementComplete(float deltaTime)
         {
             // Gap funneling: when walking over a 1-tile gap and pressing S, funnel down through it
-            if (isOnGround && keyboardState.IsKeyDown(Keys.S) && collisionMap != null)
+            if ((IsOnGround || coyoteTime > 0f) && InputManager.GameDrop() && CollisionMap != null)
             {
                 int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
                 int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);
-                
+
                 // Check if there's a semi-solid platform directly below
                 var keyBelow = new Vector2(playerTileX, playerTileY + 1);
-                bool semiSolidBelow = collisionMap.TryGetValue(keyBelow, out int belowTileId) &&
+                bool semiSolidBelow = CollisionMap.TryGetValue(keyBelow, out int belowTileId) &&
                                       belowTileId != -1 &&
                                       CollisionTypeMapper.GetCollisionType(belowTileId) == CollisionType.SemiSolid;
-                
+
                 if (semiSolidBelow)
                 {
                     var keyLeft = new Vector2(playerTileX - 1, playerTileY);
                     var keyRight = new Vector2(playerTileX + 1, playerTileY);
-                    
+
                     if (IsSolidWall(keyLeft) && IsSolidWall(keyRight))
                     {
                         ApplyGapCentering(playerTileX, HORIZONTAL_GAP_NUDGE_STRENGTH);
@@ -381,12 +404,15 @@ namespace PolyGone.Entities
             float tileCenter = (float)tileX * TILE_SIZE + TILE_HALF_SIZE;
             float playerCenter = position.X + size[0] / 2f;
             float offset = tileCenter - playerCenter;
-            
+
             if (Math.Abs(offset) > 0.1f)
             {
                 float nudge = Math.Sign(offset) * nudgeStrength;
                 if (Math.Abs(nudge) > Math.Abs(offset))
+                {
                     nudge = offset;
+                }
+
                 position.X += nudge;
             }
         }
@@ -418,7 +444,9 @@ namespace PolyGone.Entities
         {
             var ironWill = GetReadyIronWillItem();
             if (ironWill != null && ironWill.TryAbsorbLethalHit())
-                health = 1;
+            {
+                Health = 1;
+            }
         }
 
         // Helper method to get the currently equipped blaster/weapon
@@ -428,7 +456,7 @@ namespace PolyGone.Entities
         }
 
         // Public property to access current blaster for backward compatibility
-        public Blaster blaster => GetBlaster();
+        public Blaster? Blaster => GetBlaster();
 
         // Public method to access item inventory for UI
         public List<Item> GetAllItems()
@@ -444,11 +472,11 @@ namespace PolyGone.Entities
         public void Update(GameTime gameTime, Vector2 cameraOffset)
         {
             HandleInput();
-            
+
             base.Update(gameTime);
-            
+
             // Update coyote time after physics update to use current frame's ground state
-            coyoteTime = isOnGround
+            coyoteTime = IsOnGround
                 ? 6f // 0.1 seconds at 60fps
                 : Math.Max(0f, coyoteTime - 1f);
 
@@ -457,7 +485,7 @@ namespace PolyGone.Entities
             if (currentBlaster != null)
             {
 #if DEBUG
-                int bulletCountBefore = bullets.Count;
+                int bulletCountBefore = Bullets.Count;
 #endif
                 currentBlaster.Follow(new Rectangle((int)position.X, (int)position.Y, size[0], size[1]), cameraOffset);
                 currentBlaster.Use();
@@ -465,39 +493,41 @@ namespace PolyGone.Entities
 #if DEBUG
                 if (GetDevModeItem()?.IsActive == true)
                 {
-                    for (int i = bulletCountBefore; i < bullets.Count; i++)
-                        bullets[i].IsInstantKill = true;
+                    for (int i = bulletCountBefore; i < Bullets.Count; i++)
+                    {
+                        Bullets[i].IsInstantKill = true;
+                    }
                 }
 #endif
             }
-            
+
             // Update all bullets (shared across all weapons) - iterate backwards for safe removal
-            for (int i = bullets.Count - 1; i >= 0; i--)
+            for (int i = Bullets.Count - 1; i >= 0; i--)
             {
-                var bullet = bullets[i];
-                bullet.lifetime -= 1f;
-                if (bullet.lifetime <= 0f)
+                var bullet = Bullets[i];
+                bullet.Lifetime -= 1f;
+                if (bullet.Lifetime <= 0f)
                 {
-                    bullets.RemoveAt(i);
+                    Bullets.RemoveAt(i);
                 }
                 else
                 {
                     bullet.Update(gameTime);
                 }
             }
-            
+
             // Update active items
             foreach (var item in itemInventory.Where(item => item.IsActive))
             {
                 item.Update(gameTime);
-                
+
                 // Apply healing over time from HealingGlowItem
                 if (item is HealingGlowItem healingGlow)
                 {
                     healingGlow.ApplyHealingOverTime(this, (float)gameTime.ElapsedGameTime.TotalSeconds);
                 }
             }
-            
+
             ffCooldown = Math.Max(0f, ffCooldown - 1f);
         }
 
@@ -505,9 +535,7 @@ namespace PolyGone.Entities
         {
             // Check if we should draw with healing glow
             var healingGlow = GetActiveHealingGlowItem();
-            bool shouldGlow = healingGlow?.ShouldGlow() ?? false;
-            
-            if (shouldGlow)
+            if (healingGlow?.ShouldGlow() == true)
             {
                 // Draw glow outline first (behind the player) - 68x68 total size
                 Color glowColor = healingGlow.GetGlowColor();
@@ -515,21 +543,25 @@ namespace PolyGone.Entities
                 {
                     for (int y = -4; y <= 4; y++)
                     {
-                        if (x == 0 && y == 0) continue; // Skip center
+                        if (x == 0 && y == 0)
+                        {
+                            continue; // Skip center
+                        }
+
                         Vector2 glowOffset = new Vector2(x, y);
-                        spriteBatch.Draw(texture, position - offset + hitboxOffset + glowOffset, srcRect, glowColor);
+                        spriteBatch.Draw(texture, position - offset + HitboxOffset + glowOffset, srcRect, glowColor);
                     }
                 }
             }
-            
+
             base.Draw(spriteBatch, offset);
-            
+
             // Draw only the currently equipped weapon
             var currentBlaster = GetBlaster();
             currentBlaster?.Draw(spriteBatch, offset);
-            
+
             // Draw all bullets (shared across all weapons)
-            foreach (var bullet in bullets)
+            foreach (var bullet in Bullets)
             {
                 bullet.Draw(spriteBatch, offset);
             }
@@ -539,7 +571,7 @@ namespace PolyGone.Entities
         public void DrawItemIndicators(SpriteBatch spriteBatch, Texture2D itemTexture, Rectangle itemSrcRect)
         {
             const int MaxDisplayedItems = 3; // Maximum number of items to display
-            
+
             // Draw item indicators in fixed screen position (not affected by camera)
             Vector2 indicatorStart = new Vector2(20, 20); // Fixed top-left screen position
             int spacing = 25;

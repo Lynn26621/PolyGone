@@ -18,15 +18,13 @@ public class WinScene : IScene
     private readonly string currentLevel;
     private readonly List<ItemType> selectedItems;
     private readonly List<BlasterAttachmentType> selectedAttachments;
-    private SpriteFont font;
-    private Texture2D pixel;
-    private KeyboardState keyboardState;
-    private KeyboardState previousKeyboardState;
+    private SpriteFont? font;
+    private Texture2D? pixel;
     private readonly string[] options;
     private int selectedIndex;
     private static List<string>? levelOrder;
 
-    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType> selectedItems = null, List<BlasterAttachmentType> selectedAttachments = null)
+    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
     {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
@@ -35,7 +33,7 @@ public class WinScene : IScene
         this.currentLevel = currentLevel;
         this.selectedItems = selectedItems ?? new List<ItemType>();
         this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
-        
+
         // Build options list based on whether there's a next level
         string? nextLevel = GetNextLevel(currentLevel);
         if (nextLevel != null)
@@ -46,8 +44,7 @@ public class WinScene : IScene
         {
             options = new[] { "Hub", "Main Menu" };
         }
-        
-        previousKeyboardState = Keyboard.GetState();
+
         selectedIndex = 0;
 
         // Record this level as completed so locked items can be unlocked
@@ -72,7 +69,6 @@ public class WinScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        keyboardState = Keyboard.GetState();
 
         // Mouse navigation
         if (font != null)
@@ -90,9 +86,9 @@ public class WinScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     selectedIndex = i;
-                    
+
                     // Mouse click with InputManager
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         ExecuteSelection();
                         InputManager.ConsumeClick();
@@ -102,33 +98,27 @@ public class WinScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up))
+        if (InputManager.MenuUp())
         {
             selectedIndex = (selectedIndex - 1 + options.Length) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Down))
+        if (InputManager.MenuDown())
         {
             selectedIndex = (selectedIndex + 1) % options.Length;
         }
 
-        if (IsKeyPressed(Keys.Enter))
+        if (InputManager.MenuConfirm())
         {
             ExecuteSelection();
         }
 
-        previousKeyboardState = keyboardState;
     }
-    
-    private bool IsKeyPressed(Keys key)
-    {
-        return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
-    }
-    
+
     private void ExecuteSelection()
     {
         string selectedOption = options[selectedIndex];
-        
+
         if (selectedOption == "Next Level")
         {
             string? nextLevel = GetNextLevel(currentLevel);
@@ -149,22 +139,23 @@ public class WinScene : IScene
         else if (selectedOption == "Main Menu")
         {
             sceneManager.PopScene(this); // Remove WinScene
-            
+
             // Keep popping until we reach MenuScene
             while (sceneManager.GetCurrentScene() != null && sceneManager.GetCurrentScene() is not MenuScene)
             {
                 sceneManager.PopScene(sceneManager.GetCurrentScene());
             }
-            
+
             InputManager.ResetClickCooldown();
             audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
         }
     }
-    
+
     private static void LoadLevelOrder()
     {
-        if (levelOrder != null) return; // Already loaded
-        
+        if (levelOrder != null)
+            return; // Already loaded
+
         try
         {
             string jsonPath = Path.Combine("Maps/LevelOrder.json");
@@ -172,7 +163,7 @@ public class WinScene : IScene
             using JsonDocument doc = JsonDocument.Parse(jsonContent);
             JsonElement root = doc.RootElement;
             JsonElement levelsArray = root.GetProperty("levels");
-            
+
             levelOrder = new List<string>();
             foreach (JsonElement level in levelsArray.EnumerateArray())
             {
@@ -182,25 +173,25 @@ public class WinScene : IScene
         catch
         {
             // Fallback to hardcoded levels if file doesn't exist
-            levelOrder = new List<string> { "TestLevel", "TestLevel2", "TestLevel3" };
+            levelOrder = new List<string> { "TestLevel", "TestLevel2", "TestLevel3", "TestLevel4" };
         }
     }
-    
+
     private string? GetNextLevel(string currentLevel)
     {
         LoadLevelOrder();
-        
+
         if (levelOrder == null || levelOrder.Count == 0)
         {
             return null;
         }
-        
+
         int currentIndex = levelOrder.IndexOf(currentLevel);
         if (currentIndex == -1 || currentIndex == levelOrder.Count - 1)
         {
             return null; // Current level not found or it's the last level
         }
-        
+
         return levelOrder[currentIndex + 1];
     }
 
@@ -218,7 +209,7 @@ public class WinScene : IScene
         if (font != null)
         {
             var viewport = spriteBatch.GraphicsDevice.Viewport;
-            
+
             // Draw "Level Cleared!" text
             string winText = "Level Cleared!";
             var winTextSize = font.MeasureString(winText);

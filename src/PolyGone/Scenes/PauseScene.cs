@@ -14,12 +14,11 @@ using System;
 using PolyGone.Core;
 
 namespace PolyGone;
+
 internal class PauseScene : IScene
 {
-    private Texture2D _pixel;
-    private SpriteFont _font;
-    private KeyboardState keyboardState;
-    private KeyboardState previousKeyboardState;
+    private Texture2D? _pixel;
+    private SpriteFont? _font;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly AudioManager _audioManager;
@@ -30,13 +29,11 @@ internal class PauseScene : IScene
 
     public PauseScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, GameScene gameScene)
     {
-        _pixel = null;
         _content = content;
         _sceneManager = sceneManager;
         _audioManager = audioManager;
         _graphics = graphics;
         _gameScene = gameScene;
-        previousKeyboardState = Keyboard.GetState();
         _selectedIndex = 0;
     }
 
@@ -50,7 +47,6 @@ internal class PauseScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        keyboardState = Keyboard.GetState();
 
         // Mouse navigation
         if (_font != null)
@@ -68,9 +64,9 @@ internal class PauseScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _selectedIndex = i;
-                    
+
                     // Mouse click with InputManager
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirm())
                     {
                         ExecuteSelection();
                         InputManager.ConsumeClick();
@@ -80,22 +76,21 @@ internal class PauseScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up))
+        if (InputManager.MenuUp())
         {
             _selectedIndex = (_selectedIndex - 1 + _options.Length) % _options.Length;
         }
 
-        if (IsKeyPressed(Keys.Down))
+        if (InputManager.MenuDown())
         {
             _selectedIndex = (_selectedIndex + 1) % _options.Length;
         }
 
-        if (IsKeyPressed(Keys.Enter))
+        if (InputManager.MenuConfirm())
         {
             ExecuteSelection();
         }
 
-        previousKeyboardState = keyboardState;
     }
 
     private void ExecuteSelection()
@@ -111,7 +106,7 @@ internal class PauseScene : IScene
             string levelName = _gameScene.GetLevelName();
             List<ItemType> currentItems = _gameScene.GetSelectedItems();
             List<BlasterAttachmentType> currentAttachments = _gameScene.GetSelectedAttachments();
-            
+
             _sceneManager.PopScene(this); // Pop pause scene
             _sceneManager.PopScene(_gameScene); // Pop game scene
             // Create fresh game scene with same settings
@@ -156,11 +151,5 @@ internal class PauseScene : IScene
             }
         }
     }
-
-    private bool IsKeyPressed(Keys key)
-    {
-        return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
-    }
-
 
 }

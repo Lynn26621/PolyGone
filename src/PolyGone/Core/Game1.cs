@@ -6,13 +6,13 @@ using Microsoft.Xna.Framework.Input;
 using PolyGone.Core;
 
 namespace PolyGone;
+
 public class Game1 : Game
 {
     private GraphicsDeviceManager _graphics;
-    private SpriteBatch _spriteBatch;
+    private SpriteBatch _spriteBatch = null!;
     private SceneManager sceneManager;
-    private KeyboardState _previousKeyboardState;
-    private AudioManager audioManager;
+    private AudioManager audioManager = null!;
 
     public Game1()
     {
@@ -26,13 +26,13 @@ public class Game1 : Game
         if (DisplaySettings.IsFullScreen)
         {
             var dm = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
-            _graphics.PreferredBackBufferWidth  = dm.Width;
+            _graphics.PreferredBackBufferWidth = dm.Width;
             _graphics.PreferredBackBufferHeight = dm.Height;
             _graphics.IsFullScreen = true;
         }
         else
         {
-            _graphics.PreferredBackBufferWidth  = DisplaySettings.WindowedWidth;
+            _graphics.PreferredBackBufferWidth = DisplaySettings.WindowedWidth;
             _graphics.PreferredBackBufferHeight = DisplaySettings.WindowedHeight;
             _graphics.IsFullScreen = false;
         }
@@ -89,15 +89,9 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
-        var keyboardState = Keyboard.GetState();
-        
-        // Update centralized input manager
         InputManager.Update(gameTime);
 
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
-            Exit();
-
-        if (IsKeyPressed(Keys.Escape, keyboardState))
+        if (InputManager.PauseMenuOpen())
         {
             if (sceneManager.GetCurrentScene() is PauseScene)
             {
@@ -110,15 +104,9 @@ public class Game1 : Game
                 InputManager.ResetClickCooldown();
             }
         }
-
         // TODO: Add your update logic here
         sceneManager.GetCurrentScene().Update(gameTime);
-        _previousKeyboardState = keyboardState;
         base.Update(gameTime);
-    }
-    private bool IsKeyPressed(Keys key, KeyboardState currentState)
-    {
-        return currentState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
     }
 
     protected override void Draw(GameTime gameTime)

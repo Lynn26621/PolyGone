@@ -17,32 +17,38 @@ namespace PolyGone;
 public class GameScene : IScene
 {
     private ContentManager contentManager;
-    private Texture2D playerSheet;
-    private Texture2D enemySheet;
-    private Texture2D miscSheet;
-    private Texture2D textureSheet;
-    private Texture2D foregroundSheet;
-    private Texture2D backgroundSheet;
-    private Texture2D collisionSheet;
+    private Texture2D playerSheet = null!;
+    private Texture2D enemySheet = null!;
+    private Texture2D miscSheet = null!;
+    private Texture2D textureSheet = null!;
+    private Texture2D foregroundSheet = null!;
+    private Texture2D backgroundSheet = null!;
+    private Texture2D collisionSheet = null!;
     private AudioManager audioManager;
-    private SpriteFont hudFont;
+    private SpriteFont hudFont = null!;
     private SceneManager sceneManager;
-    private Player player;
-    private FollowCamera camera;
-    private GameUI gameUI;
+    private Player player = null!;
+    private FollowCamera camera = null!;
+    private GameUI gameUI = null!;
     private readonly GraphicsDeviceManager graphics;
     private Dictionary<Vector2, int> tileMap = null!;
-    private Dictionary<Vector2, int> collisionMap = null!;
+    private Dictionary<Vector2, int> CollisionMap = null!;
     private List<Rectangle> textureStore;
     private Vector2 playerPos;
     private bool playerSpawnFound = false;
     private readonly List<Vector2> enemySpawns = new(); // Store enemy spawn positions
     private readonly List<Vector2> turretEnemySpawns = new(); // Store turret spawn positions
+    private readonly List<Vector2> berserkEnemySpawns = new(); // Store berserk spawn positions
+    private readonly List<Vector2> factoryEnemySpawns = new(); // Store factory spawn positions
+    private readonly List<Vector2> frogSpawns = new(); // Store frog spawn positions
     private readonly List<Entity> enemies = new(); // Placeholder for enemy list
     private readonly List<TurretEnemy> turretEnemies = new(); // Stationary blaster enemies
+    private readonly List<BerserkEnemy> berserkEnemies = new(); // Chasing enemies that shoot when low health
+    private readonly List<FactoryEnemy> factoryEnemies = new(); // Stationary enemies that spawn patrol enemies
+    private readonly List<Frog> frogs = new(); // Jumping enemies
     private readonly List<Projectile> orphanedTurretBullets = new(); // Bullets that outlive their turret
-    private GoalTrigger goalTrigger; // Win condition trigger
-    private SwitchTrigger inventoryAccess; // Inventory access trigger
+    private GoalTrigger goalTrigger = null!; // Win condition trigger
+    private SwitchTrigger inventoryAccess = null!; // Inventory access trigger
     private List<LevelDoor> levelDoors = new(); // Doors connecting levels to hub
     private bool levelComplete = false;
     private bool gameOver = false;
@@ -111,7 +117,7 @@ public class GameScene : IScene
         int width = root.GetProperty("width").GetInt32();
 
         tileMap = new Dictionary<Vector2, int>();
-        collisionMap = new Dictionary<Vector2, int>();
+        CollisionMap = new Dictionary<Vector2, int>();
 
         foreach (JsonElement layer in layers.EnumerateArray())
         {
@@ -138,7 +144,7 @@ public class GameScene : IScene
                         }
                         else if (layerName == "Collisions")
                         {
-                            collisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
+                            CollisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
                         }
                     }
 
@@ -187,6 +193,27 @@ public class GameScene : IScene
                                 obj.GetProperty("y").GetSingle()
                             );
                             turretEnemySpawns.Add(turretPos);
+                            break;
+                        case "BerserkEnemy":
+                            Vector2 berserkPos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            berserkEnemySpawns.Add(berserkPos);
+                            break;
+                        case "FactoryEnemy":
+                            Vector2 factoryPos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            factoryEnemySpawns.Add(factoryPos);
+                            break;
+                        case "Frog":
+                            Vector2 frogPos = AdjustCoordinates(
+                                obj.GetProperty("x").GetSingle(),
+                                obj.GetProperty("y").GetSingle()
+                            );
+                            frogSpawns.Add(frogPos);
                             break;
                         case "Goal":
                             Vector2 goalPos = AdjustCoordinates(
@@ -307,11 +334,11 @@ public class GameScene : IScene
         player = new Player(
             texture: playerSheet,
             position: playerPos,
-            size: new int[2] { 60, 60 },
+            size: new int[2] { 40, 60 },
             health: 100,
             color: Color.White,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             blasterTexture: playerSheet,
             selectedItems: selectedItems,
             selectedAttachments: selectedAttachments,
@@ -331,7 +358,46 @@ public class GameScene : IScene
             health: 80,
             color: Color.White,
             srcRect: textureStore[1],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Initialize berserk enemies
+        berserkEnemies.AddRange(berserkEnemySpawns.Select(spawnPos => new BerserkEnemy(
+            texture: enemySheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 400,
+            color: Color.Red,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Initialize factory enemies
+        factoryEnemies.AddRange(factoryEnemySpawns.Select(spawnPos => new FactoryEnemy(
+            texture: enemySheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 200,
+            color: Color.White,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Initialize frogs
+        frogs.AddRange(frogSpawns.Select(spawnPos => new Frog(
+            texture: miscSheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 100,
+            color: Color.White,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Initialize patrol enemies from spawn positions
@@ -340,12 +406,13 @@ public class GameScene : IScene
             position: spawnPos,
             audioManager: audioManager,
             size: new int[2] { 60, 60 },
-            health: 50,
+            health: 100,
             color: Color.White,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             patrolSpeed: 1f,
-            visualSize: new int[2] { 64, 64 }
+            visualSize: new int[2] { 64, 64 },
+            player: player
         )));
     }
 
@@ -353,8 +420,8 @@ public class GameScene : IScene
     {
         // Reset player
         player.position = playerPos;
-        player.health = 100;
-        player.bullets.Clear();
+        player.Health = 100;
+        player.Bullets.Clear();
 
         // Reset turret enemies
         orphanedTurretBullets.Clear();
@@ -368,7 +435,49 @@ public class GameScene : IScene
             health: 80,
             color: Color.White,
             srcRect: textureStore[1],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Reset berserk enemies
+        berserkEnemies.Clear();
+        berserkEnemies.AddRange(berserkEnemySpawns.Select(spawnPos => new BerserkEnemy(
+            texture: enemySheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 400,
+            color: Color.White,
+            srcRect: textureStore[2],
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Reset factory enemies
+        factoryEnemies.Clear();
+        factoryEnemies.AddRange(factoryEnemySpawns.Select(spawnPos => new FactoryEnemy(
+            texture: enemySheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 200,
+            color: Color.White,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Reset frogs
+        frogs.Clear();
+        frogs.AddRange(frogSpawns.Select(spawnPos => new Frog(
+            texture: miscSheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 100,
+            color: Color.White,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Reset patrol enemies
@@ -378,12 +487,13 @@ public class GameScene : IScene
             position: spawnPos,
             audioManager: audioManager,
             size: new int[2] { 60, 60 },
-            health: 50,
+            health: 100,
             color: Color.White,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             patrolSpeed: 1f,
-            visualSize: new int[2] { 64, 64 }
+            visualSize: new int[2] { 64, 64 },
+            player: player
         )));
 
         // Reset goal trigger and level completion
@@ -449,18 +559,26 @@ public class GameScene : IScene
         foreach (var enemy in enemies)
         {
             if (enemy.position.Y > worldMaxY)
+            {
                 enemy.HandleDeath();
+            }
             else if (enemy.position.X < 0)
+            {
                 enemy.position.X = 0;
+            }
             else if (enemy.position.X + enemy.size[0] > worldMaxX)
+            {
                 enemy.position.X = worldMaxX - enemy.size[0];
+            }
         }
 
         // Update alive patrol enemies
         foreach (var enemy in enemies)
         {
             if (enemy.IsAlive)
+            {
                 enemy.Update(gameTime);
+            }
         }
 
         // Remove patrol enemies that died this frame
@@ -470,14 +588,102 @@ public class GameScene : IScene
         foreach (var turret in turretEnemies)
         {
             if (turret.position.Y > worldMaxY)
+            {
                 turret.HandleDeath();
+            }
+        }
+        // Check berserk enemies for falling out of bounds
+        foreach (var berserk in berserkEnemies)
+        {
+            if (berserk.position.Y > worldMaxY)
+            {
+                berserk.HandleDeath();
+            }
+            else if (berserk.position.X < 0)
+            {
+                berserk.position.X = 0;
+            }
+            else if (berserk.position.X + berserk.size[0] > worldMaxX)
+            {
+                berserk.position.X = worldMaxX - berserk.size[0];
+            }
+        }
+
+        // Check factory enemies for falling out of bounds
+        foreach (var factory in factoryEnemies)
+        {
+            if (factory.position.Y > worldMaxY)
+            {
+                factory.HandleDeath();
+            }
+            else if (factory.position.X < 0)
+            {
+                factory.position.X = 0;
+            }
+            else if (factory.position.X + factory.size[0] > worldMaxX)
+            {
+                factory.position.X = worldMaxX - factory.size[0];
+            }
+        }
+
+        // Check frogs for falling out of bounds
+        foreach (var frog in frogs)
+        {
+            if (frog.position.Y > worldMaxY)
+            {
+                frog.HandleDeath();
+            }
+            else if (frog.position.X < 0)
+            {
+                frog.position.X = 0;
+            }
+            else if (frog.position.X + frog.size[0] > worldMaxX)
+            {
+                frog.position.X = worldMaxX - frog.size[0];
+            }
         }
 
         // Update alive turret enemies
         foreach (var turret in turretEnemies)
         {
             if (turret.IsAlive)
+            {
                 turret.Update(gameTime);
+            }
+        }
+        // Update alive berserk enemies
+        foreach (var berserk in berserkEnemies)
+        {
+            if (berserk.IsAlive)
+            {
+                berserk.Update(gameTime);
+            }
+        }
+        // Update alive factory enemies
+        foreach (var factory in factoryEnemies)
+        {
+            if (factory.IsAlive)
+            {
+                factory.Update(gameTime);
+            }
+        }
+        // Update alive frogs
+        foreach (var frog in frogs)
+        {
+            if (frog.IsAlive)
+            {
+                frog.Update(gameTime);
+            }
+        }
+
+        // Collect newly spawned enemies from factories
+        foreach (var factory in factoryEnemies)
+        {
+            if (factory.SpawnedEnemies.Count > 0)
+            {
+                enemies.AddRange(factory.SpawnedEnemies);
+                factory.SpawnedEnemies.Clear();
+            }
         }
 
         // Update Doors Input
@@ -506,21 +712,39 @@ public class GameScene : IScene
             }
         }
 
+        // Before removing dead berserk enemies, rescue any live bullets they still own
+        foreach (var berserk in berserkEnemies)
+        {
+            if (!berserk.IsAlive)
+            {
+                orphanedTurretBullets.AddRange(berserk.Bullets);
+            }
+        }
+
         // Remove turret enemies that died this frame
         turretEnemies.RemoveAll(t => !t.IsAlive);
+
+        // Remove berserk enemies that died this frame
+        berserkEnemies.RemoveAll(b => !b.IsAlive);
+
+        // Remove factory enemies that died this frame
+        factoryEnemies.RemoveAll(f => !f.IsAlive);
+
+        // Remove frogs that died this frame
+        frogs.RemoveAll(j => !j.IsAlive);
 
         // Advance and prune orphaned bullets
         for (int i = orphanedTurretBullets.Count - 1; i >= 0; i--)
         {
             orphanedTurretBullets[i].Update(gameTime);
-            if (orphanedTurretBullets[i].lifetime <= 0)
+            if (orphanedTurretBullets[i].Lifetime <= 0)
             {
                 orphanedTurretBullets.RemoveAt(i);
             }
         }
 
         // Gather all entities for collision detection after all updates
-        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. player.bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. orphanedTurretBullets];
+        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. berserkEnemies, .. factoryEnemies, .. frogs, .. player.Bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. berserkEnemies.SelectMany(b => b.Bullets), .. orphanedTurretBullets];
 
         // Handle entity-to-entity collisions
         player.EntityCollisionUpdate(allEntities);
@@ -532,6 +756,19 @@ public class GameScene : IScene
         {
             turret.EntityCollisionUpdate(allEntities);
         }
+        foreach (var berserk in berserkEnemies)
+        {
+            berserk.EntityCollisionUpdate(allEntities);
+        }
+        foreach (var factory in factoryEnemies)
+        {
+            factory.EntityCollisionUpdate(allEntities);
+        }
+        foreach (var frog in frogs)
+        {
+            frog.EntityCollisionUpdate(allEntities);
+        }
+
 
         // Check for goal trigger
         if (goalTrigger != null && !levelComplete)
@@ -576,6 +813,18 @@ public class GameScene : IScene
         foreach (var turret in turretEnemies)
         {
             turret.Draw(spriteBatch, camera.position);
+        }
+        foreach (var berserk in berserkEnemies)
+        {
+            berserk.Draw(spriteBatch, camera.position);
+        }
+        foreach (var factory in factoryEnemies)
+        {
+            factory.Draw(spriteBatch, camera.position);
+        }
+        foreach (var frog in frogs)
+        {
+            frog.Draw(spriteBatch, camera.position);
         }
         foreach (var bullet in orphanedTurretBullets)
         {

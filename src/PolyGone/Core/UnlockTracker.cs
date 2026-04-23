@@ -106,10 +106,11 @@ public static class UnlockTracker
     {
 #if DEBUG
         return true; // All attachments available in dev builds
-#endif
+#else
         if (!_attachmentUnlockRequirements.TryGetValue(attachment, out var requiredLevel))
             return true;
         return _completedLevels.Contains(requiredLevel);
+#endif
     }
 
     /// <summary>Returns a human-readable hint describing how to unlock the attachment, or null if always unlocked.</summary>
@@ -146,6 +147,7 @@ public static class UnlockTracker
         if (_completedLevels.Contains("TestLevel"))  slots++;
         if (_completedLevels.Contains("TestLevel2")) slots++;
         if (_completedLevels.Contains("TestLevel3")) slots++;
+        if (_completedLevels.Contains("TestLevel4")) slots++;
         return slots; // Max 5
     }
 

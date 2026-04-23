@@ -46,7 +46,7 @@ namespace PolyGone.Items
             if (healTimer >= HealInterval)
             {
                 healTimer -= HealInterval;
-                player.health = Math.Min(player.health + HealAmount, player.maxHealth);
+                player.Health = Math.Min(player.Health + HealAmount, player.MaxHealth);
             }
         }
 

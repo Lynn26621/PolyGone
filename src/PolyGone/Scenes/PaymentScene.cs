@@ -29,8 +29,6 @@ internal class PaymentScene : IScene
     private bool _isProcessing = false;
     private Task<FormbarService.TransferResult>? _paymentTask;
 
-    private KeyboardState _keyboardState;
-    private KeyboardState _previousKeyboardState;
 
     // Maximum chars rendered inside the PIN box (prevents overflow)
     private const int PinDisplayMax = 8;
@@ -41,7 +39,6 @@ internal class PaymentScene : IScene
         _sceneManager = sceneManager;
         _audioManager = audioManager;
         _graphics = graphics;
-        _previousKeyboardState = Keyboard.GetState();
     }
 
     public void Load()
@@ -59,7 +56,6 @@ internal class PaymentScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        _keyboardState = Keyboard.GetState();
 
         // Poll async payment task
         if (_paymentTask != null && _paymentTask.IsCompleted)
@@ -81,7 +77,6 @@ internal class PaymentScene : IScene
 
         if (_isProcessing)
         {
-            _previousKeyboardState = _keyboardState;
             return;
         }
 
@@ -93,23 +88,20 @@ internal class PaymentScene : IScene
             else if (char.IsDigit(c) && _pin.Length < FormbarSession.PinMaxLength) _pin += c;
         }
 
-        if (IsKeyPressed(Keys.Enter) && _pin.Length > 0)
+        if (InputManager.MenuConfirm() && _pin.Length > 0)
             StartPayment();
 
 #if DEBUG
         // Developer bypass: Ctrl + Shift + D skips payment entirely
-        if (_keyboardState.IsKeyDown(Keys.LeftControl) &&
-            _keyboardState.IsKeyDown(Keys.LeftShift) &&
-            IsKeyPressed(Keys.D))
+        if (InputManager.DevPaymentBypass())
         {
             DevBypass();
             return;
         }
 #endif
 
-        if (_font == null || !InputManager.IsLeftMouseButtonClicked())
+        if (_font == null || !InputManager.MenuConfirm())
         {
-            _previousKeyboardState = _keyboardState;
             return;
         }
 
@@ -140,7 +132,6 @@ internal class PaymentScene : IScene
             InputManager.ConsumeClick();
         }
 
-        _previousKeyboardState = _keyboardState;
     }
 
     private void StartPayment()
@@ -258,7 +249,4 @@ internal class PaymentScene : IScene
     /// <summary>Returns a padded button Rectangle for a text element at (x, y).</summary>
     private static Rectangle Btn(int x, int y, Vector2 textSize) =>
         new Rectangle(x - 10, y - 5, (int)textSize.X + 20, (int)textSize.Y + 10);
-
-    private bool IsKeyPressed(Keys key) =>
-        _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
 }
