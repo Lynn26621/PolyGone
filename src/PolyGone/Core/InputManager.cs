@@ -68,10 +68,6 @@ public static class InputManager
         // Update escape key cooldown
         if (_escapeKeyCooldown > 0f)
             _escapeKeyCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-        // Update dash cooldown
-        if (_dashCooldown > 0f)
-            _dashCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
     }
 
     /// <summary>
