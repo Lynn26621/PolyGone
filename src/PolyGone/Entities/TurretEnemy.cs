@@ -31,9 +31,9 @@ class TurretEnemy : Enemy
         int health = 80,
         Color color = default,
         Rectangle? srcRect = null,
-        Dictionary<Vector2, int>? collisionMap = null,
+        Dictionary<Vector2, int>? CollisionMap = null,
         int[]? visualSize = null)
-        : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, patrolSpeed: 0f, visualSize: visualSize)
+        : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, patrolSpeed: 0f, visualSize: visualSize)
     {
         this.player = player;
         this.audioManager = audioManager;
@@ -67,7 +67,7 @@ class TurretEnemy : Enemy
             ySpeed: direction.Y * BULLET_SPEED,
             owner: Owner.Enemy,
             srcRect: srcRect,
-            collisionMap: CollisionMap
+            CollisionMap: CollisionMap
         ));
 
         audioManager.PlayAudio("shootSfx", true, "null", false); //Play shoot sound effect

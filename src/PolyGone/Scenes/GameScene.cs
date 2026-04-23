@@ -32,7 +32,7 @@ public class GameScene : IScene
     private GameUI gameUI = null!;
     private readonly GraphicsDeviceManager graphics;
     private Dictionary<Vector2, int> tileMap = null!;
-    private Dictionary<Vector2, int> collisionMap = null!;
+    private Dictionary<Vector2, int> CollisionMap = null!;
     private List<Rectangle> textureStore;
     private Vector2 playerPos;
     private bool playerSpawnFound = false;
@@ -117,7 +117,7 @@ public class GameScene : IScene
         int width = root.GetProperty("width").GetInt32();
 
         tileMap = new Dictionary<Vector2, int>();
-        collisionMap = new Dictionary<Vector2, int>();
+        CollisionMap = new Dictionary<Vector2, int>();
 
         foreach (JsonElement layer in layers.EnumerateArray())
         {
@@ -144,7 +144,7 @@ public class GameScene : IScene
                         }
                         else if (layerName == "Collisions")
                         {
-                            collisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
+                            CollisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
                         }
                     }
 
@@ -338,7 +338,7 @@ public class GameScene : IScene
             health: 100,
             color: Color.White,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             blasterTexture: playerSheet,
             selectedItems: selectedItems,
             selectedAttachments: selectedAttachments,
@@ -358,7 +358,7 @@ public class GameScene : IScene
             health: 80,
             color: Color.White,
             srcRect: textureStore[1],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Initialize berserk enemies
@@ -371,7 +371,7 @@ public class GameScene : IScene
             health: 400,
             color: Color.Red,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Initialize factory enemies
@@ -384,7 +384,7 @@ public class GameScene : IScene
             health: 200,
             color: Color.White,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Initialize frogs
@@ -397,7 +397,7 @@ public class GameScene : IScene
             health: 100,
             color: Color.White,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Initialize patrol enemies from spawn positions
@@ -409,7 +409,7 @@ public class GameScene : IScene
             health: 100,
             color: Color.White,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 },
             player: player
@@ -435,7 +435,7 @@ public class GameScene : IScene
             health: 80,
             color: Color.White,
             srcRect: textureStore[1],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Reset berserk enemies
@@ -449,7 +449,7 @@ public class GameScene : IScene
             health: 400,
             color: Color.White,
             srcRect: textureStore[2],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Reset factory enemies
@@ -463,7 +463,7 @@ public class GameScene : IScene
             health: 200,
             color: Color.White,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Reset frogs
@@ -477,7 +477,7 @@ public class GameScene : IScene
             health: 100,
             color: Color.White,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Reset patrol enemies
@@ -490,7 +490,7 @@ public class GameScene : IScene
             health: 100,
             color: Color.White,
             srcRect: textureStore[0],
-            collisionMap: collisionMap,
+            CollisionMap: CollisionMap,
             patrolSpeed: 1f,
             visualSize: new int[2] { 64, 64 },
             player: player
