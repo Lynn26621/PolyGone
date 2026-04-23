@@ -17,8 +17,8 @@ namespace PolyGone.Weapons
         public override float MaxCooldown => 50f; // Slow fire rate
         private AudioManager audioManager;
 
-        public VoidLance(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
-            : base(texture, position, audioManager, size, color, collisionMap, sharedBullets, srcRect)
+        public VoidLance(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> CollisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
+            : base(texture, position, audioManager, size, color, CollisionMap, sharedBullets, srcRect)
         {
             Name = "Void Lance";
             Description = "Fires a slow, piercing bolt that passes through enemies.";
@@ -42,7 +42,7 @@ namespace PolyGone.Weapons
                     ySpeed: (float)(Math.Sin(rotation) * 700f),
                     owner: Owner.Player,
                     srcRect: srcRect,
-                    collisionMap: collisionMap,
+                    CollisionMap: CollisionMap,
                     isPiercing: true             // Passes through enemies
                 ));
 
@@ -70,7 +70,7 @@ namespace PolyGone.Weapons
                             ySpeed: (float)(Math.Sin(angle) * 700f),
                             owner: Owner.Player,
                             srcRect: srcRect,
-                            collisionMap: collisionMap,
+                            CollisionMap: CollisionMap,
                             isPiercing: true
                         ));
                     }

@@ -48,17 +48,17 @@ namespace PolyGone.Entities
             int health,
             Color color,
             Rectangle? srcRect,
-            Dictionary<Vector2, int> collisionMap,
+            Dictionary<Vector2, int> CollisionMap,
             Texture2D blasterTexture,
             List<ItemType> selectedItems,
             List<BlasterAttachmentType> selectedAttachments,
             AudioManager audioManager,
             int[]? visualSize = null
         )
-            : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, visualSize)
+            : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, visualSize)
         {
             // Always use the Blaster as the base weapon
-            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, audioManager, new int[] { 32, 32 }, Color.White, collisionMap, Bullets, srcRect);
+            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, audioManager, new int[] { 32, 32 }, Color.White, CollisionMap, Bullets, srcRect);
 
             // Apply blaster attachments to the freshly created blaster
             foreach (var attachmentType in selectedAttachments)

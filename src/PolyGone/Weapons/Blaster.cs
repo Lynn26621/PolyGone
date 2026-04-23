@@ -28,13 +28,13 @@ namespace PolyGone.Weapons
         public bool IsPiercing { get; set; } = false;
         /// <summary>When true, holding the mouse button fires continuously. Set by RapidFireItem.</summary>
         public bool IsAutoFire { get; set; } = false;
-        protected readonly Dictionary<Vector2, int> collisionMap;
-        public Blaster(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
+        protected readonly Dictionary<Vector2, int> CollisionMap;
+        public Blaster(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> CollisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
             : base(texture, position, size, color, "Blaster", "Basic energy weapon", srcRect)
         {
             this.bullets = sharedBullets; // Use shared bullets list
             this.cooldown = 0f;
-            this.collisionMap = collisionMap;
+            this.CollisionMap = CollisionMap;
             this.audioManager = audioManager;
         }
 
@@ -115,7 +115,7 @@ namespace PolyGone.Weapons
                     ySpeed: (float)(Math.Sin(rotation) * 750f),
                     owner: Owner.Player,
                     srcRect: srcRect,
-                    collisionMap: collisionMap,
+                    CollisionMap: CollisionMap,
                     isPiercing: IsPiercing
                 ));
 
@@ -143,14 +143,15 @@ namespace PolyGone.Weapons
                             ySpeed: (float)(Math.Sin(angle) * 750f),
                             owner: Owner.Player,
                             srcRect: srcRect,
-                            collisionMap: collisionMap,
+                            CollisionMap: CollisionMap,
                             isPiercing: IsPiercing
                         ));
                     }
                 }
 
                 cooldown = MaxCooldown * CooldownMultiplier;
-                if (!IsAutoFire) InputManager.ConsumeClick(); // Prevent multi-shot from same click press
+                if (!IsAutoFire)
+                    InputManager.ConsumeClick(); // Prevent multi-shot from same click press
             }
         }
 
@@ -168,7 +169,7 @@ namespace PolyGone.Weapons
             Vector2 origin = new Vector2(size[0] / 2f, size[1] / 2f);
             Vector2 drawPosition = position - offset + origin;
             spriteBatch.Draw(texture, drawPosition, srcRect, color, rotation, origin, 1f, SpriteEffects.None, 0f);
-            
+
             // Bullets are drawn by Player
         }
     }

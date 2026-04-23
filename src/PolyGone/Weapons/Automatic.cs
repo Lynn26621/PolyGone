@@ -16,8 +16,8 @@ namespace PolyGone.Weapons
         public override float MaxCooldown => 4f; // Very fast fire rate
         private AudioManager audioManager;
 
-        public Automatic(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
-            : base(texture, position, audioManager, size, color, collisionMap, sharedBullets, srcRect)
+        public Automatic(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> CollisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
+            : base(texture, position, audioManager, size, color, CollisionMap, sharedBullets, srcRect)
         {
             Name = "Automatic";
             Description = "Hold to spray bullets. Fast rate, low damage per shot.";
@@ -42,7 +42,7 @@ namespace PolyGone.Weapons
                     ySpeed: (float)(Math.Sin(rotation) * 900f),
                     owner: Owner.Player,
                     srcRect: srcRect,
-                    collisionMap: collisionMap
+                    CollisionMap: CollisionMap
                 ));
 
                 audioManager.PlayAudio("shootSfx", true, "null", false); //Play shoot sound effect
@@ -69,7 +69,7 @@ namespace PolyGone.Weapons
                             ySpeed: (float)(Math.Sin(angle) * 900f),
                             owner: Owner.Player,
                             srcRect: srcRect,
-                            collisionMap: collisionMap
+                            CollisionMap: CollisionMap
                         ));
                     }
                 }
