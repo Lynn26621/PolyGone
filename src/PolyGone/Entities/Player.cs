@@ -141,17 +141,8 @@ namespace PolyGone.Entities
             {
                 default:
                 case CollisionType.Solid:
-                case CollisionType.Rough:
-                case CollisionType.Slippery:
-                    if (deltaY > 0)
-                    {
-                        position.Y = tileRect.Top - size[1];
-                        onGround = true;
-                    }
-                    else if (deltaY < 0)
-                    {
-                        position.Y = tileRect.Bottom;
-                    }
+                    position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
+                    onGround = deltaY > 0;
                     deltaY = 0;
                     break;
                 case CollisionType.SemiSolid:
@@ -171,6 +162,38 @@ namespace PolyGone.Entities
                     {
                         position.Y += deltaY;
                     }
+                    break;
+                case CollisionType.Slippery:
+                    if (deltaY > 0)
+                    {
+                        position.Y = tileRect.Top - size[1];
+                        onGround = true;
+                    }
+                    else if (deltaY < 0)
+                    {
+                        position.Y = tileRect.Bottom;
+                    }
+                    deltaY = 0;
+                    break;
+                case CollisionType.Bouncy:
+                    if (deltaY > 0)
+                    {
+                        position.Y = tileRect.Top - size[1];
+                        base.ChangeY = JumpStrength * -1.2f; // Bounce with extra power
+                        onGround = false;
+                    }
+                    else if (deltaY < 0)
+                    {
+                        position.Y = tileRect.Bottom;
+                        base.ChangeY = JumpStrength * 0.8f; // Weaker bounce when hitting head
+                    }
+                    deltaY = 0;
+                    break;
+                case CollisionType.Damage:
+                    position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
+                    onGround = deltaY > 0;
+                    deltaY = 0;
+                    TakeDamage(10);
                     break;
             }
         }
