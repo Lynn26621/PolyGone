@@ -70,13 +70,13 @@ internal class ControlRemapScene : IScene
 
     // Layout constants
     private const float TitleY = 10f;
-    private const float TabBarY = 38f;
-    private const float TabBarHeight = 26f;
-    private const float HintY = 72f;
-    private const float RowSpacing = 32f;
-    private const float ListStartY = 108f;
+    private const float TabBarY = 78f;
+    private const float TabBarHeight = 40f;
+    private const float HintY = 122f;
+    private const float RowSpacing = 48f;
+    private const float ListStartY = 178f;
     private const float LabelX = 40f;
-    private const float ValueX = 580f;
+    private const float ValueX = 780f;
 
     private static readonly string[] TabLabels = ["Keyboard", "Gamepad"];
 
@@ -171,8 +171,10 @@ internal class ControlRemapScene : IScene
                        (gamepadState.IsButtonDown(Buttons.LeftShoulder) && _previousGamepadState.IsButtonUp(Buttons.LeftShoulder));
         bool tabNext = (keyboardState.IsKeyDown(Keys.E) && _previousKeyboardState.IsKeyUp(Keys.E)) ||
                        (gamepadState.IsButtonDown(Buttons.RightShoulder) && _previousGamepadState.IsButtonUp(Buttons.RightShoulder));
-        if (tabPrev) SwitchTab(-1);
-        else if (tabNext) SwitchTab(1);
+        if (tabPrev)
+            SwitchTab(-1);
+        else if (tabNext)
+            SwitchTab(1);
 
         // Mouse: click to activate row or switch tab
         bool mouseClicked = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
@@ -382,7 +384,8 @@ internal class ControlRemapScene : IScene
         int maxVisible = GetMaxVisibleRows(viewport.Height);
         for (int i = _scrollOffset; i < Math.Min(rows.Count, _scrollOffset + maxVisible); i++)
         {
-            if (rows[i].Kind == RowKind.Header) continue;
+            if (rows[i].Kind == RowKind.Header)
+                continue;
             float y = ListStartY + (i - _scrollOffset) * RowSpacing;
             var rowRect = new Rectangle(0, (int)y, viewport.Width, (int)RowSpacing);
             if (rowRect.Contains(mousePos))
@@ -401,7 +404,8 @@ internal class ControlRemapScene : IScene
         int maxVisible = GetMaxVisibleRows(viewport.Height);
         for (int i = _scrollOffset; i < Math.Min(rows.Count, _scrollOffset + maxVisible); i++)
         {
-            if (rows[i].Kind == RowKind.Header) continue;
+            if (rows[i].Kind == RowKind.Header)
+                continue;
             float y = ListStartY + (i - _scrollOffset) * RowSpacing;
             var rowRect = new Rectangle(0, (int)y, viewport.Width, (int)RowSpacing);
             if (rowRect.Contains(mousePos))
