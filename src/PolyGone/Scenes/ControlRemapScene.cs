@@ -78,6 +78,8 @@ internal class ControlRemapScene : IScene
     private const float LabelX = 40f;
     private const float ValueX = 580f;
 
+    private static readonly string[] TabLabels = ["Keyboard", "Gamepad"];
+
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
@@ -250,7 +252,7 @@ internal class ControlRemapScene : IScene
         // Hint line
         var hint = _waitingForBinding
             ? "Press a key/button.  Esc = cancel."
-            : "W/S = navigate  \u00b7  Enter or Click = remap  \u00b7  Q/E or LB/RB = switch tab  \u00b7  Esc = back";
+            : "W/S = navigate  |  Enter or Click = remap  |  Q/E or LB/RB = switch tab  |  Esc = back";
         var hintSize = _font.MeasureString(hint);
         float hintScale = Math.Min(1f, (viewport.Width - 20f) / hintSize.X);
         spriteBatch.DrawString(_font, hint,
@@ -322,8 +324,7 @@ internal class ControlRemapScene : IScene
         if (_pixel == null || _font == null)
             return;
 
-        string[] tabLabels = ["Keyboard", "Gamepad"];
-        int tabCount = tabLabels.Length;
+        int tabCount = TabLabels.Length;
         float tabWidth = viewport.Width / (float)tabCount;
 
         for (int t = 0; t < tabCount; t++)
@@ -341,7 +342,7 @@ internal class ControlRemapScene : IScene
                     Color.CornflowerBlue);
             }
 
-            var label = tabLabels[t];
+            var label = TabLabels[t];
             var labelSize = _font.MeasureString(label);
             float scale = Math.Min(1f, (tabWidth - 20f) / labelSize.X);
             var textColor = isActive ? Color.White : Color.Gray;
@@ -359,8 +360,7 @@ internal class ControlRemapScene : IScene
         var viewport = _graphics.GraphicsDevice.Viewport;
 
         // Check tab header clicks
-        string[] tabLabels = ["Keyboard", "Gamepad"];
-        int tabCount = tabLabels.Length;
+        int tabCount = TabLabels.Length;
         float tabWidth = viewport.Width / (float)tabCount;
         for (int t = 0; t < tabCount; t++)
         {
