@@ -60,13 +60,14 @@ internal class OptionsScene : IScene
     }
 
     // Row 0=Display, Row 1=Resolution, Row 2=Buttons (drawn separately),
-    // Row 3=Volume, then reset/dev/back rows.
+    // Row 3=Volume, Row 4=Controls, then reset/dev/back rows.
     private string[] GetRowLabels() =>
     [
         _pendingIsFullScreen ? "Display: Fullscreen" : "Display: Windowed",
         ResolutionLabel(),
         "",   // placeholder — button row is drawn separately
         "",   // volume row is drawn as a slider
+        "Controls",
 #if DEBUG
         "Reset Purchases",
 #endif
@@ -381,18 +382,24 @@ internal class OptionsScene : IScene
                 break;
 #if DEBUG
             case 4:
+                _sceneManager.AddScene(new ControlRemapScene(_content, _sceneManager, _graphics));
+                break;
+            case 5:
                 _resetConfirmStep = 1;
                 _resetConfirmSelectedIndex = 1; // default cursor on Cancel
                 break;
-            case 5:
+            case 6:
                 _resetProgressConfirmStep = 1;
                 _resetProgressConfirmSelectedIndex = 1; // default cursor on Cancel
                 break;
-            case 6:
+            case 7:
                 _sceneManager.AddScene(new DevMenuScene(_content, _sceneManager, _graphics));
                 break;
 #else
             case 4:
+                _sceneManager.AddScene(new ControlRemapScene(_content, _sceneManager, _graphics));
+                break;
+            case 5:
                 _resetProgressConfirmStep = 1;
                 _resetProgressConfirmSelectedIndex = 1; // default cursor on Cancel
                 break;
@@ -498,12 +505,12 @@ internal class OptionsScene : IScene
                 else if (i == 1 && _pendingIsFullScreen)
                 { color = Color.DarkGray; }
 #if DEBUG
-                else if (i == 4 || i == 5)
+                else if (i == 5 || i == 6)
                 { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
-                else if (i == 6)
+                else if (i == 7)
                 { color = i == _selectedIndex ? Color.Cyan : Color.DarkCyan; }
 #else
-                else if (i == 4)                                     { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
+                else if (i == 5)                                     { color = i == _selectedIndex ? Color.OrangeRed : new Color(180, 80, 60); }
 #endif
                 else
                 { color = i == _selectedIndex ? Color.Yellow : Color.White; }
