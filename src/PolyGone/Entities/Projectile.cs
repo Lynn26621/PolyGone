@@ -26,8 +26,8 @@ namespace PolyGone
         public bool IsInstantKill { get; set; } = false;
         internal List<Enemy> EnemiesHit = new(); // Track enemies hit to prevent multiple hits from piercing projectiles
 
-        public Projectile(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, float lifetime, int health, Color color, float xSpeed, float ySpeed, Owner owner, int damage, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, bool isPiercing = false)
-            : base(texture, position, audioManager, size, health, color, srcRect, collisionMap)
+        public Projectile(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, float lifetime, int health, Color color, float xSpeed, float ySpeed, Owner owner, int damage, Rectangle? srcRect = null, Dictionary<Vector2, int>? CollisionMap = null, bool isPiercing = false)
+            : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap)
         {
             this.XSpeed = xSpeed;
             this.YSpeed = ySpeed;

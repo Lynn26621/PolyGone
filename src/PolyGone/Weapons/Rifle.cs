@@ -13,8 +13,8 @@ namespace PolyGone.Weapons
         public override float MaxCooldown => 60f; // Rifle has longer cooldown
         private AudioManager audioManager;
 
-        public Rifle(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
-            : base(texture, position, audioManager, size, color, collisionMap, sharedBullets, srcRect)
+        public Rifle(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> CollisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
+            : base(texture, position, audioManager, size, color, CollisionMap, sharedBullets, srcRect)
         {
             Name = "Rifle";
             Description = "Long range weapon with high damage but slow fire rate.";
@@ -24,24 +24,24 @@ namespace PolyGone.Weapons
         public override void Use()
         {
             // Handle shooting with spread using InputManager
-            if (InputManager.GameShootSingle() && cooldown <= 0f)
+            if (InputManager.GameShootSingle() && CooldownRemaining <= 0f)
             {
 
-                    bullets.Add(new Projectile(
-                        texture: texture,
-                        position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
-                        audioManager: audioManager,
-                        size: new int[2] { 11, 11 }, 
-                        lifetime: 250, // Longer range than blaster
-                        health: 3,
-                        damage: 120, // Stronger than blaster
-                        color: Color.Black, // Different color to distinguish
-                        xSpeed: (float)(Math.Cos(rotation) * 3000), // Fast
-                        ySpeed: (float)(Math.Sin(rotation) * 3000),
-                        owner: Owner.Player,
-                        srcRect: srcRect,
-                        collisionMap: collisionMap
-                    ));
+                Bullets.Add(new Projectile(
+                    texture: texture,
+                    position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
+                    audioManager: audioManager,
+                    size: new int[2] { 11, 11 },
+                    lifetime: 250, // Longer range than blaster
+                    health: 3,
+                    damage: 120, // Stronger than blaster
+                    color: Color.Black, // Different color to distinguish
+                    xSpeed: (float)(Math.Cos(Rotation) * 3000), // Fast
+                    ySpeed: (float)(Math.Sin(Rotation) * 3000),
+                    owner: Owner.Player,
+                    srcRect: srcRect,
+                    CollisionMap: CollisionMap
+                ));
 
                 audioManager.PlayAudio("shootSfx", true, "null", false); //Play shoot sound effect
 
@@ -53,8 +53,8 @@ namespace PolyGone.Weapons
                     for (int i = 0; i < ExtraBulletsPerShot; i++)
                     {
                         float spreadOffset = (i - half + (ExtraBulletsPerShot % 2 == 0 ? 0.5f : 0f)) * SpreadStep;
-                        float angle = rotation + spreadOffset;
-                        bullets.Add(new Projectile(
+                        float angle = Rotation + spreadOffset;
+                        Bullets.Add(new Projectile(
                             texture: texture,
                             position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
                             audioManager: audioManager,
@@ -67,12 +67,12 @@ namespace PolyGone.Weapons
                             ySpeed: (float)(Math.Sin(angle) * 3000),
                             owner: Owner.Player,
                             srcRect: srcRect,
-                            collisionMap: collisionMap
+                            CollisionMap: CollisionMap
                         ));
                     }
                 }
 
-                cooldown = MaxCooldown * CooldownMultiplier;
+                CooldownRemaining = MaxCooldown * CooldownMultiplier;
                 InputManager.ConsumeClick(); // Prevent multiple shots from same click
             }
         }
