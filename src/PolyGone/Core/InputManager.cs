@@ -262,20 +262,19 @@ public static class InputManager
         bool gamepadRight = thumbstickX > 0.3f; 
         return keyboardRight || gamepadRight;
     }
-    // Function for interacting with world objects like doors (W for keyboard, DPad Up or left stick up for gamepad).
+    // Function for interacting with world objects like doors (W by default for keyboard, X by default for gamepad — both remappable).
     public static bool GameInteract()
     {
-        bool keyboardInteract = IsKeyPressed(Keys.W);
-        bool gamepadInteract = IsButtonPressed(Buttons.DPadUp) ||
-                               (_currentGamepadState.ThumbSticks.Left.Y > 0.5f && _previousGamepadState.ThumbSticks.Left.Y <= 0.5f);
+        bool keyboardInteract = IsKeyPressed(Bindings.InteractKey);
+        bool gamepadInteract = IsButtonPressed(Bindings.InteractButton);
         return keyboardInteract || gamepadInteract;
     }
 
     // Function for checking if the interact input is held (used to maintain door activation state).
     public static bool GameInteractHeld()
     {
-        bool keyboardInteract = IsKeyHeld(Keys.W);
-        bool gamepadInteract = IsButtonHeld(Buttons.DPadUp) || _currentGamepadState.ThumbSticks.Left.Y > 0.5f;
+        bool keyboardInteract = IsKeyHeld(Bindings.InteractKey);
+        bool gamepadInteract = IsButtonHeld(Bindings.InteractButton);
         return keyboardInteract || gamepadInteract;
     }
 

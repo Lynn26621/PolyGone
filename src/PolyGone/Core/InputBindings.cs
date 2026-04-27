@@ -25,6 +25,7 @@ public sealed class InputBindingProfile
     public Keys JumpKey { get; set; }
     public Keys DropKey { get; set; }
     public Keys LoadoutSkipKey { get; set; }
+    public Keys InteractKey { get; set; }
 
     public Buttons MenuUpButton { get; set; }
     public Buttons MenuDownButton { get; set; }
@@ -37,6 +38,7 @@ public sealed class InputBindingProfile
     public Buttons DropButton { get; set; }
     public Buttons ShootButton { get; set; }
     public Buttons LoadoutSkipButton { get; set; }
+    public Buttons InteractButton { get; set; }
 
     public StickBinding MoveStick { get; set; }
     public StickBinding AimStick { get; set; }
@@ -57,6 +59,7 @@ public sealed class InputBindingProfile
             JumpKey = JumpKey,
             DropKey = DropKey,
             LoadoutSkipKey = LoadoutSkipKey,
+            InteractKey = InteractKey,
             MenuUpButton = MenuUpButton,
             MenuDownButton = MenuDownButton,
             MenuLeftButton = MenuLeftButton,
@@ -68,6 +71,7 @@ public sealed class InputBindingProfile
             DropButton = DropButton,
             ShootButton = ShootButton,
             LoadoutSkipButton = LoadoutSkipButton,
+            InteractButton = InteractButton,
             MoveStick = MoveStick,
             AimStick = AimStick,
         };
@@ -91,6 +95,7 @@ public static class InputBindings
         JumpKey = Keys.Space,
         DropKey = Keys.S,
         LoadoutSkipKey = Keys.LeftControl,
+        InteractKey = Keys.W,
         MenuUpButton = Buttons.DPadUp,
         MenuDownButton = Buttons.DPadDown,
         MenuLeftButton = Buttons.DPadLeft,
@@ -102,6 +107,7 @@ public static class InputBindings
         DropButton = Buttons.DPadDown,
         ShootButton = Buttons.RightTrigger,
         LoadoutSkipButton = Buttons.Back,
+        InteractButton = Buttons.X,
         MoveStick = StickBinding.Left,
         AimStick = StickBinding.Right,
     };
@@ -210,6 +216,7 @@ public static class InputBindings
         sanitized.JumpKey = IsValidKey(profile.JumpKey) ? profile.JumpKey : defaults.JumpKey;
         sanitized.DropKey = IsValidKey(profile.DropKey) ? profile.DropKey : defaults.DropKey;
         sanitized.LoadoutSkipKey = IsValidKey(profile.LoadoutSkipKey) ? profile.LoadoutSkipKey : defaults.LoadoutSkipKey;
+        sanitized.InteractKey = IsValidKey(profile.InteractKey) ? profile.InteractKey : defaults.InteractKey;
 
         sanitized.MenuUpButton = IsValidButton(profile.MenuUpButton) ? profile.MenuUpButton : defaults.MenuUpButton;
         sanitized.MenuDownButton = IsValidButton(profile.MenuDownButton) ? profile.MenuDownButton : defaults.MenuDownButton;
@@ -222,6 +229,7 @@ public static class InputBindings
         sanitized.DropButton = IsValidButton(profile.DropButton) ? profile.DropButton : defaults.DropButton;
         sanitized.ShootButton = IsValidButton(profile.ShootButton) ? profile.ShootButton : defaults.ShootButton;
         sanitized.LoadoutSkipButton = IsValidButton(profile.LoadoutSkipButton) ? profile.LoadoutSkipButton : defaults.LoadoutSkipButton;
+        sanitized.InteractButton = IsValidButton(profile.InteractButton) ? profile.InteractButton : defaults.InteractButton;
 
         sanitized.MoveStick = Enum.IsDefined(typeof(StickBinding), profile.MoveStick) ? profile.MoveStick : defaults.MoveStick;
         sanitized.AimStick = Enum.IsDefined(typeof(StickBinding), profile.AimStick) ? profile.AimStick : defaults.AimStick;

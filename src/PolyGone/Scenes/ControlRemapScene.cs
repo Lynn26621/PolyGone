@@ -50,6 +50,7 @@ internal class ControlRemapScene : IScene
         ("Move Right", p => p.MoveRightKey, (p, v) => p.MoveRightKey = v),
         ("Jump", p => p.JumpKey, (p, v) => p.JumpKey = v),
         ("Drop", p => p.DropKey, (p, v) => p.DropKey = v),
+        ("Interact", p => p.InteractKey, (p, v) => p.InteractKey = v),
         ("Loadout Skip", p => p.LoadoutSkipKey, (p, v) => p.LoadoutSkipKey = v),
     ];
 
@@ -64,6 +65,7 @@ internal class ControlRemapScene : IScene
         ("Pause", p => p.PauseButton, (p, v) => p.PauseButton = v),
         ("Jump", p => p.JumpButton, (p, v) => p.JumpButton = v),
         ("Drop", p => p.DropButton, (p, v) => p.DropButton = v),
+        ("Interact", p => p.InteractButton, (p, v) => p.InteractButton = v),
         ("Shoot", p => p.ShootButton, (p, v) => p.ShootButton = v),
         ("Loadout Skip", p => p.LoadoutSkipButton, (p, v) => p.LoadoutSkipButton = v),
     ];
