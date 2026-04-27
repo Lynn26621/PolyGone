@@ -10,6 +10,8 @@ namespace PolyGone;
 
 internal class ControlRemapScene : IScene
 {
+    private enum Tab { Keyboard, Gamepad }
+
     private enum RowKind
     {
         Header,
@@ -66,17 +68,26 @@ internal class ControlRemapScene : IScene
         ("Loadout Skip", p => p.LoadoutSkipButton, (p, v) => p.LoadoutSkipButton = v),
     ];
 
+    // Layout constants
+    private const float TitleY = 10f;
+    private const float TabBarY = 38f;
+    private const float TabBarHeight = 26f;
+    private const float HintY = 72f;
     private const float RowSpacing = 32f;
     private const float ListStartY = 108f;
     private const float LabelX = 40f;
-    private const float ValueX = 580f; // right-align values against this x
+    private const float ValueX = 580f;
 
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
-    private readonly List<Row> _rows = [];
+    private readonly List<Row> _keyboardRows = [];
+    private readonly List<Row> _gamepadRows = [];
+    private List<Row> CurrentRows => _currentTab == Tab.Keyboard ? _keyboardRows : _gamepadRows;
+
     private Texture2D? _pixel;
     private SpriteFont? _font;
+    private Tab _currentTab;
     private int _selectedIndex;
     private int _scrollOffset;
     private bool _waitingForBinding;
@@ -84,6 +95,7 @@ internal class ControlRemapScene : IScene
     private InputBindingProfile _pendingBindings;
     private KeyboardState _previousKeyboardState;
     private GamePadState _previousGamepadState;
+    private MouseState _previousMouseState;
     private int _captureFramesToSkip;
 
     public ControlRemapScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
@@ -94,31 +106,31 @@ internal class ControlRemapScene : IScene
         _pendingBindings = InputBindings.CloneCurrent();
         _previousKeyboardState = Keyboard.GetState();
         _previousGamepadState = GamePad.GetState(PlayerIndex.One);
-        _captureFramesToSkip = 0;
-        _scrollOffset = 0;
+        _previousMouseState = Mouse.GetState();
+        _currentTab = Tab.Keyboard;
 
-        _rows.Add(new Row(RowKind.Header, "-- Keyboard --"));
-        for (int i = 0; i < KeyboardMappings.Length; i++)
-        {
-            _rows.Add(new Row(RowKind.KeyboardBinding, KeyboardMappings[i].Label, i));
-        }
-
-        _rows.Add(new Row(RowKind.Header, "-- Gamepad --"));
-        for (int i = 0; i < GamepadMappings.Length; i++)
-        {
-            _rows.Add(new Row(RowKind.GamepadBinding, GamepadMappings[i].Label, i));
-        }
-
-        _rows.Add(new Row(RowKind.Header, "-- Stick Settings --"));
-        _rows.Add(new Row(RowKind.MoveStick, "Move Stick"));
-        _rows.Add(new Row(RowKind.AimStick, "Aim Stick"));
-
-        _rows.Add(new Row(RowKind.Header, "-- Actions --"));
-        _rows.Add(new Row(RowKind.Apply, "Apply"));
-        _rows.Add(new Row(RowKind.ResetDefaults, "Reset To Defaults"));
-        _rows.Add(new Row(RowKind.Back, "Back"));
-
+        BuildRows();
         _selectedIndex = FirstSelectableIndex();
+    }
+
+    private void BuildRows()
+    {
+        _keyboardRows.Clear();
+        for (int i = 0; i < KeyboardMappings.Length; i++)
+            _keyboardRows.Add(new Row(RowKind.KeyboardBinding, KeyboardMappings[i].Label, i));
+        _keyboardRows.Add(new Row(RowKind.Apply, "Apply"));
+        _keyboardRows.Add(new Row(RowKind.ResetDefaults, "Reset To Defaults"));
+        _keyboardRows.Add(new Row(RowKind.Back, "Back"));
+
+        _gamepadRows.Clear();
+        for (int i = 0; i < GamepadMappings.Length; i++)
+            _gamepadRows.Add(new Row(RowKind.GamepadBinding, GamepadMappings[i].Label, i));
+        _gamepadRows.Add(new Row(RowKind.Header, "-- Stick Settings --"));
+        _gamepadRows.Add(new Row(RowKind.MoveStick, "Move Stick"));
+        _gamepadRows.Add(new Row(RowKind.AimStick, "Aim Stick"));
+        _gamepadRows.Add(new Row(RowKind.Apply, "Apply"));
+        _gamepadRows.Add(new Row(RowKind.ResetDefaults, "Reset To Defaults"));
+        _gamepadRows.Add(new Row(RowKind.Back, "Back"));
     }
 
     public void Load()
@@ -126,15 +138,14 @@ internal class ControlRemapScene : IScene
         // Refresh pending bindings from the live profile each time this scene is shown.
         _pendingBindings = InputBindings.CloneCurrent();
         _scrollOffset = 0;
+        _currentTab = Tab.Keyboard;
         _selectedIndex = FirstSelectableIndex();
 
         if (_font == null)
         {
             var fontAssetPath = Path.Combine(_content.RootDirectory, "Fonts", "PauseMenu.xnb");
             if (File.Exists(fontAssetPath))
-            {
                 _font = _content.Load<SpriteFont>("Fonts/PauseMenu");
-            }
         }
     }
 
@@ -142,28 +153,47 @@ internal class ControlRemapScene : IScene
     {
         var keyboardState = Keyboard.GetState();
         var gamepadState = GamePad.GetState(PlayerIndex.One);
+        var mouseState = Mouse.GetState();
 
         if (_waitingForBinding)
         {
             HandleBindingCapture(keyboardState, gamepadState);
             _previousKeyboardState = keyboardState;
             _previousGamepadState = gamepadState;
+            _previousMouseState = mouseState;
             return;
+        }
+
+        // Tab switching: Q or LB = previous tab, E or RB = next tab
+        bool tabPrev = (keyboardState.IsKeyDown(Keys.Q) && _previousKeyboardState.IsKeyUp(Keys.Q)) ||
+                       (gamepadState.IsButtonDown(Buttons.LeftShoulder) && _previousGamepadState.IsButtonUp(Buttons.LeftShoulder));
+        bool tabNext = (keyboardState.IsKeyDown(Keys.E) && _previousKeyboardState.IsKeyUp(Keys.E)) ||
+                       (gamepadState.IsButtonDown(Buttons.RightShoulder) && _previousGamepadState.IsButtonUp(Buttons.RightShoulder));
+        if (tabPrev) SwitchTab(-1);
+        else if (tabNext) SwitchTab(1);
+
+        // Mouse: click to activate row or switch tab
+        bool mouseClicked = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+        if (mouseClicked)
+        {
+            HandleMouseClick(mouseState.Position);
+        }
+        else if (mouseState.Position != _previousMouseState.Position)
+        {
+            // Hover: update selected row when mouse moves (keyboard/gamepad can override)
+            HandleMouseHover(mouseState.Position);
         }
 
         // Use raw, hardcoded navigation so this scene always works regardless of how the
         // user has remapped (or broken) their bindings.
         if (RawNavUp(keyboardState, gamepadState))
-        {
             MoveSelection(-1);
-        }
 
         if (RawNavDown(keyboardState, gamepadState))
-        {
             MoveSelection(1);
-        }
 
-        var currentRow = _rows[_selectedIndex];
+        var rows = CurrentRows;
+        var currentRow = rows[_selectedIndex];
         if (currentRow.Kind == RowKind.MoveStick)
         {
             if (RawNavLeft(keyboardState, gamepadState) || RawNavRight(keyboardState, gamepadState))
@@ -184,18 +214,15 @@ internal class ControlRemapScene : IScene
         }
 
         if (RawConfirm(keyboardState, gamepadState))
-        {
             ActivateSelectedRow();
-        }
 
         // Escape always exits this scene (matching the hardcoded MenuBack behaviour).
         if (RawBack(keyboardState, gamepadState))
-        {
             _sceneManager.PopScene(this);
-        }
 
         _previousKeyboardState = keyboardState;
         _previousGamepadState = gamepadState;
+        _previousMouseState = mouseState;
     }
 
     public void Draw(SpriteBatch spriteBatch)
@@ -210,25 +237,30 @@ internal class ControlRemapScene : IScene
         spriteBatch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, viewport.Height), new Color(35, 35, 35));
 
         if (_font == null)
-        {
             return;
-        }
 
         // Title
         const string title = "Controls";
         var titleSize = _font.MeasureString(title);
-        spriteBatch.DrawString(_font, title, new Vector2(viewport.Width / 2f - titleSize.X / 2f, 18f), Color.White);
+        spriteBatch.DrawString(_font, title, new Vector2(viewport.Width / 2f - titleSize.X / 2f, TitleY), Color.White);
+
+        // Tab bar
+        DrawTabBar(spriteBatch, viewport);
 
         // Hint line
         var hint = _waitingForBinding
             ? "Press a key/button.  Esc = cancel."
-            : "W/S or Up/Dn to navigate.  Enter = remap.  Esc = back.";
+            : "W/S = navigate  \u00b7  Enter or Click = remap  \u00b7  Q/E or LB/RB = switch tab  \u00b7  Esc = back";
         var hintSize = _font.MeasureString(hint);
-        spriteBatch.DrawString(_font, hint, new Vector2(viewport.Width / 2f - hintSize.X / 2f, 62f), Color.LightGray);
+        float hintScale = Math.Min(1f, (viewport.Width - 20f) / hintSize.X);
+        spriteBatch.DrawString(_font, hint,
+            new Vector2(viewport.Width / 2f - hintSize.X * hintScale / 2f, HintY),
+            Color.LightGray, 0f, Vector2.Zero, hintScale, SpriteEffects.None, 0f);
 
         // Scroll window
+        var rows = CurrentRows;
         int maxVisible = GetMaxVisibleRows(viewport.Height);
-        int endIndex = Math.Min(_rows.Count, _scrollOffset + maxVisible);
+        int endIndex = Math.Min(rows.Count, _scrollOffset + maxVisible);
 
         // "More above" indicator
         if (_scrollOffset > 0)
@@ -242,7 +274,7 @@ internal class ControlRemapScene : IScene
 
         for (int i = _scrollOffset; i < endIndex; i++)
         {
-            var row = _rows[i];
+            var row = rows[i];
             var isSelected = i == _selectedIndex;
             float y = ListStartY + (i - _scrollOffset) * RowSpacing;
 
@@ -264,7 +296,7 @@ internal class ControlRemapScene : IScene
         }
 
         // "More below" indicator
-        if (_scrollOffset + maxVisible < _rows.Count)
+        if (_scrollOffset + maxVisible < rows.Count)
         {
             const string below = "v more below v";
             float belowY = ListStartY + maxVisible * RowSpacing;
@@ -272,6 +304,111 @@ internal class ControlRemapScene : IScene
             spriteBatch.DrawString(_font, below,
                 new Vector2(viewport.Width / 2f - sz.X / 2f, belowY),
                 Color.Gray);
+        }
+    }
+
+    // ── Tab helpers ──────────────────────────────────────────────────────────
+
+    private void SwitchTab(int direction)
+    {
+        int count = Enum.GetValues<Tab>().Length;
+        _currentTab = (Tab)(((int)_currentTab + direction + count) % count);
+        _scrollOffset = 0;
+        _selectedIndex = FirstSelectableIndex();
+    }
+
+    private void DrawTabBar(SpriteBatch spriteBatch, Viewport viewport)
+    {
+        if (_pixel == null || _font == null)
+            return;
+
+        string[] tabLabels = ["Keyboard", "Gamepad"];
+        int tabCount = tabLabels.Length;
+        float tabWidth = viewport.Width / (float)tabCount;
+
+        for (int t = 0; t < tabCount; t++)
+        {
+            bool isActive = (Tab)t == _currentTab;
+            float tabX = t * tabWidth;
+            var bgColor = isActive ? new Color(60, 60, 130) : new Color(45, 45, 55);
+            spriteBatch.Draw(_pixel, new Rectangle((int)tabX, (int)TabBarY, (int)tabWidth - 2, (int)TabBarHeight), bgColor);
+
+            // Draw bottom border highlight for active tab
+            if (isActive)
+            {
+                spriteBatch.Draw(_pixel,
+                    new Rectangle((int)tabX, (int)(TabBarY + TabBarHeight - 2), (int)tabWidth - 2, 2),
+                    Color.CornflowerBlue);
+            }
+
+            var label = tabLabels[t];
+            var labelSize = _font.MeasureString(label);
+            float scale = Math.Min(1f, (tabWidth - 20f) / labelSize.X);
+            var textColor = isActive ? Color.White : Color.Gray;
+            spriteBatch.DrawString(_font, label,
+                new Vector2(tabX + tabWidth / 2f - labelSize.X * scale / 2f,
+                            TabBarY + (TabBarHeight - labelSize.Y * scale) / 2f),
+                textColor, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+        }
+    }
+
+    // ── Mouse helpers ────────────────────────────────────────────────────────
+
+    private void HandleMouseClick(Point mousePos)
+    {
+        var viewport = _graphics.GraphicsDevice.Viewport;
+
+        // Check tab header clicks
+        string[] tabLabels = ["Keyboard", "Gamepad"];
+        int tabCount = tabLabels.Length;
+        float tabWidth = viewport.Width / (float)tabCount;
+        for (int t = 0; t < tabCount; t++)
+        {
+            var tabRect = new Rectangle((int)(t * tabWidth), (int)TabBarY, (int)tabWidth - 2, (int)TabBarHeight);
+            if (tabRect.Contains(mousePos))
+            {
+                if (_currentTab != (Tab)t)
+                {
+                    _currentTab = (Tab)t;
+                    _scrollOffset = 0;
+                    _selectedIndex = FirstSelectableIndex();
+                }
+                return;
+            }
+        }
+
+        // Check row clicks
+        var rows = CurrentRows;
+        int maxVisible = GetMaxVisibleRows(viewport.Height);
+        for (int i = _scrollOffset; i < Math.Min(rows.Count, _scrollOffset + maxVisible); i++)
+        {
+            if (rows[i].Kind == RowKind.Header) continue;
+            float y = ListStartY + (i - _scrollOffset) * RowSpacing;
+            var rowRect = new Rectangle(0, (int)y, viewport.Width, (int)RowSpacing);
+            if (rowRect.Contains(mousePos))
+            {
+                _selectedIndex = i;
+                ActivateSelectedRow();
+                return;
+            }
+        }
+    }
+
+    private void HandleMouseHover(Point mousePos)
+    {
+        var viewport = _graphics.GraphicsDevice.Viewport;
+        var rows = CurrentRows;
+        int maxVisible = GetMaxVisibleRows(viewport.Height);
+        for (int i = _scrollOffset; i < Math.Min(rows.Count, _scrollOffset + maxVisible); i++)
+        {
+            if (rows[i].Kind == RowKind.Header) continue;
+            float y = ListStartY + (i - _scrollOffset) * RowSpacing;
+            var rowRect = new Rectangle(0, (int)y, viewport.Width, (int)RowSpacing);
+            if (rowRect.Contains(mousePos))
+            {
+                _selectedIndex = i;
+                break;
+            }
         }
     }
 
@@ -408,7 +545,7 @@ internal class ControlRemapScene : IScene
 
     private void ActivateSelectedRow()
     {
-        var row = _rows[_selectedIndex];
+        var row = CurrentRows[_selectedIndex];
         switch (row.Kind)
         {
             case RowKind.KeyboardBinding:
@@ -488,32 +625,31 @@ internal class ControlRemapScene : IScene
             _scrollOffset = _selectedIndex - maxVisible + 1;
         }
 
-        _scrollOffset = Math.Clamp(_scrollOffset, 0, Math.Max(0, _rows.Count - maxVisible));
+        _scrollOffset = Math.Clamp(_scrollOffset, 0, Math.Max(0, CurrentRows.Count - maxVisible));
     }
 
     // ── Selection helpers ────────────────────────────────────────────────────
 
     private int FirstSelectableIndex()
     {
-        for (int i = 0; i < _rows.Count; i++)
+        var rows = CurrentRows;
+        for (int i = 0; i < rows.Count; i++)
         {
-            if (_rows[i].Kind != RowKind.Header)
-            {
+            if (rows[i].Kind != RowKind.Header)
                 return i;
-            }
         }
-
         return 0;
     }
 
     private void MoveSelection(int direction)
     {
+        var rows = CurrentRows;
         int next = _selectedIndex;
         do
         {
-            next = (next + direction + _rows.Count) % _rows.Count;
+            next = (next + direction + rows.Count) % rows.Count;
         }
-        while (_rows[next].Kind == RowKind.Header);
+        while (rows[next].Kind == RowKind.Header);
 
         _selectedIndex = next;
         EnsureSelectedVisible();
