@@ -90,7 +90,7 @@ public class Entity : Sprite
         }
 
         CollisionType colType = CollisionTypeMapper.GetCollisionType(tileId);
-        return colType == CollisionType.Solid || colType == CollisionType.Damage || colType == CollisionType.Slippery;
+        return colType == CollisionType.Solid || colType == CollisionType.Rough || colType == CollisionType.Slippery;
     }
 
     protected virtual void HandleVerticalCollision(ref bool onGround, ref float deltaY, List<(Rectangle, CollisionType)> collisions)
@@ -100,11 +100,14 @@ public class Entity : Sprite
         {
             default:
             case CollisionType.Solid:
+            case CollisionType.Rough:
+            case CollisionType.Slippery:
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
-                deltaY = 0;
                 onGround = deltaY > 0;
+                deltaY = 0;
                 break;
-            case CollisionType.SemiSolid: 
+            case CollisionType.SemiSolid:
+                // By default, entities do not drop through platforms
                 if (deltaY > 0 && (position.Y + size[1]) <= tileRect.Top + 10)
                 {
                     position.Y = tileRect.Top - size[1];
@@ -116,30 +119,6 @@ public class Entity : Sprite
                     position.Y += deltaY;
                 }
                 break;
-            case CollisionType.Slippery:
-                position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
-                onGround = deltaY > 0;
-                Friction = 0.5f;
-                deltaY = 0;
-                break;
-            case CollisionType.Bouncy:
-                position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
-                onGround = deltaY > 0;
-                if (deltaY > 0)
-                {
-                    deltaY = -Math.Abs(deltaY) * 1.5f;
-                }
-                else
-                {
-                    deltaY = Math.Abs(deltaY) * 1.5f;
-                }
-                break;
-            case CollisionType.Damage:
-                position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
-                onGround = deltaY > 0;
-                deltaY = 0;
-                TakeDamage(10); 
-                break;
         }
     }
 
@@ -150,32 +129,14 @@ public class Entity : Sprite
         {
             default:
             case CollisionType.Solid:
-                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                    deltaX = 0;
-                    break;
+            case CollisionType.Rough:
+            case CollisionType.Slippery:
+                // Standard wall collision
+                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+                deltaX = 0;
+                break;
             case CollisionType.SemiSolid:
                 position.X += deltaX;
-                break;
-            case CollisionType.Slippery:
-                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                deltaX = 0;
-                Friction = 0.5f;
-                break;
-            case CollisionType.Bouncy:
-                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                    if (deltaX > 0)
-                    {
-                        deltaX = -Math.Abs(deltaX) * 1.5f;
-                    }
-                    else
-                    {
-                        deltaX = Math.Abs(deltaX) * 1.5f;
-                    }
-                    break;
-            case CollisionType.Damage:
-                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                deltaX = 0;
-                TakeDamage(10); 
                 break;
         }
     }
@@ -413,7 +374,7 @@ public class Entity : Sprite
             foreach (var (tileRect, colType) in visualCollisions)
             {
                 // Only adjust for solid collision types
-                if (colType == CollisionType.Solid || colType == CollisionType.Damage || colType == CollisionType.Slippery)
+                if (colType == CollisionType.Solid || colType == CollisionType.Rough || colType == CollisionType.Slippery)
                 {
                     // Check if hitbox is not colliding (meaning only visual extends into tile)
                     Rectangle hitboxRect = new Rectangle((int)position.X, (int)position.Y, size[0], size[1]);
