@@ -6,8 +6,8 @@ public enum CollisionType
     Solid = 1,      // Normal solid collision
     SemiSolid = 2,  // Drop-through platforms
     Slippery = 3,   // Slippery surface (e.g., ice)
-    Rough = 4,     // Rough surface (e.g., mud)
-    OneWay = 5,     // One-way platforms
+    Bouncy = 4,     // Bouncy surface 
+    Damage = 5,     // Damaging surface
 }
 
 public static class CollisionTypeMapper
@@ -21,10 +21,9 @@ public static class CollisionTypeMapper
             0 => CollisionType.Solid,
             1 => CollisionType.SemiSolid,
             2 => CollisionType.Slippery,
-            3 => CollisionType.Rough,
-            4 => CollisionType.OneWay,
+            3 => CollisionType.Bouncy,
+            4 => CollisionType.Damage,
             _ => CollisionType.None,
         };
     }
 }
- 
