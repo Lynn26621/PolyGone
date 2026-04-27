@@ -181,11 +181,11 @@ namespace PolyGone.Entities
             int moveDirection = 0;
 
             // Horizontal movement with speed boost consideration
-            if ((InputManager.GameMoveLeft() && !InputManager.GameMoveRight()))
+            if (InputManager.GameMoveLeft() && !InputManager.GameMoveRight())
             {
                 moveDirection = -1;
             }
-            else if ((InputManager.GameMoveRight() && !InputManager.GameMoveLeft()))
+            else if (InputManager.GameMoveRight() && !InputManager.GameMoveLeft())
             {
                 moveDirection = 1;
             }
@@ -271,9 +271,8 @@ namespace PolyGone.Entities
                         {
                             break;
                         }
-
-                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 #endif
+                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
                         // Take 40 damage
                         Health -= 40;
                         if (Health <= 0)
@@ -302,9 +301,8 @@ namespace PolyGone.Entities
                         {
                             break;
                         }
-
-                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 #endif
+                        audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
                         // Take 40 damage
                         Health -= 40;
                         if (Health <= 0)
