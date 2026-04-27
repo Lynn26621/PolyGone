@@ -27,9 +27,9 @@ namespace PolyGone.Weapons
         public override void Use()
         {
             // Fires while mouse button is held - no ConsumeClick needed (hold-fire weapon)
-            if (InputManager.GameShootHold() && CooldownRemaining <= 0f)
+            if (InputManager.GameShootHold() && cooldown <= 0f)
             {
-                Bullets.Add(new Projectile(
+                bullets.Add(new Projectile(
                     texture: texture,
                     position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
                     audioManager: audioManager,
@@ -38,11 +38,11 @@ namespace PolyGone.Weapons
                     health: 1,
                     damage: 15,
                     color: Color.Cyan,
-                    xSpeed: (float)(Math.Cos(Rotation) * 900f),
-                    ySpeed: (float)(Math.Sin(Rotation) * 900f),
+                    xSpeed: (float)(Math.Cos(rotation) * 900f),
+                    ySpeed: (float)(Math.Sin(rotation) * 900f),
                     owner: Owner.Player,
                     srcRect: srcRect,
-                    CollisionMap: CollisionMap
+                    collisionMap: collisionMap
                 ));
 
                 audioManager.PlayAudio("shootSfx", true, "null", false); //Play shoot sound effect
@@ -55,8 +55,8 @@ namespace PolyGone.Weapons
                     for (int i = 0; i < ExtraBulletsPerShot; i++)
                     {
                         float spreadOffset = (i - half + (ExtraBulletsPerShot % 2 == 0 ? 0.5f : 0f)) * SpreadStep;
-                        float angle = Rotation + spreadOffset;
-                        Bullets.Add(new Projectile(
+                        float angle = rotation + spreadOffset;
+                        bullets.Add(new Projectile(
                             texture: texture,
                             position: new Vector2(position.X + size[0] / 2f - 5f, position.Y + size[1] / 2f - 5f),
                             audioManager: audioManager,
@@ -69,12 +69,12 @@ namespace PolyGone.Weapons
                             ySpeed: (float)(Math.Sin(angle) * 900f),
                             owner: Owner.Player,
                             srcRect: srcRect,
-                            CollisionMap: CollisionMap
+                            collisionMap: collisionMap
                         ));
                     }
                 }
 
-                CooldownRemaining = MaxCooldown * CooldownMultiplier;
+                cooldown = MaxCooldown * CooldownMultiplier;
             }
         }
     }

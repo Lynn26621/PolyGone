@@ -17,8 +17,8 @@ namespace PolyGone.Weapons
         public override float MaxCooldown => 50f; // Slow fire rate
         private AudioManager audioManager;
 
-        public VoidLance(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> CollisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
-            : base(texture, position, audioManager, size, color, CollisionMap, sharedBullets, srcRect)
+        public VoidLance(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, Color color, Dictionary<Vector2, int> collisionMap, List<Projectile> sharedBullets, Rectangle? srcRect = null)
+            : base(texture, position, audioManager, size, color, collisionMap, sharedBullets, srcRect)
         {
             Name = "Void Lance";
             Description = "Fires a slow, piercing bolt that passes through enemies.";
@@ -27,9 +27,9 @@ namespace PolyGone.Weapons
 
         public override void Use()
         {
-            if (InputManager.GameShootSingle() && CooldownRemaining <= 0f)
+            if (InputManager.GameShootSingle() && cooldown <= 0f)
             {
-                Bullets.Add(new Projectile(
+                bullets.Add(new Projectile(
                     texture: texture,
                     position: new Vector2(position.X + size[0] / 2f - 7f, position.Y + size[1] / 2f - 7f),
                     audioManager: audioManager,
@@ -38,11 +38,11 @@ namespace PolyGone.Weapons
                     health: 99,                  // Won't die from health damage
                     damage: 40,                  // Same as base blaster
                     color: new Color(180, 0, 220), // Deep violet
-                    xSpeed: (float)(Math.Cos(Rotation) * 700f),
-                    ySpeed: (float)(Math.Sin(Rotation) * 700f),
+                    xSpeed: (float)(Math.Cos(rotation) * 700f),
+                    ySpeed: (float)(Math.Sin(rotation) * 700f),
                     owner: Owner.Player,
                     srcRect: srcRect,
-                    CollisionMap: CollisionMap,
+                    collisionMap: collisionMap,
                     isPiercing: true             // Passes through enemies
                 ));
 
@@ -56,8 +56,8 @@ namespace PolyGone.Weapons
                     for (int i = 0; i < ExtraBulletsPerShot; i++)
                     {
                         float spreadOffset = (i - half + (ExtraBulletsPerShot % 2 == 0 ? 0.5f : 0f)) * SpreadStep;
-                        float angle = Rotation + spreadOffset;
-                        Bullets.Add(new Projectile(
+                        float angle = rotation + spreadOffset;
+                        bullets.Add(new Projectile(
                             texture: texture,
                             position: new Vector2(position.X + size[0] / 2f - 7f, position.Y + size[1] / 2f - 7f),
                             audioManager: audioManager,
@@ -70,13 +70,13 @@ namespace PolyGone.Weapons
                             ySpeed: (float)(Math.Sin(angle) * 700f),
                             owner: Owner.Player,
                             srcRect: srcRect,
-                            CollisionMap: CollisionMap,
+                            collisionMap: collisionMap,
                             isPiercing: true
                         ));
                     }
                 }
 
-                CooldownRemaining = MaxCooldown * CooldownMultiplier;
+                cooldown = MaxCooldown * CooldownMultiplier;
                 InputManager.ConsumeClick();
             }
         }

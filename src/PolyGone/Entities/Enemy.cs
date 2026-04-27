@@ -24,9 +24,9 @@ class Enemy : Entity
     private readonly List<Projectile> hitProjectiles = new List<Projectile>(); // Track projectiles that hit during window
     private const float DAMAGE_WINDOW_DURATION = 2f; // 2 frames to accumulate damage
 
-    public Enemy(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? CollisionMap = null, float patrolSpeed = 1f, int[]? visualSize = null, Player? player = null)
+    public Enemy(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? collisionMap = null, float patrolSpeed = 1f, int[]? visualSize = null, Player? player = null)
 
-        : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, visualSize)
+        : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, visualSize)
     {
         this.Friction = 0.9f; // Enemy has default friction
         this.patrolSpeed = patrolSpeed;

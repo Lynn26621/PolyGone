@@ -31,9 +31,9 @@ class FactoryEnemy : Enemy
         int health = 200,
         Color color = default,
         Rectangle? srcRect = null,
-        Dictionary<Vector2, int>? CollisionMap = null,
+        Dictionary<Vector2, int>? collisionMap = null,
         int[]? visualSize = null)
-        : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, patrolSpeed: 0f, visualSize: visualSize)
+        : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, patrolSpeed: 0f, visualSize: visualSize)
     {
         this.player = player;
         this.audioManager = audioManager;
@@ -69,7 +69,7 @@ class FactoryEnemy : Enemy
             health: 25,
             color: Color.White,
             srcRect: srcRect,
-            CollisionMap: CollisionMap,
+            collisionMap: CollisionMap,
             patrolSpeed: 2f,
             visualSize: new int[] { 32, 32 },
             player: player

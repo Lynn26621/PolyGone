@@ -23,7 +23,6 @@ public class Game1 : Game
 
         // Apply saved display settings (defaults to 1280x720 windowed on first run)
         DisplaySettings.Load();
-        InputBindings.Load();
         if (DisplaySettings.IsFullScreen)
         {
             var dm = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;

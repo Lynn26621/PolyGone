@@ -28,9 +28,9 @@ class Frog : Enemy
         int health = 100,
         Color color = default,
         Rectangle? srcRect = null,
-        Dictionary<Vector2, int>? CollisionMap = null,
+        Dictionary<Vector2, int>? collisionMap = null,
         int[]? visualSize = null)
-        : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, patrolSpeed: 0.8f, visualSize: visualSize, player: player)
+        : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, patrolSpeed: 0.8f, visualSize: visualSize, player: player)
     {
         this.player = player;
         this.Friction = 0.93f;

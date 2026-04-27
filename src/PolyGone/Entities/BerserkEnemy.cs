@@ -34,9 +34,9 @@ class BerserkEnemy : Enemy
         int health = 400,
         Color color = default,
         Rectangle? srcRect = null,
-        Dictionary<Vector2, int>? CollisionMap = null,
+        Dictionary<Vector2, int>? collisionMap = null,
         int[]? visualSize = null)
-        : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, patrolSpeed: 1f, visualSize: visualSize)
+        : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, patrolSpeed: 1f, visualSize: visualSize)
     {
         this.player = player;
         this.audioManager = audioManager;
@@ -70,7 +70,7 @@ class BerserkEnemy : Enemy
             ySpeed: direction.Y * BULLET_SPEED,
             owner: Owner.Enemy,
             srcRect: srcRect,
-            CollisionMap: CollisionMap
+            collisionMap: CollisionMap
         ));
 
         audioManager.PlayAudio("shootSfx", true, "null", false); //Play shoot sound effect

@@ -12,6 +12,8 @@ namespace PolyGone.Core
     {
         public bool IsTriggered { get; private set; }
         public bool IsActivated { get; private set; }
+        private KeyboardState keyboardState;
+        private KeyboardState prevKeyboardState;
         private AudioManager audioManager;
         public SwitchTrigger(Vector2 position, int width, int height, AudioManager audioManager)
         : base(position, width, height)
@@ -35,15 +37,19 @@ namespace PolyGone.Core
 
         public void HandleInput()
         {
-            // Use InputManager so both keyboard (W) and gamepad (DPad Up / left-stick up) work.
-            if (!PolyGone.InputManager.GameInteractHeld())
+            keyboardState = Keyboard.GetState();
+            if (keyboardState.IsKeyUp(Keys.W))
             {
                 IsActivated = false;
             }
-            if (IsTriggered && PolyGone.InputManager.GameInteract())
+            if (IsTriggered)
             {
-                IsActivated = true;
+                if (keyboardState.IsKeyDown(Keys.W) && prevKeyboardState.IsKeyUp(Keys.W))
+                {
+                    IsActivated = true;
+                }
             }
+            prevKeyboardState = Keyboard.GetState();
         }
 
         public void Reset()

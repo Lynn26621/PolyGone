@@ -48,17 +48,17 @@ namespace PolyGone.Entities
             int health,
             Color color,
             Rectangle? srcRect,
-            Dictionary<Vector2, int> CollisionMap,
+            Dictionary<Vector2, int> collisionMap,
             Texture2D blasterTexture,
             List<ItemType> selectedItems,
             List<BlasterAttachmentType> selectedAttachments,
             AudioManager audioManager,
             int[]? visualSize = null
         )
-            : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, visualSize)
+            : base(texture, position, audioManager, size, health, color, srcRect, collisionMap, visualSize)
         {
             // Always use the Blaster as the base weapon
-            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, audioManager, new int[] { 32, 32 }, Color.White, CollisionMap, Bullets, srcRect);
+            currentWeapon = new Blaster(blasterTexture, Vector2.Zero, audioManager, new int[] { 32, 32 }, Color.White, collisionMap, Bullets, srcRect);
 
             // Apply blaster attachments to the freshly created blaster
             foreach (var attachmentType in selectedAttachments)
@@ -204,11 +204,11 @@ namespace PolyGone.Entities
             int moveDirection = 0;
 
             // Horizontal movement with speed boost consideration
-            if (InputManager.GameMoveLeft() && !InputManager.GameMoveRight())
+            if ((InputManager.GameMoveLeft() && !InputManager.GameMoveRight()))
             {
                 moveDirection = -1;
             }
-            else if (InputManager.GameMoveRight() && !InputManager.GameMoveLeft())
+            else if ((InputManager.GameMoveRight() && !InputManager.GameMoveLeft()))
             {
                 moveDirection = 1;
             }
@@ -294,8 +294,9 @@ namespace PolyGone.Entities
                         {
                             break;
                         }
-#endif
+
                         audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
+#endif
                         // Take 40 damage
                         Health -= 40;
                         if (Health <= 0)
@@ -324,8 +325,9 @@ namespace PolyGone.Entities
                         {
                             break;
                         }
-#endif
+
                         audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
+#endif
                         // Take 40 damage
                         Health -= 40;
                         if (Health <= 0)

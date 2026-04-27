@@ -257,7 +257,7 @@ namespace PolyGone
             HandleVerticalNavigation();
 
             // Handle item selection
-            if (InputManager.MenuNonPointerConfirm())
+            if (InputManager.MenuConfirm())
             {
                 HandleItemSelection();
             }
@@ -265,7 +265,7 @@ namespace PolyGone
 
         private void HandleMouseNavigation()
         {
-            if (_font == null || !InputManager.MenuConfirmMouseClick())
+            if (_font == null || !InputManager.MenuConfirm() || Mouse.GetState().LeftButton != ButtonState.Pressed)
             {
                 return;
             }
