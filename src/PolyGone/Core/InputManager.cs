@@ -134,6 +134,12 @@ public static class InputManager
             _mouseClickCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
+        // Update dash cooldown
+        if (_dashCooldown > 0f)
+        {
+            _dashCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
         // Update menu hold timers
         if (menuUpHeld)
         {
@@ -194,6 +200,14 @@ public static class InputManager
     {
         _mouseClickCooldown = CLICK_COOLDOWN;
     }
+    /// <summary>
+    /// Consumes the dash by starting the cooldown timer.
+    /// Call this after handling a dash to prevent it from triggering multiple actions.
+    /// </summary>
+    public static void ConsumeDash()
+    {
+        _dashCooldown = DASH_COOLDOWN;
+    }
     // Function for single shooting (left click for mouse and right trigger for gamepad)
     public static bool GameShootSingle()
         {
@@ -219,6 +233,18 @@ public static class InputManager
         bool gamepadJump = _currentGamepadState.Buttons.A == ButtonState.Pressed
                            && _previousGamepadState.Buttons.A == ButtonState.Released;
         return keyboardJump || gamepadJump;
+    }
+
+    // function for dashing (left shift for keyboard and B button for gamepad)
+    public static bool GameDash()
+    {
+        bool keyboardDash = _currentKeyboardState.IsKeyDown(Keys.LeftShift)
+                            && !_previousKeyboardState.IsKeyDown(Keys.LeftShift)
+                            && _dashCooldown <= 0f;
+        bool gamepadDash = _currentGamepadState.Buttons.B == ButtonState.Pressed
+                           && _previousGamepadState.Buttons.B == ButtonState.Released
+                           && _dashCooldown <= 0f;
+        return keyboardDash || gamepadDash;
     }
 
     // function for moving left in game (A key for keyboard and left thumbstick left for gamepad)
@@ -482,6 +508,14 @@ public static class InputManager
         _mouseClickCooldown = CLICK_COOLDOWN;
     }
 
+    /// <summary>
+    /// Forces a reset of the dash cooldown. Useful when transitioning between scenes
+    /// to ensure old dashes don't carry over.
+    /// </summary>
+    public static void ResetDash()
+    {
+        _dashCooldown = DASH_COOLDOWN;
+    }
 
 
     /// <summary>

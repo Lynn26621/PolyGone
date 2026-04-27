@@ -1,14 +1,15 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Numerics;
-using Vector2 = Microsoft.Xna.Framework.Vector2;
-using PolyGone.Weapons;
-using PolyGone.Items;
 using PolyGone.Core;
+using PolyGone.Items;
+using PolyGone.Weapons;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Threading.Channels;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
 
 namespace PolyGone.Entities
 {
@@ -244,6 +245,18 @@ namespace PolyGone.Entities
                 }
 #endif
             }
+
+            // Dashing with coyote time
+            if (InputManager.GameDash())
+            {
+                var dash = playerAbilityTypes[0];
+                if (UnlockTracker.IsAbilityUnlocked(dash))
+                {
+                    ChangeX += DashStrength * moveDirection;
+                    InputManager.ConsumeDash();
+                }
+            }
+
         }
 
         protected override void OnEntityCollision(Entity other)
