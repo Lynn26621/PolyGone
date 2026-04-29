@@ -29,6 +29,12 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <!-- Copy background textures (loaded directly from file system, not through content pipeline) to output -->
+    <Content Include="Content\Textures\Backgrounds\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
   </ItemGroup>

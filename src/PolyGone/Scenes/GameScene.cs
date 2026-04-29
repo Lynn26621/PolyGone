@@ -22,8 +22,15 @@ public class GameScene : IScene
     private Texture2D miscSheet = null!;
     private Texture2D textureSheet = null!;
     private Texture2D foregroundSheet = null!;
-    private Texture2D backgroundSheet = null!;
+    private Texture2D? backgroundSheet;
     private Texture2D collisionSheet = null!;
+    private Vector2 backgroundLayerOffset = Vector2.Zero;
+    private Vector2 backgroundParallax = new Vector2(0.5f, 0.5f);
+    private float backgroundOpacity = 1f;
+    private bool backgroundRepeatX = false;
+    private bool backgroundRepeatY = false;
+    private int mapWidth;
+    private int mapHeight;
     private AudioManager audioManager;
     private SpriteFont hudFont = null!;
     private SceneManager sceneManager;
@@ -103,6 +110,51 @@ public class GameScene : IScene
         return new Vector2(x * 2, y * 2 - 64);
     }
 
+    private Texture2D LoadImageLayerTexture(string mapFilePath, string imagePath)
+    {
+        string mapDirectory = Path.GetDirectoryName(Path.GetFullPath(mapFilePath)) ?? Directory.GetCurrentDirectory();
+        string resolvedPath = Path.GetFullPath(Path.Combine(mapDirectory, imagePath));
+
+        if (!File.Exists(resolvedPath))
+        {
+            throw new FileNotFoundException($"Could not find background image '{imagePath}' referenced by '{mapFilePath}'.", resolvedPath);
+        }
+
+        using FileStream stream = File.OpenRead(resolvedPath);
+        return Texture2D.FromStream(graphics.GraphicsDevice, stream);
+    }
+
+    private static float GetFloatProperty(JsonElement element, string propertyName, float defaultValue)
+    {
+        if (!element.TryGetProperty(propertyName, out JsonElement property))
+        {
+            return defaultValue;
+        }
+
+        return property.ValueKind switch
+        {
+            JsonValueKind.Number => property.GetSingle(),
+            JsonValueKind.String when float.TryParse(property.GetString(), out float parsedValue) => parsedValue,
+            _ => defaultValue,
+        };
+    }
+
+    private static bool GetBoolProperty(JsonElement element, string propertyName, bool defaultValue)
+    {
+        if (!element.TryGetProperty(propertyName, out JsonElement property))
+        {
+            return defaultValue;
+        }
+
+        return property.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String when bool.TryParse(property.GetString(), out bool parsedValue) => parsedValue,
+            _ => defaultValue,
+        };
+    }
+
     // Loads tile and collision maps from a JSON file exported from Tiled
     public void LoadMapFromJson(string filepath)
     {
@@ -114,16 +166,49 @@ public class GameScene : IScene
         JsonElement root = doc.RootElement;
         JsonElement layers = root.GetProperty("layers");
 
-        int width = root.GetProperty("width").GetInt32();
+        mapWidth = root.GetProperty("width").GetInt32();
+        mapHeight = root.GetProperty("height").GetInt32();
 
         tileMap = new Dictionary<Vector2, int>();
         CollisionMap = new Dictionary<Vector2, int>();
+        backgroundSheet = null;
+        backgroundLayerOffset = Vector2.Zero;
+        backgroundParallax = new Vector2(0.5f, 0.5f);
+        backgroundOpacity = 1f;
+        backgroundRepeatX = false;
+        backgroundRepeatY = false;
 
         foreach (JsonElement layer in layers.EnumerateArray())
         {
+            string? layerType = layer.GetProperty("type").GetString();
             string? layerName = layer.GetProperty("name").GetString();
-            // Process tile and collision layers
-            if (layerName != "Objects")
+
+            if (layerType == "imagelayer")
+            {
+                if (backgroundSheet == null && layer.TryGetProperty("image", out JsonElement imageProperty))
+                {
+                    string? imagePath = imageProperty.GetString();
+                    if (!string.IsNullOrWhiteSpace(imagePath))
+                    {
+                        backgroundSheet = LoadImageLayerTexture(filepath, imagePath);
+                        backgroundLayerOffset = new Vector2(
+                            (GetFloatProperty(layer, "x", 0f) + GetFloatProperty(layer, "offsetx", 0f)) * 2f,
+                            (GetFloatProperty(layer, "y", 0f) + GetFloatProperty(layer, "offsety", 0f)) * 2f
+                        );
+                        backgroundParallax = new Vector2(
+                            GetFloatProperty(layer, "parallaxx", 0.5f),
+                            GetFloatProperty(layer, "parallaxy", 0.5f)
+                        );
+                        backgroundOpacity = GetFloatProperty(layer, "opacity", 1f);
+                        backgroundRepeatX = GetBoolProperty(layer, "repeatx", false);
+                        backgroundRepeatY = GetBoolProperty(layer, "repeaty", false);
+                    }
+                }
+
+                continue;
+            }
+
+            if (layerType == "tilelayer")
             {
                 JsonElement dataArray = layer.GetProperty("data");
 
@@ -131,8 +216,8 @@ public class GameScene : IScene
                 foreach (JsonElement tile in dataArray.EnumerateArray())
                 {
                     int tileValue = tile.GetInt32();
-                    int x = index % width;
-                    int y = index / width;
+                    int x = index % mapWidth;
+                    int y = index / mapWidth;
 
                     if (tileValue > 0)
                     {
@@ -150,123 +235,127 @@ public class GameScene : IScene
 
                     index++;
                 }
+
+                continue;
             }
-            // Process object layer for entity spawns and other objects
-            else
+
+            if (layerType != "objectgroup")
             {
-                List<JsonElement> objects = layer.GetProperty("objects").EnumerateArray().ToList();
-                foreach (JsonElement obj in objects)
+                continue;
+            }
+
+            List<JsonElement> objects = layer.GetProperty("objects").EnumerateArray().ToList();
+            foreach (JsonElement obj in objects)
+            {
+                string? objType = obj.GetProperty("type").GetString();
+                switch (objType)
                 {
-                    string? objType = obj.GetProperty("type").GetString();
-                    switch (objType)
-                    {
-                        case "Player":
-                        case "PlayerSpawn":
-                            int playerX;
-                            int playerY;
-                            if (loadX.HasValue && loadY.HasValue)
+                    case "Player":
+                    case "PlayerSpawn":
+                        int playerX;
+                        int playerY;
+                        if (loadX.HasValue && loadY.HasValue)
+                        {
+                            playerX = loadX.Value;
+                            playerY = loadY.Value;
+                        }
+                        else
+                        {
+                            playerX = (int)obj.GetProperty("x").GetSingle();
+                            playerY = (int)obj.GetProperty("y").GetSingle();
+                        }
+                        playerPos = AdjustCoordinates(
+                            playerX,
+                            playerY
+                        );
+                        playerSpawnFound = true;
+                        break;
+                    case "Enemy":
+                        Vector2 enemyPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        enemySpawns.Add(enemyPos);
+                        break;
+                    case "TurretEnemy":
+                        Vector2 turretPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        turretEnemySpawns.Add(turretPos);
+                        break;
+                    case "BerserkEnemy":
+                        Vector2 berserkPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        berserkEnemySpawns.Add(berserkPos);
+                        break;
+                    case "FactoryEnemy":
+                        Vector2 factoryPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        factoryEnemySpawns.Add(factoryPos);
+                        break;
+                    case "Frog":
+                        Vector2 frogPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        frogSpawns.Add(frogPos);
+                        break;
+                    case "Goal":
+                        Vector2 goalPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        int goalWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                        int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                        goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight);
+                        break;
+                    case "Door":
+                        Vector2 doorPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        int doorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                        int doorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                        string connectedLevel = "Hub";
+                        int playerLoadX = 0;
+                        int playerLoadY = 0;
+                        List<JsonElement> properties = obj.GetProperty("properties").EnumerateArray().ToList();
+                        foreach (JsonElement prop in properties)
+                        {
+                            string? propName = prop.GetProperty("name").GetString();
+                            switch (propName)
                             {
-                                playerX = loadX.Value;
-                                playerY = loadY.Value;
+                                case "connectedLevel":
+                                    connectedLevel = (string)(prop.GetProperty("value").GetString() ?? "Hub");
+                                    break;
+                                case "loadX":
+                                    playerLoadX = (int)prop.GetProperty("value").GetSingle();
+                                    break;
+                                case "loadY":
+                                    playerLoadY = (int)prop.GetProperty("value").GetSingle();
+                                    break;
+                                default:
+                                    break;
                             }
-                            else
-                            {
-                                playerX = (int)obj.GetProperty("x").GetSingle();
-                                playerY = (int)obj.GetProperty("y").GetSingle();
-                            }
-                            playerPos = AdjustCoordinates(
-                                playerX,
-                                playerY
-                            );
-                            playerSpawnFound = true;
-                            break;
-                        case "Enemy":
-                            Vector2 enemyPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            enemySpawns.Add(enemyPos);
-                            break;
-                        case "TurretEnemy":
-                            Vector2 turretPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            turretEnemySpawns.Add(turretPos);
-                            break;
-                        case "BerserkEnemy":
-                            Vector2 berserkPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            berserkEnemySpawns.Add(berserkPos);
-                            break;
-                        case "FactoryEnemy":
-                            Vector2 factoryPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            factoryEnemySpawns.Add(factoryPos);
-                            break;
-                        case "Frog":
-                            Vector2 frogPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            frogSpawns.Add(frogPos);
-                            break;
-                        case "Goal":
-                            Vector2 goalPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            int goalWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
-                            int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                            goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight);
-                            break;
-                        case "Door":
-                            Vector2 doorPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            int doorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
-                            int doorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                            string connectedLevel = "Hub";
-                            int playerLoadX = 0;
-                            int playerLoadY = 0;
-                            List<JsonElement> properties = obj.GetProperty("properties").EnumerateArray().ToList();
-                            foreach (JsonElement prop in properties)
-                            {
-                                string? propName = prop.GetProperty("name").GetString();
-                                switch (propName)
-                                {
-                                    case "connectedLevel":
-                                        connectedLevel = (string)(prop.GetProperty("value").GetString() ?? "Hub");
-                                        break;
-                                    case "loadX":
-                                        playerLoadX = (int)prop.GetProperty("value").GetSingle();
-                                        break;
-                                    case "loadY":
-                                        playerLoadY = (int)prop.GetProperty("value").GetSingle();
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            }
-                            levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connectedLevel, playerLoadX, playerLoadY));
-                            break;
-                        case "Inventory":
-                            Vector2 inventoryPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            int inventoryWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
-                            int inventoryHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                            inventoryAccess = new SwitchTrigger(inventoryPos, inventoryWidth, inventoryHeight, audioManager);
-                            break;
-                        default:
-                            break;
-                    }
+                        }
+                        levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connectedLevel, playerLoadX, playerLoadY));
+                        break;
+                    case "Inventory":
+                        Vector2 inventoryPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        int inventoryWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                        int inventoryHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                        inventoryAccess = new SwitchTrigger(inventoryPos, inventoryWidth, inventoryHeight, audioManager);
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -319,7 +408,6 @@ public class GameScene : IScene
         miscSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneMiscSpriteSheet");
         textureSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneMgSheet");
         foregroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneFgSheet");
-        backgroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneBgSheet");
         collisionSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneCollisionSheet");
         try
         {
@@ -527,11 +615,11 @@ public class GameScene : IScene
 
         // Update player and camera
         player.Update(gameTime, camera.position);
-        camera.Follow(player.Rectangle, new Vector2(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight), new Vector2(tileMap.Keys.Max(k => k.X + 1) * 64, tileMap.Keys.Max(k => k.Y + 1) * 64));
+        camera.Follow(player.Rectangle, new Vector2(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight), new Vector2(mapWidth * 64, mapHeight * 64));
 
         // Check all entities for out-of-bounds
-        float worldMaxY = tileMap.Keys.Max(k => k.Y + 1) * 64;
-        float worldMaxX = tileMap.Keys.Max(k => k.X + 1) * 64;
+        float worldMaxY = mapHeight * 64;
+        float worldMaxX = mapWidth * 64;
 
         // Check player bounds
         if (player.position.Y > worldMaxY)
@@ -793,8 +881,82 @@ public class GameScene : IScene
             }
         }
     }
+
+    private void DrawBackground(SpriteBatch spriteBatch)
+    {
+        if (backgroundSheet == null)
+        {
+            return;
+        }
+
+        // Apply parallax scrolling: parallax factor closer to 0 = farther away (moves less)
+        // Invert the parallax value so that values work intuitively:
+        // 0.0 = fixed, 0.5 = typical depth effect, 1.0 = moves with camera
+        Vector2 parallaxFactor = Vector2.One - backgroundParallax;
+
+        int baseX = (int)backgroundLayerOffset.X - (int)(camera.position.X * parallaxFactor.X);
+        int baseY = (int)backgroundLayerOffset.Y - (int)(camera.position.Y * parallaxFactor.Y);
+        int bgWidth = backgroundSheet.Width * 2;
+        int bgHeight = backgroundSheet.Height * 2;
+
+        if (backgroundRepeatX || backgroundRepeatY)
+        {
+            // Calculate viewport bounds to determine which tiles to draw
+            int viewportWidth = graphics.PreferredBackBufferWidth;
+            int viewportHeight = graphics.PreferredBackBufferHeight;
+
+            // Normalize the base position to handle tiling correctly
+            int startX = baseX;
+            int startY = baseY;
+
+            if (backgroundRepeatX)
+            {
+                // Calculate how many tiles we need to cover the screen horizontally
+                startX = baseX % bgWidth;
+                if (startX > 0)
+                    startX -= bgWidth;
+
+                for (int x = startX; x < viewportWidth; x += bgWidth)
+                {
+                    int drawY = backgroundRepeatY ? (startY % bgHeight) - bgHeight : baseY;
+                    if (backgroundRepeatY)
+                    {
+                        for (int y = drawY; y < viewportHeight; y += bgHeight)
+                        {
+                            spriteBatch.Draw(backgroundSheet, new Rectangle(x, y, bgWidth, bgHeight), Color.White * backgroundOpacity);
+                        }
+                    }
+                    else
+                    {
+                        spriteBatch.Draw(backgroundSheet, new Rectangle(x, baseY, bgWidth, bgHeight), Color.White * backgroundOpacity);
+                    }
+                }
+            }
+            else if (backgroundRepeatY)
+            {
+                // Only repeat vertically
+                startY = baseY % bgHeight;
+                if (startY > 0)
+                    startY -= bgHeight;
+
+                for (int y = startY; y < viewportHeight; y += bgHeight)
+                {
+                    spriteBatch.Draw(backgroundSheet, new Rectangle(baseX, y, bgWidth, bgHeight), Color.White * backgroundOpacity);
+                }
+            }
+        }
+        else
+        {
+            // No tiling, just draw once
+            Rectangle backgroundDest = new Rectangle(baseX, baseY, bgWidth, bgHeight);
+            spriteBatch.Draw(backgroundSheet, backgroundDest, Color.White * backgroundOpacity);
+        }
+    }
+
     public void Draw(SpriteBatch spriteBatch)
     {
+        DrawBackground(spriteBatch);
+
         foreach (var tile in tileMap)
         {
             Rectangle dest = new Rectangle(
