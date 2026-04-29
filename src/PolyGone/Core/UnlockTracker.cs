@@ -18,6 +18,8 @@ public static class UnlockTracker
 
     private static HashSet<string> _completedLevels = new();
 
+    private static HashSet<string> _unlockedAbilities = new();
+
     /// <summary>
     /// Maps each locked player item to the level name that must be completed to unlock it.
     /// Items not listed here are always unlocked.
@@ -41,20 +43,15 @@ public static class UnlockTracker
     };
 
     /// <summary>
-    /// Maps each locked ability to the level name required to unlock it.
-    /// Abilities not listed here are always unlocked.
-    /// </summary>
-    private static readonly Dictionary<AbilityType, string> _abilityUnlockRequirements = new()
-    {
-        { AbilityType.Dash,   "TestLevel"  },
-        { AbilityType.WallJump,    "TestLevel2" }
-    };
-
-    /// <summary>
     /// The ordered list of level file names. Index 0 is always unlocked;
     /// every subsequent level requires the one before it to be completed.
     /// </summary>
     private static readonly string[] _levelOrder = { "TestLevel", "TestLevel2", "TestLevel3" };
+
+    /// <summary>
+    /// List of all unlockable abilites.
+    /// </summary>
+    private static readonly string[] _abilityNames = { "Dash", "WallJump" };
 
     /// <summary>Returns true if the level is available to play.</summary>
     public static bool IsLevelUnlocked(string levelFile)
@@ -71,6 +68,12 @@ public static class UnlockTracker
         if (idx <= 0) return null;
         if (_completedLevels.Contains(_levelOrder[idx - 1])) return null;
         return $"Complete {GetLevelDisplayName(_levelOrder[idx - 1])} to unlock";
+    }
+
+    /// <summary>Returns true if the level is available to play.</summary>
+    public static bool IsAbilityUnlocked(string abilityName)
+    {
+        return _unlockedAbilities.Contains(abilityName);
     }
 
     /// <summary>Returns true if the item is available for selection.</summary>
@@ -121,22 +124,6 @@ public static class UnlockTracker
         return $"Complete {GetLevelDisplayName(level)} to unlock";
     }
 
-    /// <summary>Returns true if the ability is available for use.</summary>
-    public static bool IsAbilityUnlocked(AbilityType ability)
-    {
-        if (!_abilityUnlockRequirements.TryGetValue(ability, out var requiredLevel))
-            return true; // No requirement — always unlocked
-        return _completedLevels.Contains(requiredLevel);
-    }
-
-    /// <summary>Returns a human-readable hint describing how to unlock the ability, or null if always unlocked.</summary>
-    public static string? GetAbilityUnlockHint(AbilityType ability)
-    {
-        if (!_abilityUnlockRequirements.TryGetValue(ability, out var level))
-            return null;
-        return $"Complete {GetLevelDisplayName(level)} to unlock";
-    }
-
     /// <summary>
     /// Returns the number of player item slots available.
     /// Starts at 1; completing TestLevel adds a 2nd slot; completing TestLevel3 adds a 3rd.
@@ -177,15 +164,23 @@ public static class UnlockTracker
     public static void Load()
     {
         _completedLevels = new HashSet<string>();
+        _unlockedAbilities = new HashSet<string>();
         try
         {
             if (!File.Exists(SavePath)) return;
             string json = File.ReadAllText(SavePath);
             var raw = JsonSerializer.Deserialize<List<string>>(json);
             if (raw != null)
+            {
                 _completedLevels = new HashSet<string>(raw);
+                _unlockedAbilities = new HashSet<string>(raw);
+            }
         }
         catch { }
+        foreach (var ability in _abilityNames)
+        {
+            _unlockedAbilities.Add(ability);
+        }
     }
 
     /// <summary>Records that a level has been completed and saves to disk.</summary>
@@ -195,10 +190,18 @@ public static class UnlockTracker
             Save();
     }
 
+    // <summary>Records that an ability has been unlocked and saves to disk.</summary>
+    public static void RecordAbilityUnlocked(string abilityName)
+    {
+        if (_unlockedAbilities.Add(abilityName))
+            Save();
+    }
+
     /// <summary>Clears all unlock data from memory and disk (used for testing/reset).</summary>
     public static void Reset()
     {
         _completedLevels = new HashSet<string>();
+        _unlockedAbilities = new HashSet<string>();
         try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
     }
 
@@ -211,6 +214,14 @@ public static class UnlockTracker
     {
         if (!_completedLevels.Add(levelFile))
             _completedLevels.Remove(levelFile);
+        Save();
+    }
+
+    /// <summary>
+    public static void ToggleAbilityUnlocked(string abilityName)
+    {
+        if (!_unlockedAbilities.Add(abilityName))
+            _unlockedAbilities.Remove(abilityName);
         Save();
     }
 #endif

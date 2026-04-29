@@ -33,13 +33,7 @@ namespace PolyGone.Entities
         private readonly string[] playerAbilityNames =
         {
             "Dash",
-            "Wall Jump"
-        };
-
-        private readonly AbilityType[] playerAbilityTypes =
-        {
-            AbilityType.Dash,
-            AbilityType.WallJump
+            "WallJump"
         };
 
         private readonly string[] playerAbilityDescriptions =
@@ -64,7 +58,7 @@ namespace PolyGone.Entities
         public float JumpStrength { get; set; } = -16.75f;
 
         // Dash velocity boost applied when dashing
-        public float DashStrength { get; set; } = 288f;
+        public float DashStrength { get; set; } = 35f;
 
         public Player(
             Texture2D texture,
@@ -216,6 +210,7 @@ namespace PolyGone.Entities
             float speedMultiplier = 1.5f;
             ChangeX += moveDirection * 1f * speedMultiplier;
             ChangeX = MathHelper.Clamp(ChangeX, -5f * speedMultiplier, 5f * speedMultiplier);
+            ChangeX += ExtraX; // Apply any additional speed boosts (like from dashing)
 
             // Jumping with coyote time and double jump
             bool JumpTriggered = InputManager.GameJump();
@@ -247,12 +242,13 @@ namespace PolyGone.Entities
             }
 
             // Dashing with coyote time
-            if (InputManager.GameDash())
+            if (InputManager.GameDash() && moveDirection != 0)
             {
-                var dash = playerAbilityTypes[0];
+                var dash = playerAbilityNames[0];
                 if (UnlockTracker.IsAbilityUnlocked(dash))
                 {
-                    ChangeX += DashStrength * moveDirection;
+                    ExtraX += DashStrength * moveDirection;
+                    ChangeX += ExtraX; // Apply dash boost to current velocity
                     InputManager.ConsumeDash();
                 }
             }

@@ -23,6 +23,7 @@ public sealed class InputBindingProfile
     public Keys MoveLeftKey { get; set; }
     public Keys MoveRightKey { get; set; }
     public Keys JumpKey { get; set; }
+    public Keys DashKey { get; set; }
     public Keys DropKey { get; set; }
     public Keys LoadoutSkipKey { get; set; }
     public Keys InteractKey { get; set; }
@@ -35,6 +36,7 @@ public sealed class InputBindingProfile
     public Buttons MenuBackButton { get; set; }
     public Buttons PauseButton { get; set; }
     public Buttons JumpButton { get; set; }
+    public Buttons DashButton { get; set; }
     public Buttons DropButton { get; set; }
     public Buttons ShootButton { get; set; }
     public Buttons LoadoutSkipButton { get; set; }
@@ -57,6 +59,7 @@ public sealed class InputBindingProfile
             MoveLeftKey = MoveLeftKey,
             MoveRightKey = MoveRightKey,
             JumpKey = JumpKey,
+            DashKey = DashKey,
             DropKey = DropKey,
             LoadoutSkipKey = LoadoutSkipKey,
             InteractKey = InteractKey,
@@ -68,6 +71,7 @@ public sealed class InputBindingProfile
             MenuBackButton = MenuBackButton,
             PauseButton = PauseButton,
             JumpButton = JumpButton,
+            DashButton = DashButton,
             DropButton = DropButton,
             ShootButton = ShootButton,
             LoadoutSkipButton = LoadoutSkipButton,
@@ -93,6 +97,7 @@ public static class InputBindings
         MoveLeftKey = Keys.A,
         MoveRightKey = Keys.D,
         JumpKey = Keys.Space,
+        DashKey = Keys.LeftShift,
         DropKey = Keys.S,
         LoadoutSkipKey = Keys.LeftControl,
         InteractKey = Keys.W,
@@ -104,6 +109,7 @@ public static class InputBindings
         MenuBackButton = Buttons.B,
         PauseButton = Buttons.Start,
         JumpButton = Buttons.A,
+        DashButton = Buttons.B,
         DropButton = Buttons.DPadDown,
         ShootButton = Buttons.RightTrigger,
         LoadoutSkipButton = Buttons.Back,
@@ -214,6 +220,7 @@ public static class InputBindings
         sanitized.MoveLeftKey = IsValidKey(profile.MoveLeftKey) ? profile.MoveLeftKey : defaults.MoveLeftKey;
         sanitized.MoveRightKey = IsValidKey(profile.MoveRightKey) ? profile.MoveRightKey : defaults.MoveRightKey;
         sanitized.JumpKey = IsValidKey(profile.JumpKey) ? profile.JumpKey : defaults.JumpKey;
+        sanitized.DashKey = IsValidKey(profile.DashKey) ? profile.DashKey: defaults.DashKey;
         sanitized.DropKey = IsValidKey(profile.DropKey) ? profile.DropKey : defaults.DropKey;
         sanitized.LoadoutSkipKey = IsValidKey(profile.LoadoutSkipKey) ? profile.LoadoutSkipKey : defaults.LoadoutSkipKey;
         sanitized.InteractKey = IsValidKey(profile.InteractKey) ? profile.InteractKey : defaults.InteractKey;
@@ -226,6 +233,7 @@ public static class InputBindings
         sanitized.MenuBackButton = IsValidButton(profile.MenuBackButton) ? profile.MenuBackButton : defaults.MenuBackButton;
         sanitized.PauseButton = IsValidButton(profile.PauseButton) ? profile.PauseButton : defaults.PauseButton;
         sanitized.JumpButton = IsValidButton(profile.JumpButton) ? profile.JumpButton : defaults.JumpButton;
+        sanitized.DashButton = IsValidButton(profile.DashButton) ? profile.DashButton : defaults.DashButton;
         sanitized.DropButton = IsValidButton(profile.DropButton) ? profile.DropButton : defaults.DropButton;
         sanitized.ShootButton = IsValidButton(profile.ShootButton) ? profile.ShootButton : defaults.ShootButton;
         sanitized.LoadoutSkipButton = IsValidButton(profile.LoadoutSkipButton) ? profile.LoadoutSkipButton : defaults.LoadoutSkipButton;

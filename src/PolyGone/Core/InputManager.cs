@@ -267,11 +267,9 @@ public static class InputManager
     // function for dashing (left shift for keyboard and B button for gamepad)
     public static bool GameDash()
     {
-        bool keyboardDash = _currentKeyboardState.IsKeyDown(Keys.LeftShift)
-                            && !_previousKeyboardState.IsKeyDown(Keys.LeftShift)
+        bool keyboardDash = IsKeyPressed(Bindings.DashKey)
                             && _dashCooldown <= 0f;
-        bool gamepadDash = _currentGamepadState.Buttons.B == ButtonState.Pressed
-                           && _previousGamepadState.Buttons.B == ButtonState.Released
+        bool gamepadDash = IsButtonPressed(Bindings.DashButton)
                            && _dashCooldown <= 0f;
         return keyboardDash || gamepadDash;
     }
