@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="43">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="43">
  <editorsettings>
   <export target="../../src/PolyGone/Maps/TestLevel4.json" format="json"/>
  </editorsettings>
  <tileset firstgid="1" source="../TiledSets/PolyGoneTextureSheet.tsx"/>
  <tileset firstgid="5" source="../TiledSets/BasicTiles.tsx"/>
  <tileset firstgid="9" source="../TiledSets/CollisionTiles.tsx"/>
+ <imagelayer id="4" name="Background" parallaxx="0.8" parallaxy="0.9" repeatx="1" repeaty="1">
+  <image source="../../src/PolyGone/Content/Textures/Backgrounds/CastleBackground.png" width="256" height="256"/>
+ </imagelayer>
  <layer id="1" name="Tiles" width="30" height="20">
   <data encoding="csv">
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
