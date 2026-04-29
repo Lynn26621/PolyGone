@@ -2,6 +2,22 @@
  "height":20,
  "infinite":false,
  "layers":[
+       {
+         "id":4,
+         "image":"..\/Content\/Textures\/Backgrounds\/CastleBackground.png",
+         "imageheight":256,
+         "imagewidth":256,
+         "name":"Background",
+         "opacity":1,
+         "parallaxx":0.8,
+         "parallaxy":0.9,
+         "repeatx":true,
+         "repeaty":true,
+         "type":"imagelayer",
+         "visible":true,
+         "x":0,
+         "y":0
+       },
         {
          "data":[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
