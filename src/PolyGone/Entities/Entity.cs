@@ -25,6 +25,7 @@ public class Entity : Sprite
     private AudioManager audioManager;
     /// <summary>Multiplier applied to gravity each physics tick. 1 = normal, lower = floatier.</summary>
     protected float GravityScale = 1f;
+    protected bool IsOnSlipperyTile = false;
 
     // Constants for tile-based calculations
     protected const int TILE_SIZE = 64;
@@ -101,8 +102,8 @@ public class Entity : Sprite
             default:
             case CollisionType.Solid:
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
+                onGround = deltaY > 0;  // ✅ Check deltaY before setting it to 0
                 deltaY = 0;
-                onGround = deltaY > 0;
                 break;
             case CollisionType.SemiSolid: 
                 if (deltaY > 0 && (position.Y + size[1]) <= tileRect.Top + 10)
@@ -119,20 +120,39 @@ public class Entity : Sprite
             case CollisionType.Slippery:
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                 onGround = deltaY > 0;
-                Friction = 0.5f;
                 deltaY = 0;
+                if (onGround)
+                {
+                    Friction = 0.4f;
+                    IsOnSlipperyTile = true; // Mark as on slippery surface
+                }
                 break;
             case CollisionType.Bouncy:
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                 onGround = deltaY > 0;
-                if (deltaY > 0)
+
+                if (deltaY > 0) // Landing on bouncy tile
                 {
-                    deltaY = -Math.Abs(deltaY) * 1.5f;
+                    float fallSpeed = Math.Abs(this.ChangeY); // Use current velocity as fall speed
+
+                    if (fallSpeed > 2f) // Fast fall - trampoline effect
+                    {
+                        // Dynamic bounce proportional to fall speed
+                        this.ChangeY = -fallSpeed * 1.2f;
+                    }
+                    else // Slow approach - standing boost
+                    {
+                        // Jump boost for standing/walking on bouncy tiles
+                        this.ChangeY = -16.75f * 1.5f; // JumpStrength * 1.5f (using typical jump strength)
+                    }
                 }
-                else
+                else if (deltaY < 0) // Head bonk from below
                 {
-                    deltaY = Math.Abs(deltaY) * 1.5f;
+                    // Weaker bounce when hitting from below
+                    this.ChangeY = Math.Abs(this.ChangeY) * 0.8f;
                 }
+
+                deltaY = 0;
                 break;
             case CollisionType.Damage:
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
@@ -159,19 +179,20 @@ public class Entity : Sprite
             case CollisionType.Slippery:
                 position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
                 deltaX = 0;
-                Friction = 0.5f;
+                if (IsOnGround)
+                {
+                    Friction = 0.4f;
+                    IsOnSlipperyTile = true; // Mark as on slippery surface
+                }
                 break;
             case CollisionType.Bouncy:
-                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                    if (deltaX > 0)
-                    {
-                        deltaX = -Math.Abs(deltaX) * 1.5f;
-                    }
-                    else
-                    {
-                        deltaX = Math.Abs(deltaX) * 1.5f;
-                    }
-                    break;
+                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+
+                // Wall bounce - reverse and amplify
+                this.ChangeX = -this.ChangeX * 1.5f;
+
+                deltaX = 0;
+                break;
             case CollisionType.Damage:
                 position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
                 deltaX = 0;
@@ -216,6 +237,9 @@ public class Entity : Sprite
     // Physics and collision update for non-player entities (no input)
     protected virtual void PhysicsUpdate(float deltaTime)
     {
+        Friction = 0.9f; // Reset to normal each frame
+        IsOnSlipperyTile = false; // Reset each frame, collision handlers will set it if needed
+
         // Apply gravity
         ChangeY += 0.7f * GravityScale;
         ChangeY = Math.Min(ChangeY, 14f);

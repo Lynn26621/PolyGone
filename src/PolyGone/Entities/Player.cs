@@ -40,6 +40,9 @@ namespace PolyGone.Entities
 
         // Jump velocity — scaled by LowGravityItem to keep peak height constant
         public float JumpStrength { get; set; } = -16.75f;
+        private bool isOnSlipperyTile = false;
+        private bool wasOnSlipperyTile = false;
+        private float preservedMomentumX = 0f;
 
         public Player(
             Texture2D texture,
@@ -164,35 +167,60 @@ namespace PolyGone.Entities
                     }
                     break;
                 case CollisionType.Slippery:
-                    if (deltaY > 0)
-                    {
-                        position.Y = tileRect.Top - size[1];
-                        onGround = true;
-                    }
-                    else if (deltaY < 0)
-                    {
-                        position.Y = tileRect.Bottom;
-                    }
+                    position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
+                    onGround = deltaY > 0;
                     deltaY = 0;
-                    break;
-                case CollisionType.Bouncy:
-                    if (deltaY > 0)
+                    if (onGround)
                     {
-                        position.Y = tileRect.Top - size[1];
-                        base.ChangeY = JumpStrength * -1.2f; // Bounce with extra power
-                        onGround = false;
+                        // If we just stepped on ice, preserve current momentum
+                        if (!wasOnSlipperyTile)
+                        {
+                            preservedMomentumX = ChangeX; // Save current velocity
+                        }
+                        Friction = 0.02f;
+                        isOnSlipperyTile = true;
                     }
-                    else if (deltaY < 0)
-                    {
-                        position.Y = tileRect.Bottom;
-                        base.ChangeY = JumpStrength * 0.8f; // Weaker bounce when hitting head
-                    }
-                    deltaY = 0;
                     break;
                 case CollisionType.Damage:
                     position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                     onGround = deltaY > 0;
                     deltaY = 0;
+                    TakeDamage(10);
+                    break;
+            }
+        }
+
+        // Handle horizontal collisions
+        protected override void HandleHorizontalCollision(ref float deltaX, List<(Rectangle, CollisionType)> collisions)
+        {
+            var (tileRect, colType) = collisions[0];
+            switch (colType)
+            {
+                default:
+                case CollisionType.Solid:
+                     position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+                    deltaX = 0;
+                    break;
+                case CollisionType.SemiSolid: //Player passes through semi-solid platforms horizontally without collision
+                    position.X += deltaX;
+                    break;
+                case CollisionType.Slippery:
+                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+                    deltaX = 0;
+                    if (IsOnGround)
+                    {
+                        // If we just touched a slippery wall, preserve current momentum
+                        if (!wasOnSlipperyTile)
+                        {
+                            preservedMomentumX = ChangeX; // Save current velocity
+                        }
+                        Friction = 0.02f;
+                        isOnSlipperyTile = true;
+                    }
+                    break;
+                case CollisionType.Damage:
+                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+                    deltaX = 0;
                     TakeDamage(10);
                     break;
             }
@@ -214,8 +242,9 @@ namespace PolyGone.Entities
             }
 
             // Apply acceleration with speed boost
+            float baseAcceleration = isOnSlipperyTile ? 0.01f : 1f; // Much slower acceleration on ice
             float speedMultiplier = GetSpeedBoostMultiplier();
-            ChangeX += moveDirection * 1f * speedMultiplier;
+            ChangeX += moveDirection * baseAcceleration * speedMultiplier;
             ChangeX = MathHelper.Clamp(ChangeX, -5f * speedMultiplier, 5f * speedMultiplier);
 
             // Jumping with coyote time and double jump
@@ -224,10 +253,29 @@ namespace PolyGone.Entities
 
             if ((IsOnGround || coyoteTime > 0f) && JumpTriggered)
             {
-                base.ChangeY = JumpStrength;
-                audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect                 
-                coyoteTime = 0f; // Reset coyote time after jumping
-                GetActiveDoubleJumpItem()?.Reset(); // Allow double jump in the new air phase
+                // Check if standing on bouncy tile for jump boost
+                float jumpPower = JumpStrength;
+
+                // Check if there's a bouncy tile directly below the player
+                if (CollisionMap != null)
+                {
+                    int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
+                    int playerTileY = (int)((position.Y + size[1]) / TILE_SIZE);
+                    var keyBelow = new Vector2(playerTileX, playerTileY + 1);
+
+                    if (CollisionMap.TryGetValue(keyBelow, out int belowTileId) &&
+                        belowTileId != -1 &&
+                        CollisionTypeMapper.GetCollisionType(belowTileId) == CollisionType.Bouncy)
+                    {
+                        jumpPower = JumpStrength * 1.5f; // 50% jump boost on bouncy tiles
+                        Console.WriteLine($"Jump boost applied! Jump power: {jumpPower}");
+                    }
+                }
+
+                base.ChangeY = jumpPower;
+                audioManager.PlayAudio("jumpSfx", true, "null", false);
+                coyoteTime = 0f;
+                GetActiveDoubleJumpItem()?.Reset();
             }
             else
             {
@@ -350,7 +398,17 @@ namespace PolyGone.Entities
 
         protected override void PhysicsUpdate(float deltaTime)
         {
-            // Call base physics update for standard collision handling
+            Friction = 0.8f;
+            wasOnSlipperyTile = isOnSlipperyTile; // Remember previous state
+            isOnSlipperyTile = false; // Reset each frame
+
+            // Apply preserved momentum if we were on ice
+            if (wasOnSlipperyTile && Math.Abs(preservedMomentumX) > 0.1f)
+            {
+                ChangeX = preservedMomentumX * 0.998f; // Slower decay (was 0.98f)
+                preservedMomentumX *= 0.998f;
+            }
+
             base.PhysicsUpdate(deltaTime);
         }
 
