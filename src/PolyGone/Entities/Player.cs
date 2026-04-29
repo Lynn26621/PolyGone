@@ -197,9 +197,10 @@ namespace PolyGone.Entities
 
             // Jumping with coyote time and double jump
             bool JumpTriggered = InputManager.GameJump();
+            bool JumpHeld = InputManager.GameJumpHeld();
             bool wasOnGroundLastFrame = IsOnGround;
 
-            if ((IsOnGround || coyoteTime > 0f) && JumpTriggered)
+            if ((IsOnGround || coyoteTime > 0f) && JumpHeld)
             {
                 base.ChangeY = JumpStrength;
                 audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect                 
