@@ -86,9 +86,7 @@ public class WinScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     selectedIndex = i;
-
-                    // Mouse click with InputManager
-                    if (InputManager.MenuConfirm())
+                    if (InputManager.MenuConfirmMouseClick())
                     {
                         ExecuteSelection();
                         InputManager.ConsumeClick();
@@ -108,7 +106,7 @@ public class WinScene : IScene
             selectedIndex = (selectedIndex + 1) % options.Length;
         }
 
-        if (InputManager.MenuConfirm())
+        if (InputManager.MenuNonPointerConfirm())
         {
             ExecuteSelection();
         }

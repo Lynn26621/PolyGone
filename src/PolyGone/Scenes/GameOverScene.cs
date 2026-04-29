@@ -58,7 +58,6 @@ internal class GameOverScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     selectedIndex = i;
-
                     if (InputManager.MenuConfirmMouseClick())
                     {
                         ExecuteSelection();
@@ -79,7 +78,7 @@ internal class GameOverScene : IScene
             selectedIndex = (selectedIndex + 1) % options.Length;
         }
 
-        if (InputManager.MenuConfirm())
+        if (InputManager.MenuNonPointerConfirm())
         {
             ExecuteSelection();
         }

@@ -64,9 +64,7 @@ internal class PauseScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _selectedIndex = i;
-
-                    // Mouse click with InputManager
-                    if (InputManager.MenuConfirm())
+                    if (InputManager.MenuConfirmMouseClick())
                     {
                         ExecuteSelection();
                         InputManager.ConsumeClick();
@@ -86,7 +84,7 @@ internal class PauseScene : IScene
             _selectedIndex = (_selectedIndex + 1) % _options.Length;
         }
 
-        if (InputManager.MenuConfirm())
+        if (InputManager.MenuNonPointerConfirm())
         {
             ExecuteSelection();
         }
