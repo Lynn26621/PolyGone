@@ -155,40 +155,6 @@ public class GameScene : IScene
         };
     }
 
-    private static int GetTilesetFirstGid(JsonElement root, string tilesetName)
-    {
-        foreach (JsonElement tileset in root.GetProperty("tilesets").EnumerateArray())
-        {
-            if (!tileset.TryGetProperty("source", out JsonElement sourceProperty))
-            {
-                continue;
-            }
-
-            string? source = sourceProperty.GetString();
-            if (string.IsNullOrWhiteSpace(source))
-            {
-                continue;
-            }
-
-            string sourceName = Path.GetFileNameWithoutExtension(source);
-            if (string.Equals(sourceName, tilesetName, StringComparison.OrdinalIgnoreCase))
-            {
-                return tileset.GetProperty("firstgid").GetInt32();
-            }
-        }
-
-        throw new InvalidDataException($"Could not find tileset '{tilesetName}' in exported Tiled map data.");
-    }
-
-    private static int NormalizeCollisionTileId(int rawTileValue, int collisionFirstGid)
-    {
-        // If the value is a Tiled global ID, convert it to a 1-based local collision ID.
-        // If it is already local (e.g., hand-edited 1/2), keep it as-is.
-        return rawTileValue >= collisionFirstGid
-            ? rawTileValue - collisionFirstGid + 1
-            : rawTileValue;
-    }
-
     // Loads tile and collision maps from a JSON file exported from Tiled
     public void LoadMapFromJson(string filepath)
     {
@@ -199,8 +165,6 @@ public class GameScene : IScene
         // Get root and layers
         JsonElement root = doc.RootElement;
         JsonElement layers = root.GetProperty("layers");
-        int tileFirstGid = GetTilesetFirstGid(root, "BasicTiles");
-        int collisionFirstGid = GetTilesetFirstGid(root, "CollisionTiles");
 
         mapWidth = root.GetProperty("width").GetInt32();
         mapHeight = root.GetProperty("height").GetInt32();
@@ -257,17 +221,15 @@ public class GameScene : IScene
 
                     if (tileValue > 0)
                     {
+                        // Tiled's firstgid is 1, so we subtract 1 to convert to 0-based index.
+                        // Wrap tileValue to fit within our texture store (assuming 16 tiles per layer in Tiled)
                         if (layerName == "Tiles")
                         {
-                            tileMap[new Vector2(x, y)] = tileValue - tileFirstGid;
+                            tileMap[new Vector2(x, y)] = tileValue % 16 - 1;
                         }
                         else if (layerName == "Collisions")
                         {
-                            int normalizedCollisionId = NormalizeCollisionTileId(tileValue, collisionFirstGid);
-                            if (normalizedCollisionId > 0)
-                            {
-                                CollisionMap[new Vector2(x, y)] = normalizedCollisionId;
-                            }
+                            CollisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
                         }
                     }
 
