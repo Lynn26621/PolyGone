@@ -88,7 +88,7 @@ internal class PaymentScene : IScene
             else if (char.IsDigit(c) && _pin.Length < FormbarSession.PinMaxLength) _pin += c;
         }
 
-        if (InputManager.MenuConfirm() && _pin.Length > 0)
+        if (InputManager.MenuNonPointerConfirm() && _pin.Length > 0)
             StartPayment();
 
 #if DEBUG
@@ -100,7 +100,7 @@ internal class PaymentScene : IScene
         }
 #endif
 
-        if (_font == null || !InputManager.MenuConfirm())
+        if (_font == null)
         {
             return;
         }

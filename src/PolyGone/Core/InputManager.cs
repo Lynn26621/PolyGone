@@ -62,6 +62,7 @@ public static class InputManager
     private static float _menuDownAutoRepeatTimer = 0f;
     private static float _menuLeftAutoRepeatTimer = 0f;
     private static float _menuRightAutoRepeatTimer = 0f;
+    private static bool _windowIsActive = true;
     private const float MENU_AUTO_REPEAT_INTERVAL = 0.1f;
     private const float CLICK_COOLDOWN = 0.01f; // 10ms between clicks
     private const float ESCAPE_COOLDOWN = 0.2f; // 200ms between escape presses
@@ -117,13 +118,22 @@ public static class InputManager
     public static void Update(GameTime gameTime)
     {
         _previousMouseState = _currentMouseState;
-        _currentMouseState = Mouse.GetState();
-
         _previousKeyboardState = _currentKeyboardState;
-        _currentKeyboardState = Keyboard.GetState();
-
         _previousGamepadState = _currentGamepadState;
-        _currentGamepadState = GamePad.GetState(PlayerIndex.One);
+
+        if (_windowIsActive)
+        {
+            _currentMouseState = Mouse.GetState();
+            _currentKeyboardState = Keyboard.GetState();
+            _currentGamepadState = GamePad.GetState(PlayerIndex.One);
+        }
+        else
+        {
+            // Keep current state equal to previous so no new input is detected while inactive
+            _currentMouseState = _previousMouseState;
+            _currentKeyboardState = _previousKeyboardState;
+            _currentGamepadState = _previousGamepadState;
+        }
 
         var moveStick = GetMoveStickVector();
         thumbstickX = moveStick.X;
@@ -213,6 +223,17 @@ public static class InputManager
         _menuDownAutoRepeatTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         _menuLeftAutoRepeatTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         _menuRightAutoRepeatTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+    }
+
+    public static void SetWindowActive(bool active)
+    {
+        _windowIsActive = active;
+        if (!active)
+        {
+            // Reset cooldowns so returning focus doesn't immediately trigger actions
+            _mouseClickCooldown = CLICK_COOLDOWN;
+            _escapeKeyCooldown = ESCAPE_COOLDOWN;
+        }
     }
 
 

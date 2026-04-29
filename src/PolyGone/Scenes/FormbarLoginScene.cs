@@ -36,7 +36,8 @@ internal class FormbarLoginScene : IScene
     private HttpListener? _listener;
     private Task<HttpListenerContext>? _callbackTask;
 
-    private const int CallbackPort = 59200;
+    private const int DefaultCallbackPort = 59200;
+    private int _callbackPort = DefaultCallbackPort;
 
     // Vertical spacing between UI rows (pixels)
     private const float RowGap = 70f;
@@ -85,21 +86,51 @@ internal class FormbarLoginScene : IScene
 
     private void StartOAuth()
     {
+        // Prevent re-entrant calls if we're already in the middle of OAuth
+        if (_state != LoginState.Idle)
+            return;
         try
         {
-            string prefix = $"http://localhost:{CallbackPort}/";
-            string redirectUrl = $"http://localhost:{CallbackPort}/login";
-            _oauthUrl = $"{FormbarSession.ServerUrl.TrimEnd('/')}/oauth?redirectURL={Uri.EscapeDataString(redirectUrl)}";
+            var rng = new Random();
+            int attempts = 0;
+            const int maxAttempts = 12;
 
-            _listener = new HttpListener();
-            _listener.Prefixes.Add(prefix);
-            _listener.Start();
-            _callbackTask = _listener.GetContextAsync();
+            while (attempts < maxAttempts)
+            {
+                try
+                {
+                    string prefix = $"http://localhost:{_callbackPort}/";
+                    string redirectUrl = $"http://localhost:{_callbackPort}/login";
+                    _oauthUrl = $"{FormbarSession.ServerUrl.TrimEnd('/')}/oauth?redirectURL={Uri.EscapeDataString(redirectUrl)}";
 
-            Process.Start(new ProcessStartInfo { FileName = _oauthUrl, UseShellExecute = true });
+                    _listener = new HttpListener();
+                    _listener.Prefixes.Add(prefix);
+                    _listener.Start();
+                    _callbackTask = _listener.GetContextAsync();
 
-            _state = LoginState.WaitingForCallback;
-            _statusMessage = "";
+                    Process.Start(new ProcessStartInfo { FileName = _oauthUrl, UseShellExecute = true });
+
+                    _state = LoginState.WaitingForCallback;
+                    _statusMessage = "";
+                    return;
+                }
+                catch (HttpListenerException)
+                {
+                    StopListener();
+                    attempts++;
+                    _statusMessage = $"Port {_callbackPort} in use, trying another...";
+                    _callbackPort = rng.Next(49152, 65536);
+                    Task.Delay(200).Wait();
+                }
+                catch (Exception ex)
+                {
+                    StopListener();
+                    _statusMessage = $"Could not start login: {ex.Message}";
+                    return;
+                }
+            }
+
+            _statusMessage = "Could not start login: no available ports found.";
         }
         catch (Exception ex)
         {
@@ -174,8 +205,12 @@ internal class FormbarLoginScene : IScene
 
     private void StopListener()
     {
+        try { _listener?.Abort(); } catch { }
         try { _listener?.Stop(); } catch { }
+        try { _listener?.Close(); } catch { }
         _listener = null;
+        _callbackTask = null;
+        _callbackPort = DefaultCallbackPort;
     }
 
     // -----------------------------------------------------------------------
@@ -184,10 +219,7 @@ internal class FormbarLoginScene : IScene
 
     private void HandleIdleInput()
     {
-        if (InputManager.MenuConfirm())
-            StartOAuth();
-
-        if (_font == null || !InputManager.MenuConfirm()) return;
+        if (_font == null) return;
 
         var viewport = _graphics.GraphicsDevice.Viewport;
         var mousePos = InputManager.GetMousePosition();
@@ -202,16 +234,28 @@ internal class FormbarLoginScene : IScene
             (int)btnY - 5,
             (int)btnSize.X + 20,
             (int)btnSize.Y + 10);
-        if (btnBounds.Contains(mousePos))
+
+        bool mouseConfirm = InputManager.MenuMouseConfirm();
+        bool nonPointerConfirm = InputManager.MenuNonPointerConfirm();
+
+        // Mouse click on the button
+        if (btnBounds.Contains(mousePos) && mouseConfirm)
         {
             StartOAuth();
             InputManager.ConsumeClick();
+            return;
+        }
+
+        if (nonPointerConfirm)
+        {
+            StartOAuth();
+            return;
         }
     }
 
     private bool IsCancelButtonClicked()
     {
-        if (_font == null || !InputManager.MenuConfirm()) return false;
+        if (_font == null) return false;
 
         var viewport = _graphics.GraphicsDevice.Viewport;
         var mousePos = InputManager.GetMousePosition();
@@ -227,7 +271,7 @@ internal class FormbarLoginScene : IScene
             (int)cancelSize.X + 20,
             (int)cancelSize.Y + 10);
 
-        if (cancelBounds.Contains(mousePos))
+        if (cancelBounds.Contains(mousePos) && InputManager.MenuMouseConfirm())
         {
             InputManager.ConsumeClick();
             return true;

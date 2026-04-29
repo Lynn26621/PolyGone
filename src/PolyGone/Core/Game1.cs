@@ -90,6 +90,7 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
+        InputManager.SetWindowActive(this.IsActive);
         InputManager.Update(gameTime);
 
         if (InputManager.PauseMenuOpen())
