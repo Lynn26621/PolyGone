@@ -181,6 +181,25 @@ namespace PolyGone.Entities
                         isOnSlipperyTile = true;
                     }
                     break;
+                case CollisionType.Bouncy: //Keep track of velocity. Reverse it when colliding with bouncy tile top. holding down input when landing on bouncy tile will negate the bounce effect. Also, when the player is just standing on the tile and jumps, their jump is boosted by 50%.
+                     if (deltaY > 0 && !InputManager.GameDrop())
+                    {
+                        position.Y = tileRect.Top - size[1];
+                        onGround = true;
+                        deltaY = -ChangeY * 1.5f; // Reverse and boost vertical velocity
+                    }
+                    else if (deltaY > 0 && InputManager.GameDrop())
+                    {
+                        position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
+                        onGround = deltaY > 0;
+                        deltaY = 0;
+                    }
+                    else
+                    {
+                        position.Y = tileRect.Bottom;
+                        deltaY = 0;
+                    }
+                    break;
                 case CollisionType.Damage:
                     position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                     onGround = deltaY > 0;
@@ -197,6 +216,7 @@ namespace PolyGone.Entities
             switch (colType)
             {
                 default:
+                case CollisionType.Bouncy:
                 case CollisionType.Solid:
                      position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
                     deltaX = 0;

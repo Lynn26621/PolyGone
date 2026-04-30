@@ -127,32 +127,18 @@ public class Entity : Sprite
                     IsOnSlipperyTile = true; // Mark as on slippery surface
                 }
                 break;
-            case CollisionType.Bouncy:
-                position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
-                onGround = deltaY > 0;
-
-                if (deltaY > 0) // Landing on bouncy tile
+            case CollisionType.Bouncy: //Keep track of velocity. Reverse it when colliding with bouncy tile top.
+                if (deltaY > 0)
                 {
-                    float fallSpeed = Math.Abs(this.ChangeY); // Use current velocity as fall speed
-
-                    if (fallSpeed > 2f) // Fast fall - trampoline effect
-                    {
-                        // Dynamic bounce proportional to fall speed
-                        this.ChangeY = -fallSpeed * 1.2f;
-                    }
-                    else // Slow approach - standing boost
-                    {
-                        // Jump boost for standing/walking on bouncy tiles
-                        this.ChangeY = -16.75f * 1.5f; // JumpStrength * 1.5f (using typical jump strength)
-                    }
+                    position.Y = tileRect.Top - size[1];
+                    deltaY = -ChangeY * 1.2f; // Reverse and amplify vertical velocity for bounce effect
+                    onGround = false;
                 }
-                else if (deltaY < 0) // Head bonk from below
+                else
                 {
-                    // Weaker bounce when hitting from below
-                    this.ChangeY = Math.Abs(this.ChangeY) * 0.8f;
+                    position.Y = tileRect.Bottom;
+                    deltaY = 0;
                 }
-
-                deltaY = 0;
                 break;
             case CollisionType.Damage:
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
@@ -169,6 +155,7 @@ public class Entity : Sprite
         switch (colType)
         {
             default:
+            case CollisionType.Bouncy:
             case CollisionType.Solid:
                     position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
                     deltaX = 0;
@@ -184,14 +171,6 @@ public class Entity : Sprite
                     Friction = 0.4f;
                     IsOnSlipperyTile = true; // Mark as on slippery surface
                 }
-                break;
-            case CollisionType.Bouncy:
-                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-
-                // Wall bounce - reverse and amplify
-                this.ChangeX = -this.ChangeX * 1.5f;
-
-                deltaX = 0;
                 break;
             case CollisionType.Damage:
                 position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
