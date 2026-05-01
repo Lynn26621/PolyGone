@@ -127,11 +127,11 @@ public class Entity : Sprite
                     IsOnSlipperyTile = true; // Mark as on slippery surface
                 }
                 break;
-            case CollisionType.Bouncy: //Keep track of velocity. Reverse it when colliding with bouncy tile top.
+            case CollisionType.Bouncy: // Keep track of velocity. Reverse it when colliding with bouncy tile top.
                 if (deltaY > 0)
                 {
                     position.Y = tileRect.Top - size[1];
-                    deltaY = -ChangeY * 1.2f; // Reverse and amplify vertical velocity for bounce effect
+                    deltaY = -ChangeY; // Reverse vertical velocity for bounce effect
                     onGround = false;
                 }
                 else

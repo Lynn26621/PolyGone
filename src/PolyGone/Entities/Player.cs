@@ -221,7 +221,7 @@ namespace PolyGone.Entities
                     position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
                     deltaX = 0;
                     break;
-                case CollisionType.SemiSolid: //Player passes through semi-solid platforms horizontally without collision
+                case CollisionType.SemiSolid: // Player passes through semi-solid platforms horizontally without collision
                     position.X += deltaX;
                     break;
                 case CollisionType.Slippery:
