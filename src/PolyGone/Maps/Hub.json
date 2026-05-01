@@ -139,7 +139,7 @@
                  "y":480
                 }, 
                 {
-                 "gid":21,
+                 "gid":69,
                  "height":32,
                  "id":20,
                  "name":"",
@@ -177,7 +177,7 @@
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":32
+                         "value":64
                         }, 
                         {
                          "name":"loadY",
