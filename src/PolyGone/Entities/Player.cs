@@ -18,6 +18,7 @@ namespace PolyGone.Entities
         // Constants for gap centering nudge strengths
         private const float VERTICAL_GAP_NUDGE_STRENGTH = 20f; // Strong nudge for vertical movement through gaps
         private const float HORIZONTAL_GAP_NUDGE_STRENGTH = 15f; // Medium nudge for horizontal gap funneling
+        private const float BOUNCY_BOUNCE_THRESHOLD = 4f; // Only stronger landings should bounce
 
         private AudioManager audioManager;
         private Item? currentWeapon; // Single selected weapon
@@ -42,6 +43,8 @@ namespace PolyGone.Entities
         public float JumpStrength { get; set; } = -16.75f;
         private bool isOnSlipperyTile = false;
         private bool wasOnSlipperyTile = false;
+        private bool isOnBouncyTile = false;
+        private bool wasOnBouncyTile = false;
         private float preservedMomentumX = 0f;
 
         public Player(
@@ -182,17 +185,14 @@ namespace PolyGone.Entities
                     }
                     break;
                 case CollisionType.Bouncy: //Keep track of velocity. Reverse it when colliding with bouncy tile top. holding down input when landing on bouncy tile will negate the bounce effect. Also, when the player is just standing on the tile and jumps, their jump is boosted by 50%.
-                     if (deltaY > 0 && !InputManager.GameDrop())
+                    if (deltaY > 0)
                     {
                         position.Y = tileRect.Top - size[1];
                         onGround = true;
-                        deltaY = -ChangeY * 1.5f; // Reverse and boost vertical velocity
-                    }
-                    else if (deltaY > 0 && InputManager.GameDrop())
-                    {
-                        position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
-                        onGround = deltaY > 0;
-                        deltaY = 0;
+                        isOnBouncyTile = true;
+                        deltaY = (!InputManager.GameDrop() && deltaY > BOUNCY_BOUNCE_THRESHOLD)
+                            ? -ChangeY // Reverse and boost vertical velocity
+                            : 0;
                     }
                     else
                     {
@@ -218,7 +218,7 @@ namespace PolyGone.Entities
                 default:
                 case CollisionType.Bouncy:
                 case CollisionType.Solid:
-                     position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
                     deltaX = 0;
                     break;
                 case CollisionType.SemiSolid: //Player passes through semi-solid platforms horizontally without collision
@@ -276,16 +276,23 @@ namespace PolyGone.Entities
                 // Check if standing on bouncy tile for jump boost
                 float jumpPower = JumpStrength;
 
-                // Check if there's a bouncy tile directly below the player
-                if (CollisionMap != null)
+                // Check if the player is standing on a bouncy tile
+                if (wasOnBouncyTile || CollisionMap != null)
                 {
-                    int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
-                    int playerTileY = (int)((position.Y + size[1]) / TILE_SIZE);
-                    var keyBelow = new Vector2(playerTileX, playerTileY + 1);
+                    bool standingOnBouncy = wasOnBouncyTile;
 
-                    if (CollisionMap.TryGetValue(keyBelow, out int belowTileId) &&
-                        belowTileId != -1 &&
-                        CollisionTypeMapper.GetCollisionType(belowTileId) == CollisionType.Bouncy)
+                    if (!standingOnBouncy && CollisionMap != null)
+                    {
+                        int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
+                        int playerTileY = (int)((position.Y + size[1]) / TILE_SIZE);
+                        var keyBelow = new Vector2(playerTileX, playerTileY + 1);
+
+                        standingOnBouncy = CollisionMap.TryGetValue(keyBelow, out int belowTileId) &&
+                                           belowTileId != -1 &&
+                                           CollisionTypeMapper.GetCollisionType(belowTileId) == CollisionType.Bouncy;
+                    }
+
+                    if (standingOnBouncy)
                     {
                         jumpPower = JumpStrength * 1.5f; // 50% jump boost on bouncy tiles
                         Console.WriteLine($"Jump boost applied! Jump power: {jumpPower}");
@@ -421,6 +428,8 @@ namespace PolyGone.Entities
             Friction = 0.8f;
             wasOnSlipperyTile = isOnSlipperyTile; // Remember previous state
             isOnSlipperyTile = false; // Reset each frame
+            wasOnBouncyTile = isOnBouncyTile; // Remember previous bouncy-ground state
+            isOnBouncyTile = false; // Reset each frame; collision handling sets it when standing on bounce tiles
 
             // Apply preserved momentum if we were on ice
             if (wasOnSlipperyTile && Math.Abs(preservedMomentumX) > 0.1f)
