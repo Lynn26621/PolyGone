@@ -72,7 +72,7 @@ namespace PolyGone
                     _confirmSelectedIndex = 1;
 
                 // Enter or Y to confirm
-                if (InputManager.MenuConfirm())
+                if (InputManager.MenuNonPointerConfirm())
                 {
                     if (_confirmSelectedIndex == 0)
                         _confirmedAction?.Invoke();
@@ -101,7 +101,7 @@ namespace PolyGone
                     if (yesBounds.Contains(InputManager.GetMousePosition()))
                     {
                         _confirmSelectedIndex = 0;
-                        if (InputManager.MenuConfirm())
+                        if (InputManager.MenuConfirmMouseClick())
                         {
                             _confirmedAction?.Invoke();
                             InputManager.ConsumeClick();
@@ -110,7 +110,7 @@ namespace PolyGone
                     else if (noBounds.Contains(InputManager.GetMousePosition()))
                     {
                         _confirmSelectedIndex = 1;
-                        if (InputManager.MenuConfirm())
+                        if (InputManager.MenuConfirmMouseClick())
                         {
                             _confirmingAction = false;
                             InputManager.ConsumeClick();
@@ -136,9 +136,7 @@ namespace PolyGone
                     if (bounds.Contains(InputManager.GetMousePosition()))
                     {
                         _selectedIndex = i;
-
-                        // Mouse click with InputManager
-                        if (InputManager.MenuConfirm())
+                        if (InputManager.MenuConfirmMouseClick())
                         {
                             ExecuteSelection();
                             InputManager.ConsumeClick();
@@ -158,10 +156,10 @@ namespace PolyGone
                 _selectedIndex = (_selectedIndex + 1) % _options.Length;
             }
 
-            if (InputManager.MenuConfirm())
-            {
-                ExecuteSelection();
-            }
+                if (InputManager.MenuNonPointerConfirm())
+                {
+                    ExecuteSelection();
+                }
         }
 
         private void ExecuteSelection()
