@@ -43,6 +43,9 @@ public class GameScene : IScene
     private Dictionary<Vector2, int> CollisionMap = null!;
     private Dictionary<string, int> layerFirstGid = new(); // Store firstgid for each layer
     private List<Rectangle> textureStore;
+    private List<Rectangle> tileTextureStore;
+    private string tileTextureAssetName = "Textures/Tiles/PolyGoneTextureSheet";
+    private int[] tileTextureGridSize = new int[2] { 8, 8 };
     private Vector2 playerPos;
     private bool playerSpawnFound = false;
     private readonly List<Vector2> enemySpawns = new(); // Store enemy spawn positions
@@ -81,6 +84,7 @@ public class GameScene : IScene
 
         LoadMapFromJson("Maps/" + levelName + ".json");
         textureStore = GetTextureStore(32, new int[2] { 8, 8 });
+        tileTextureStore = GetTextureStore(32, tileTextureGridSize);
     }
 
     // Public method to get the level name for restart functionality
@@ -157,6 +161,52 @@ public class GameScene : IScene
         };
     }
 
+    private static int ResolveTilesetFirstGid(int globalTileId, List<int> sortedFirstGids)
+    {
+        // Tiled encodes flip flags in the top three bits of the gid.
+        const uint GidMask = 0x1FFFFFFF;
+        int cleanGid = (int)((uint)globalTileId & GidMask);
+
+        int resolvedFirstGid = 1;
+        foreach (int firstGid in sortedFirstGids)
+        {
+            if (cleanGid >= firstGid)
+            {
+                resolvedFirstGid = firstGid;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return resolvedFirstGid;
+    }
+
+    private void ConfigureTileTextureFromTilesetSource(string tilesetSource)
+    {
+        string filename = Path.GetFileName(tilesetSource);
+        if (string.Equals(filename, "Basic.tsx", StringComparison.OrdinalIgnoreCase))
+        {
+            tileTextureAssetName = "Textures/Tiles/PolyGoneBasic";
+            tileTextureGridSize = new int[2] { 2, 2 };
+            return;
+        }
+
+        if (string.Equals(filename, "Proto.tsx", StringComparison.OrdinalIgnoreCase))
+        {
+            tileTextureAssetName = "Textures/Tiles/PolyGoneProto";
+            tileTextureGridSize = new int[2] { 8, 8 };
+            return;
+        }
+
+        if (string.Equals(filename, "TextureSheet.tsx", StringComparison.OrdinalIgnoreCase))
+        {
+            tileTextureAssetName = "Textures/Tiles/PolyGoneTextureSheet";
+            tileTextureGridSize = new int[2] { 8, 8 };
+        }
+    }
+
     // Loads tile and collision maps from a JSON file exported from Tiled
     public void LoadMapFromJson(string filepath)
     {
@@ -173,19 +223,36 @@ public class GameScene : IScene
 
         // Extract firstgid values from tilesets
         layerFirstGid.Clear();
+        List<int> sortedFirstGids = new();
+        Dictionary<int, string> tilesetSourceByFirstGid = new();
         if (root.TryGetProperty("tilesets", out JsonElement tilesetsArray))
         {
             foreach (JsonElement tileset in tilesetsArray.EnumerateArray())
             {
-                if (tileset.TryGetProperty("name", out JsonElement nameElement) &&
-                    tileset.TryGetProperty("firstgid", out JsonElement firstgidElement))
+                if (tileset.TryGetProperty("firstgid", out JsonElement firstgidElement))
                 {
-                    string tilesetName = nameElement.GetString() ?? "";
                     int firstgid = firstgidElement.GetInt32();
-                    layerFirstGid[tilesetName] = firstgid;
+                    sortedFirstGids.Add(firstgid);
+
+                    if (tileset.TryGetProperty("source", out JsonElement sourceElement))
+                    {
+                        string tilesetSource = sourceElement.GetString() ?? string.Empty;
+                        tilesetSourceByFirstGid[firstgid] = tilesetSource;
+                    }
+
+                    if (tileset.TryGetProperty("name", out JsonElement nameElement))
+                    {
+                        string tilesetName = nameElement.GetString() ?? "";
+                        layerFirstGid[tilesetName] = firstgid;
+                    }
                 }
             }
         }
+        sortedFirstGids.Sort();
+
+        // Default visual tileset unless a tiles layer indicates otherwise.
+        tileTextureAssetName = "Textures/Tiles/PolyGoneTextureSheet";
+        tileTextureGridSize = new int[2] { 8, 8 };
 
         tileMap = new Dictionary<Vector2, int>();
         CollisionMap = new Dictionary<Vector2, int>();
@@ -229,37 +296,58 @@ public class GameScene : IScene
             if (layerType == "tilelayer")
             {
                 JsonElement dataArray = layer.GetProperty("data");
+                bool isTileLayer = string.Equals(layerName, "tiles", StringComparison.OrdinalIgnoreCase);
+                bool isCollisionLayer = string.Equals(layerName, "collisions", StringComparison.OrdinalIgnoreCase);
+
+                // Some legacy maps encode collision gids from different source tilesets.
+                // Use the first non-zero gid on the layer as a fallback base when firstgid-based
+                // conversion produces ids outside our CollisionTypeMapper range.
+                int collisionLayerBaseGid = 0;
+                if (isCollisionLayer)
+                {
+                    foreach (JsonElement tile in dataArray.EnumerateArray())
+                    {
+                        int cleanTileValue = (int)((uint)tile.GetInt32() & 0x1FFFFFFF);
+                        if (cleanTileValue > 0)
+                        {
+                            collisionLayerBaseGid = cleanTileValue;
+                            break;
+                        }
+                    }
+                }
 
                 int index = 0;
                 foreach (JsonElement tile in dataArray.EnumerateArray())
                 {
                     int tileValue = tile.GetInt32();
+                    int cleanTileValue = (int)((uint)tileValue & 0x1FFFFFFF);
                     int x = index % mapWidth;
                     int y = index / mapWidth;
 
-                    if (tileValue > 0)
+                    if (cleanTileValue > 0)
                     {
-                        // Get the firstgid for this layer based on its name and associated tileset
-                        int firstgid = 1; // Default fallback
+                        int firstgid = ResolveTilesetFirstGid(cleanTileValue, sortedFirstGids);
+                        int localTileId = cleanTileValue - firstgid;
 
-                        if (layerName?.ToLower() == "tiles" && layerFirstGid.TryGetValue("Basic", out int tilesFirstGid))
+                        if (isTileLayer && tilesetSourceByFirstGid.TryGetValue(firstgid, out string? tilesetSource) && !string.IsNullOrEmpty(tilesetSource))
                         {
-                            firstgid = tilesFirstGid;
-                        }
-                        else if (layerName?.ToLower() == "collisions" && layerFirstGid.TryGetValue("CollisionTiles", out int collisionsFirstGid))
-                        {
-                            firstgid = collisionsFirstGid;
+                            ConfigureTileTextureFromTilesetSource(tilesetSource);
                         }
 
-                        // Wrap tileValue to fit within our texture store (assuming 16 tiles per layer in Tiled)
-                        if (layerName?.ToLower() == "tiles")
+                        if (isTileLayer)
                         {
-                            tileMap[new Vector2(x, y)] = tileValue % 16 - firstgid;
+                            tileMap[new Vector2(x, y)] = Math.Max(localTileId, 0);
                         }
-                        // Collision layer uses a separate tileset where tile IDs directly represent collision types
-                        else if (layerName?.ToLower() == "collisions")
+                        else if (isCollisionLayer)
                         {
-                            CollisionMap[new Vector2(x, y)] = tileValue % 16 - firstgid;
+                            // Preferred conversion uses tileset firstgid. Fallback handles maps where
+                            // collision gids are authored from a non-collision tileset palette.
+                            if ((localTileId < 0 || localTileId > 4) && collisionLayerBaseGid > 0)
+                            {
+                                localTileId = cleanTileValue - collisionLayerBaseGid;
+                            }
+
+                            CollisionMap[new Vector2(x, y)] = localTileId;
                         }
                     }
 
@@ -390,6 +478,8 @@ public class GameScene : IScene
             }
         }
 
+        tileTextureStore = GetTextureStore(32, tileTextureGridSize);
+
         // If no player marker exists in the map, allow door-provided coordinates.
         if (!playerSpawnFound && loadX.HasValue && loadY.HasValue)
         {
@@ -437,7 +527,7 @@ public class GameScene : IScene
         enemySheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneEnemySheet");
         miscSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneMiscSpriteSheet");
         uiSheet = contentManager.Load<Texture2D>("Textures/UI/PolyGoneUI");
-        textureSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneTextureSheet");
+        textureSheet = contentManager.Load<Texture2D>(tileTextureAssetName);
         foregroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneFgSheet");
         collisionSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneCollisionSheet");
         try
@@ -996,7 +1086,7 @@ public class GameScene : IScene
                 64,
                 64
             );
-            Rectangle src = textureStore[tile.Value % textureStore.Count]; // Ensure we don't go out of bounds
+            Rectangle src = tileTextureStore[tile.Value % tileTextureStore.Count]; // Ensure we don't go out of bounds
             spriteBatch.Draw(textureSheet, dest, src, Color.White);
         }
         foreach (var enemy in enemies)
