@@ -97,7 +97,8 @@ namespace PolyGone.Weapons
         public override void Use()
         {
             // Handle shooting with InputManager to prevent click carryover
-            if (InputManager.GameShootSingle() && CooldownRemaining <= 0f)
+            bool shouldShoot = IsAutoFire ? InputManager.GameShootHold() : InputManager.GameShootSingle();
+            if (shouldShoot && CooldownRemaining <= 0f)
             {
                 int baseDamage = (int)(40 * DamageMultiplier);
 
