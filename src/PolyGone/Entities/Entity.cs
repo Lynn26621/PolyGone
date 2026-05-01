@@ -102,10 +102,10 @@ public class Entity : Sprite
             default:
             case CollisionType.Solid:
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
-                onGround = deltaY > 0;  // ✅ Check deltaY before setting it to 0
+                onGround = deltaY > 0;  // Check deltaY before setting it to 0
                 deltaY = 0;
                 break;
-            case CollisionType.SemiSolid: 
+            case CollisionType.SemiSolid:
                 if (deltaY > 0 && (position.Y + size[1]) <= tileRect.Top + 10)
                 {
                     position.Y = tileRect.Top - size[1];
@@ -144,7 +144,7 @@ public class Entity : Sprite
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                 onGround = deltaY > 0;
                 deltaY = 0;
-                TakeDamage(10); 
+                TakeDamage(10);
                 break;
         }
     }
@@ -157,9 +157,9 @@ public class Entity : Sprite
             default:
             case CollisionType.Bouncy:
             case CollisionType.Solid:
-                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                    deltaX = 0;
-                    break;
+                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+                deltaX = 0;
+                break;
             case CollisionType.SemiSolid:
                 position.X += deltaX;
                 break;
@@ -175,7 +175,7 @@ public class Entity : Sprite
             case CollisionType.Damage:
                 position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
                 deltaX = 0;
-                TakeDamage(10); 
+                TakeDamage(10);
                 break;
         }
     }
@@ -221,7 +221,7 @@ public class Entity : Sprite
 
         // Apply gravity
         ChangeY += 0.7f * GravityScale;
-        ChangeY = Math.Min(ChangeY, 14f);
+        ChangeY = Math.Clamp(ChangeY, -50f, 50f); // Terminal velocity
 
         // Handle vertical movement and collisions
         HandleVerticalMovement(deltaTime);
