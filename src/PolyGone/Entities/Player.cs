@@ -295,7 +295,6 @@ namespace PolyGone.Entities
                     if (standingOnBouncy)
                     {
                         jumpPower = JumpStrength * 1.5f; // 50% jump boost on bouncy tiles
-                        Console.WriteLine($"Jump boost applied! Jump power: {jumpPower}");
                     }
                 }
 
