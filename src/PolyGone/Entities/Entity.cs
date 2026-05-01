@@ -102,10 +102,10 @@ public class Entity : Sprite
             default:
             case CollisionType.Solid:
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
-                onGround = deltaY > 0;  // Check deltaY before setting it to 0
+                onGround = deltaY > 0;  // ✅ Check deltaY before setting it to 0
                 deltaY = 0;
                 break;
-            case CollisionType.SemiSolid:
+            case CollisionType.SemiSolid: 
                 if (deltaY > 0 && (position.Y + size[1]) <= tileRect.Top + 10)
                 {
                     position.Y = tileRect.Top - size[1];
@@ -121,17 +121,14 @@ public class Entity : Sprite
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                 onGround = deltaY > 0;
                 deltaY = 0;
-                if (onGround)
-                {
-                    Friction = 0.4f;
-                    IsOnSlipperyTile = true; // Mark as on slippery surface
-                }
+                IsOnSlipperyTile = true;
+                Friction = 0.95f;
                 break;
-            case CollisionType.Bouncy: // Keep track of velocity. Reverse it when colliding with bouncy tile top.
+            case CollisionType.Bouncy: //Keep track of velocity. Reverse it when colliding with bouncy tile top.
                 if (deltaY > 0)
                 {
                     position.Y = tileRect.Top - size[1];
-                    deltaY = -ChangeY; // Reverse vertical velocity for bounce effect
+                    deltaY = -ChangeY * 1.2f; // Reverse and amplify vertical velocity for bounce effect
                     onGround = false;
                 }
                 else
@@ -144,7 +141,7 @@ public class Entity : Sprite
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                 onGround = deltaY > 0;
                 deltaY = 0;
-                TakeDamage(10);
+                TakeDamage(10); 
                 break;
         }
     }
@@ -155,27 +152,19 @@ public class Entity : Sprite
         switch (colType)
         {
             default:
+            case CollisionType.Slippery:
             case CollisionType.Bouncy:
             case CollisionType.Solid:
-                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                deltaX = 0;
-                break;
+                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+                    deltaX = 0;
+                    break;
             case CollisionType.SemiSolid:
                 position.X += deltaX;
-                break;
-            case CollisionType.Slippery:
-                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                deltaX = 0;
-                if (IsOnGround)
-                {
-                    Friction = 0.4f;
-                    IsOnSlipperyTile = true; // Mark as on slippery surface
-                }
                 break;
             case CollisionType.Damage:
                 position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
                 deltaX = 0;
-                TakeDamage(10);
+                TakeDamage(10); 
                 break;
         }
     }
@@ -221,7 +210,7 @@ public class Entity : Sprite
 
         // Apply gravity
         ChangeY += 0.7f * GravityScale;
-        ChangeY = Math.Clamp(ChangeY, -50f, 50f); // Terminal velocity
+        ChangeY = Math.Min(ChangeY, 14f);
 
         // Handle vertical movement and collisions
         HandleVerticalMovement(deltaTime);

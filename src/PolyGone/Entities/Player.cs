@@ -173,16 +173,8 @@ namespace PolyGone.Entities
                     position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                     onGround = deltaY > 0;
                     deltaY = 0;
-                    if (onGround)
-                    {
-                        // If we just stepped on ice, preserve current momentum
-                        if (!wasOnSlipperyTile)
-                        {
-                            preservedMomentumX = ChangeX; // Save current velocity
-                        }
-                        Friction = 0.02f;
-                        isOnSlipperyTile = true;
-                    }
+                    isOnSlipperyTile = true;
+                    Friction = 0.95f;
                     break;
                 case CollisionType.Bouncy: //Keep track of velocity. Reverse it when colliding with bouncy tile top. holding down input when landing on bouncy tile will negate the bounce effect. Also, when the player is just standing on the tile and jumps, their jump is boosted by 50%.
                     if (deltaY > 0)
@@ -216,6 +208,7 @@ namespace PolyGone.Entities
             switch (colType)
             {
                 default:
+                case CollisionType.Slippery:
                 case CollisionType.Bouncy:
                 case CollisionType.Solid:
                     position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
@@ -223,20 +216,6 @@ namespace PolyGone.Entities
                     break;
                 case CollisionType.SemiSolid: // Player passes through semi-solid platforms horizontally without collision
                     position.X += deltaX;
-                    break;
-                case CollisionType.Slippery:
-                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                    deltaX = 0;
-                    if (IsOnGround)
-                    {
-                        // If we just touched a slippery wall, preserve current momentum
-                        if (!wasOnSlipperyTile)
-                        {
-                            preservedMomentumX = ChangeX; // Save current velocity
-                        }
-                        Friction = 0.02f;
-                        isOnSlipperyTile = true;
-                    }
                     break;
                 case CollisionType.Damage:
                     position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
@@ -249,20 +228,20 @@ namespace PolyGone.Entities
         // Handle player input and jumping
         private void HandleInput()
         {
-            int moveDirection = 0;
+            float moveDirection = 0f;
 
             // Horizontal movement with speed boost consideration
             if (InputManager.GameMoveLeft() && !InputManager.GameMoveRight())
             {
-                moveDirection = -1;
+                moveDirection = isOnSlipperyTile ? -0.0001f : -1f;
             }
             else if (InputManager.GameMoveRight() && !InputManager.GameMoveLeft())
             {
-                moveDirection = 1;
+                moveDirection = isOnSlipperyTile ? 0.0001f : 1f;
             }
 
             // Apply acceleration with speed boost
-            float baseAcceleration = isOnSlipperyTile ? 0.01f : 1f; // Much slower acceleration on ice
+            float baseAcceleration = isOnSlipperyTile ? 0.0001f : 1f; // Much slower acceleration on ice
             float speedMultiplier = GetSpeedBoostMultiplier();
             ChangeX += moveDirection * baseAcceleration * speedMultiplier;
             ChangeX = MathHelper.Clamp(ChangeX, -5f * speedMultiplier, 5f * speedMultiplier);
@@ -426,7 +405,7 @@ namespace PolyGone.Entities
         {
             Friction = 0.8f;
             wasOnSlipperyTile = isOnSlipperyTile; // Remember previous state
-            isOnSlipperyTile = false; // Reset each frame
+            isOnSlipperyTile = IsOnSlipperyTile; // Reset each frame
             wasOnBouncyTile = isOnBouncyTile; // Remember previous bouncy-ground state
             isOnBouncyTile = false; // Reset each frame; collision handling sets it when standing on bounce tiles
 
@@ -563,10 +542,10 @@ namespace PolyGone.Entities
 
         public void Update(GameTime gameTime, Vector2 cameraOffset)
         {
-            HandleInput();
 
             base.Update(gameTime);
 
+            HandleInput();
             // Update coyote time after physics update to use current frame's ground state
             coyoteTime = IsOnGround
                 ? 6f // 0.1 seconds at 60fps
