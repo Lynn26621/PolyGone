@@ -26,6 +26,11 @@ namespace PolyGone.Entities
         public readonly List<Projectile> Bullets = new List<Projectile>(); // Shared projectile list for all weapons
         private float ffCooldown = 0f;
         private float coyoteTime = 0f; // Allows jumping shortly after leaving a platform
+        private float wallCoyoteTime = 0f; // Allows wall jump shortly after leaving a wall
+        private float wallBoostLength = 0f; // Prevents player from immediately moving back towards the wall after a wall jump
+        private int wallDirection = 0; // 1 for left wall, -1 for right wall (player should be boosted away from the wall when wall jumping)
+        protected bool IsOnWall = false; // Indicates if the player is currently clinging to a wall
+        protected bool JustWallJumped = false; // Track if the player just performed a wall jump, used to prevent repeat wall jumps
 
         // -----------------------------------------------------------------------
         // Player Ability Definitions
@@ -59,6 +64,9 @@ namespace PolyGone.Entities
 
         // Dash velocity boost applied when dashing
         public float DashStrength { get; set; } = 35f;
+
+        // Strength of horizontal boost applied when wall jumping
+        public float WallBoostStrength { get; set; } = 50f;
 
         public Player(
             Texture2D texture,
@@ -206,6 +214,15 @@ namespace PolyGone.Entities
                 moveDirection = 1;
             }
 
+            // Prevent player from moving back towards the wall immediately after a wall jump
+            if ((wallDirection != 0) && (wallBoostLength > 0f))
+            {
+                if (moveDirection != wallDirection)
+                {
+                    moveDirection = 0;
+                }
+            }
+
             // Apply acceleration with speed boost
             float speedMultiplier = 1.5f;
             ChangeX += moveDirection * 1f * speedMultiplier;
@@ -225,11 +242,23 @@ namespace PolyGone.Entities
             }
             else
             {
+                var wallJump = playerAbilityNames[1];
+
                 // Check for double jump
                 var doubleJumpItem = GetActiveDoubleJumpItem();
                 if (doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, JumpTriggered, wasOnGroundLastFrame))
                 {
                     base.ChangeY = JumpStrength; // Same jump strength for double jump
+                    audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
+                }
+
+                // Check for wall jump with coyote time
+                else if (((IsOnWall || wallCoyoteTime > 0f) && !JustWallJumped) && (JumpTriggered && UnlockTracker.IsAbilityUnlocked(wallJump)))
+                {
+                    base.ChangeY = JumpStrength;
+                    wallCoyoteTime = 0f; // Reset wall coyote time after wall jumping
+                    JustWallJumped = true; // Set to true to prevent repeat wall jumps
+                    ChangeX += wallDirection * WallBoostStrength; // Apply horizontal boost away from the wall
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #if DEBUG
@@ -357,6 +386,60 @@ namespace PolyGone.Entities
             }
         }
 
+        private void HandleWallCling()
+        {
+            if (CollisionMap != null)
+            {
+                int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
+                int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);
+
+                var keyLeft = new Vector2(playerTileX - 1, playerTileY);
+                var keyRight = new Vector2(playerTileX + 1, playerTileY);
+
+                var wallJump = playerAbilityNames[1];
+
+                if ((IsSolidWall(keyLeft) || IsSolidWall(keyRight)) && (!IsOnGround && !(ChangeY <= 0)))
+                {
+                    if (UnlockTracker.IsAbilityUnlocked(wallJump))
+                    {
+                        IsOnWall = true;
+                        base.GravityScale = 0.3f; // Reduce gravity for wall cling
+
+                        // Determine wall direction for wall jump boost direction
+                        if (IsSolidWall(keyLeft) && !IsSolidWall(keyRight))
+                        {
+                            wallDirection = 1; // Left wall
+                        }
+                        else if (IsSolidWall(keyRight) && !IsSolidWall(keyLeft))
+                        {
+                            wallDirection = -1; // Right wall
+                        }
+                        else
+                        {
+                            wallDirection = 0; // Both sides solid, no directional bias
+                        }
+                    }
+                }
+                else
+                {
+                    IsOnWall = false;
+                    base.GravityScale = 1f; // Normal gravity
+
+                    // Set wall direction to 0 after wall boost length expires to allow normal movement again
+                    if (wallBoostLength <= 0f)
+                    {
+                        wallDirection = 0;
+                    }
+                }
+
+                if (IsOnGround)
+                {
+                    JustWallJumped = false; // Reset wall jump when touching the ground
+                    wallBoostLength = 0f;
+                }
+            }
+        }
+
         protected override void PhysicsUpdate(float deltaTime)
         {
             // Call base physics update for standard collision handling
@@ -481,6 +564,7 @@ namespace PolyGone.Entities
         public void Update(GameTime gameTime, Vector2 cameraOffset)
         {
             HandleInput();
+            HandleWallCling();
 
             base.Update(gameTime);
 
@@ -488,6 +572,16 @@ namespace PolyGone.Entities
             coyoteTime = IsOnGround
                 ? 6f // 0.1 seconds at 60fps
                 : Math.Max(0f, coyoteTime - 1f);
+
+            // Update wall coyote time after physics update to use current frame's wall state
+            wallCoyoteTime = IsOnWall
+                ? 6f // 0.1 seconds at 60fps
+                : Math.Max(0f, wallCoyoteTime - 1f);
+
+            // Update wall boost length after physics update to use current frame's wall state
+            wallBoostLength = IsOnWall
+                ? 15f // 0.25 seconds at 60fps
+                : Math.Max(0f, wallBoostLength - 1f);
 
             // Update only the currently equipped weapon
             var currentBlaster = GetBlaster();
