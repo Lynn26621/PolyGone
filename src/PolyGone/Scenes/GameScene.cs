@@ -22,6 +22,7 @@ public class GameScene : IScene
     private Texture2D miscSheet = null!;
     private Texture2D textureSheet = null!;
     private Texture2D foregroundSheet = null!;
+    private Texture2D uiSheet = null!;
     private Texture2D? backgroundSheet;
     private Texture2D collisionSheet = null!;
     private Vector2 backgroundLayerOffset = Vector2.Zero;
@@ -40,6 +41,7 @@ public class GameScene : IScene
     private readonly GraphicsDeviceManager graphics;
     private Dictionary<Vector2, int> tileMap = null!;
     private Dictionary<Vector2, int> CollisionMap = null!;
+    private Dictionary<string, int> layerFirstGid = new(); // Store firstgid for each layer
     private List<Rectangle> textureStore;
     private Vector2 playerPos;
     private bool playerSpawnFound = false;
@@ -78,7 +80,7 @@ public class GameScene : IScene
         this.loadY = loadY;
 
         LoadMapFromJson("Maps/" + levelName + ".json");
-        textureStore = GetTextureStore(32, new int[2] { 2, 2 });
+        textureStore = GetTextureStore(32, new int[2] { 8, 8 });
     }
 
     // Public method to get the level name for restart functionality
@@ -169,6 +171,22 @@ public class GameScene : IScene
         mapWidth = root.GetProperty("width").GetInt32();
         mapHeight = root.GetProperty("height").GetInt32();
 
+        // Extract firstgid values from tilesets
+        layerFirstGid.Clear();
+        if (root.TryGetProperty("tilesets", out JsonElement tilesetsArray))
+        {
+            foreach (JsonElement tileset in tilesetsArray.EnumerateArray())
+            {
+                if (tileset.TryGetProperty("name", out JsonElement nameElement) &&
+                    tileset.TryGetProperty("firstgid", out JsonElement firstgidElement))
+                {
+                    string tilesetName = nameElement.GetString() ?? "";
+                    int firstgid = firstgidElement.GetInt32();
+                    layerFirstGid[tilesetName] = firstgid;
+                }
+            }
+        }
+
         tileMap = new Dictionary<Vector2, int>();
         CollisionMap = new Dictionary<Vector2, int>();
         backgroundSheet = null;
@@ -221,15 +239,27 @@ public class GameScene : IScene
 
                     if (tileValue > 0)
                     {
-                        // Tiled's firstgid is 1, so we subtract 1 to convert to 0-based index.
-                        // Wrap tileValue to fit within our texture store (assuming 16 tiles per layer in Tiled)
-                        if (layerName == "Tiles")
+                        // Get the firstgid for this layer based on its name and associated tileset
+                        int firstgid = 1; // Default fallback
+
+                        if (layerName?.ToLower() == "tiles" && layerFirstGid.TryGetValue("Basic", out int tilesFirstGid))
                         {
-                            tileMap[new Vector2(x, y)] = tileValue % 16 - 1;
+                            firstgid = tilesFirstGid;
                         }
-                        else if (layerName == "Collisions")
+                        else if (layerName?.ToLower() == "collisions" && layerFirstGid.TryGetValue("CollisionTiles", out int collisionsFirstGid))
                         {
-                            CollisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
+                            firstgid = collisionsFirstGid;
+                        }
+
+                        // Wrap tileValue to fit within our texture store (assuming 16 tiles per layer in Tiled)
+                        if (layerName?.ToLower() == "tiles")
+                        {
+                            tileMap[new Vector2(x, y)] = tileValue % 16 - firstgid;
+                        }
+                        // Collision layer uses a separate tileset where tile IDs directly represent collision types
+                        else if (layerName?.ToLower() == "collisions")
+                        {
+                            CollisionMap[new Vector2(x, y)] = tileValue % 16 - firstgid;
                         }
                     }
 
@@ -406,7 +436,8 @@ public class GameScene : IScene
         playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
         enemySheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneEnemySheet");
         miscSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneMiscSpriteSheet");
-        textureSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneMgSheet");
+        uiSheet = contentManager.Load<Texture2D>("Textures/UI/PolyGoneUI");
+        textureSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneTextureSheet");
         foregroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneFgSheet");
         collisionSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneCollisionSheet");
         try
@@ -435,7 +466,7 @@ public class GameScene : IScene
         );
 
         // Initialize GameUI
-        gameUI = new GameUI(player, textureSheet, textureStore[2], hudFont);
+        gameUI = new GameUI(player, uiSheet, textureStore[2], hudFont);
         // Initialize turret enemies
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
             texture: enemySheet,
@@ -1002,7 +1033,7 @@ public class GameScene : IScene
                 doorRect.Height
             );
             Color doorColor = door.IsTriggered ? Color.Gold : Color.SaddleBrown;
-            spriteBatch.Draw(textureSheet, doorDest, textureStore[0], doorColor * 0.5f);
+            spriteBatch.Draw(uiSheet, doorDest, textureStore[0], doorColor * 0.5f);
         }
 
         //Draw inventory access trigger (if it exists)
@@ -1016,7 +1047,7 @@ public class GameScene : IScene
                 inventoryRect.Height
             );
             Color inventoryColor = inventoryAccess.IsTriggered ? Color.Gold : Color.SaddleBrown;
-            spriteBatch.Draw(textureSheet, inventoryDest, textureStore[0], inventoryColor * 0.5f);
+            spriteBatch.Draw(uiSheet, inventoryDest, textureStore[0], inventoryColor * 0.5f);
         }
 
         player.Draw(spriteBatch, camera.position);
@@ -1033,7 +1064,7 @@ public class GameScene : IScene
             );
             // Draw goal with a green tint (using tile 0 or any appropriate texture)
             Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
-            spriteBatch.Draw(textureSheet, goalDest, textureStore[0], goalColor * 0.5f);
+            spriteBatch.Draw(uiSheet, goalDest, textureStore[0], goalColor * 0.5f);
         }
 
         // Draw new GameUI (health, cooldown, and active items)
