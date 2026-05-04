@@ -210,7 +210,7 @@ public class Entity : Sprite
 
         // Apply gravity
         ChangeY += 0.7f * GravityScale;
-        ChangeY = Math.Min(ChangeY, 14f);
+        ChangeY = Math.Clamp(ChangeY, -30f, 20f); // Terminal velocity cap
 
         // Handle vertical movement and collisions
         HandleVerticalMovement(deltaTime);
