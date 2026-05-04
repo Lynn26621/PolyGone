@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="1">
  <tileset firstgid="1" source=":/automap-tiles.tsx"/>
- <tileset firstgid="6" source="../../TiledSets/PolygoneProto.tsx"/>
- <tileset firstgid="70" source="../../TiledSets/BasicTiles.tsx"/>
+ <tileset firstgid="6" source="../../TiledSets/Proto.tsx"/>
+ <tileset firstgid="70" source="../../TiledSets/TextureSheet.tsx"/>
  <layer id="2" name="input_prototype" width="30" height="20">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
