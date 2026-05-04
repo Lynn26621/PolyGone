@@ -102,7 +102,7 @@ public class Entity : Sprite
             default:
             case CollisionType.Solid:
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
-                onGround = deltaY > 0;  // ✅ Check deltaY before setting it to 0
+                onGround = deltaY > 0;  // Check deltaY before setting it to 0
                 deltaY = 0;
                 break;
             case CollisionType.SemiSolid: 

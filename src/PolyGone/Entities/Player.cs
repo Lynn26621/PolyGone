@@ -233,11 +233,11 @@ namespace PolyGone.Entities
             // Horizontal movement with speed boost consideration
             if (InputManager.GameMoveLeft() && !InputManager.GameMoveRight())
             {
-                moveDirection = isOnSlipperyTile ? -0.0001f : -1f;
+                moveDirection = isOnSlipperyTile ? -0.00000000001f : -1f;
             }
             else if (InputManager.GameMoveRight() && !InputManager.GameMoveLeft())
             {
-                moveDirection = isOnSlipperyTile ? 0.0001f : 1f;
+                moveDirection = isOnSlipperyTile ? 0.00000000001f : 1f;
             }
 
             // Apply acceleration with speed boost
