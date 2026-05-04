@@ -248,9 +248,10 @@ namespace PolyGone.Entities
 
             // Jumping with coyote time and double jump
             bool JumpTriggered = InputManager.GameJump();
+            bool JumpHeld = InputManager.GameJumpHeld();
             bool wasOnGroundLastFrame = IsOnGround;
 
-            if ((IsOnGround || coyoteTime > 0f) && JumpTriggered)
+            if ((IsOnGround || coyoteTime > 0f) && JumpHeld)
             {
                 // Check if standing on bouncy tile for jump boost
                 float jumpPower = JumpStrength;

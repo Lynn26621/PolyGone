@@ -154,7 +154,7 @@ internal class OptionsScene : IScene
                     if (CanProcessMouseInput() && bounds.Contains(InputManager.GetMousePosition()))
                     {
                         _confirmSelectedIndex = i;
-                        if (InputManager.MenuConfirm())
+                        if (InputManager.MenuConfirmMouseClick())
                         {
                             ExecuteConfirm();
                             InputManager.ConsumeClick();
@@ -170,7 +170,7 @@ internal class OptionsScene : IScene
             {
                 _confirmSelectedIndex = (_confirmSelectedIndex + 1) % 2;
             }
-            if (InputManager.MenuConfirm())
+            if (InputManager.MenuNonPointerConfirm())
             {
                 ExecuteConfirm();
             }
@@ -224,10 +224,6 @@ internal class OptionsScene : IScene
                         if (Mouse.GetState().LeftButton == ButtonState.Pressed)
                         {
                             SetVolumeFromMouseX(InputManager.GetMousePosition().X, sliderRect);
-                            if (InputManager.MenuConfirm())
-                            {
-                                InputManager.ConsumeClick();
-                            }
                         }
                     }
                     // Keyboard/gamepad volume adjustment uses MenuLeft and MenuRight.
@@ -248,7 +244,7 @@ internal class OptionsScene : IScene
                 else if (CanProcessMouseInput() && bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _selectedIndex = i;
-                    if (InputManager.MenuConfirm())
+                    if (InputManager.MenuConfirmMouseClick())
                     {
                         if (i == 1 && !_pendingIsFullScreen)
                         {
@@ -272,12 +268,20 @@ internal class OptionsScene : IScene
             if (CanProcessMouseInput() && applyRect.Contains(InputManager.GetMousePosition()))
             {
                 _selectedIndex = 2; _buttonIndex = 0;
-                if (InputManager.MenuConfirm()) { ExecuteSelection(); InputManager.ConsumeClick(); }
+                if (InputManager.MenuConfirmMouseClick())
+                {
+                    ExecuteSelection();
+                    InputManager.ConsumeClick();
+                }
             }
             else if (CanProcessMouseInput() && discardRect.Contains(InputManager.GetMousePosition()))
             {
                 _selectedIndex = 2; _buttonIndex = 1;
-                if (InputManager.MenuConfirm()) { ExecuteSelection(); InputManager.ConsumeClick(); }
+                if (InputManager.MenuConfirmMouseClick())
+                {
+                    ExecuteSelection();
+                    InputManager.ConsumeClick();
+                }
             }
         }
 
@@ -298,7 +302,7 @@ internal class OptionsScene : IScene
             if (InputManager.MenuRight()) { _buttonIndex = 1; }
         }
 
-        if (InputManager.MenuConfirm()) { ExecuteSelection(); }
+        if (InputManager.MenuNonPointerConfirm()) { ExecuteSelection(); }
         if (InputManager.MenuBack())
         {
             if (HasPendingChanges)
@@ -432,7 +436,7 @@ internal class OptionsScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _resetConfirmSelectedIndex = i;
-                    if (InputManager.MenuConfirm())
+                    if (InputManager.MenuConfirmMouseClick())
                     {
                         ExecuteResetConfirm();
                         InputManager.ConsumeClick();
@@ -443,7 +447,7 @@ internal class OptionsScene : IScene
 
         if (InputManager.MenuUp()   || InputManager.MenuLeft())  { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex - 1 + 2) % 2; }
         if (InputManager.MenuDown() || InputManager.MenuRight()) { _resetConfirmSelectedIndex = (_resetConfirmSelectedIndex + 1) % 2; }
-        if (InputManager.MenuConfirm())  { ExecuteResetConfirm(); }
+        if (InputManager.MenuNonPointerConfirm())  { ExecuteResetConfirm(); }
         if (InputManager.MenuBack()) { _resetConfirmStep = 0; _resetConfirmSelectedIndex = 1; }
     }
 
@@ -696,7 +700,7 @@ internal class OptionsScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _resetProgressConfirmSelectedIndex = i;
-                    if (InputManager.MenuConfirm())
+                    if (InputManager.MenuConfirmMouseClick())
                     {
                         ExecuteResetProgressConfirm();
                         InputManager.ConsumeClick();
@@ -707,7 +711,7 @@ internal class OptionsScene : IScene
 
         if (InputManager.MenuUp()   || InputManager.MenuLeft())  { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex - 1 + 2) % 2; }
         if (InputManager.MenuDown() || InputManager.MenuRight()) { _resetProgressConfirmSelectedIndex = (_resetProgressConfirmSelectedIndex + 1) % 2; }
-        if (InputManager.MenuConfirm())  { ExecuteResetProgressConfirm(); }
+        if (InputManager.MenuNonPointerConfirm())  { ExecuteResetProgressConfirm(); }
         if (InputManager.MenuBack()) { _resetProgressConfirmStep = 0; _resetProgressConfirmSelectedIndex = 1; }
     }
 

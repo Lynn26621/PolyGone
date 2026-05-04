@@ -83,7 +83,7 @@ internal class DevMenuScene : IScene
 
         if (InputManager.MenuUp()) _cursor = (_cursor - 1 + EntryCount) % EntryCount;
         if (InputManager.MenuDown()) _cursor = (_cursor + 1) % EntryCount;
-        if (InputManager.MenuConfirm()) ExecuteAction(_cursor);
+        if (InputManager.MenuNonPointerConfirm()) ExecuteAction(_cursor);
         if (InputManager.MenuBack()) _sceneManager.PopScene(this);
     }
 

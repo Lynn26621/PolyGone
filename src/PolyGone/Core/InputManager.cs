@@ -34,7 +34,7 @@ public static class InputManager
     {
         var sb = new StringBuilder();
         while (_typedChars.Count > 0)
-        { 
+        {
             sb.Append(_typedChars.Dequeue());
         }
         return sb.ToString();
@@ -62,6 +62,7 @@ public static class InputManager
     private static float _menuDownAutoRepeatTimer = 0f;
     private static float _menuLeftAutoRepeatTimer = 0f;
     private static float _menuRightAutoRepeatTimer = 0f;
+    private static bool _windowIsActive = true;
     private const float MENU_AUTO_REPEAT_INTERVAL = 0.1f;
     private const float CLICK_COOLDOWN = 0.01f; // 10ms between clicks
     private const float ESCAPE_COOLDOWN = 0.2f; // 200ms between escape presses
@@ -117,13 +118,22 @@ public static class InputManager
     public static void Update(GameTime gameTime)
     {
         _previousMouseState = _currentMouseState;
-        _currentMouseState = Mouse.GetState();
-
         _previousKeyboardState = _currentKeyboardState;
-        _currentKeyboardState = Keyboard.GetState();
-
         _previousGamepadState = _currentGamepadState;
-        _currentGamepadState = GamePad.GetState(PlayerIndex.One);
+
+        if (_windowIsActive)
+        {
+            _currentMouseState = Mouse.GetState();
+            _currentKeyboardState = Keyboard.GetState();
+            _currentGamepadState = GamePad.GetState(PlayerIndex.One);
+        }
+        else
+        {
+            // Keep current state equal to previous so no new input is detected while inactive
+            _currentMouseState = _previousMouseState;
+            _currentKeyboardState = _previousKeyboardState;
+            _currentGamepadState = _previousGamepadState;
+        }
 
         var moveStick = GetMoveStickVector();
         thumbstickX = moveStick.X;
@@ -193,7 +203,7 @@ public static class InputManager
         {
             _menuLeftHoldTimer = 0f;
         }
-        
+
         if (menuRightHeld)
         {
             _menuRightHoldTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -215,6 +225,17 @@ public static class InputManager
         _menuRightAutoRepeatTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
     }
 
+    public static void SetWindowActive(bool active)
+    {
+        _windowIsActive = active;
+        if (!active)
+        {
+            // Reset cooldowns so returning focus doesn't immediately trigger actions
+            _mouseClickCooldown = CLICK_COOLDOWN;
+            _escapeKeyCooldown = ESCAPE_COOLDOWN;
+        }
+    }
+
 
     /// <summary>
     /// Consumes the click by starting the cooldown timer.
@@ -226,7 +247,7 @@ public static class InputManager
     }
     // Function for single shooting (left click for mouse and right trigger for gamepad)
     public static bool GameShootSingle()
-        {
+    {
         bool mouseClicked = _currentMouseState.LeftButton == ButtonState.Pressed
                             && _previousMouseState.LeftButton == ButtonState.Released
                             && _mouseClickCooldown <= 0f;
@@ -237,7 +258,7 @@ public static class InputManager
     // function for automatic shooting (holding left click for mouse and holding right trigger for gamepad)
     public static bool GameShootHold()
     {
-        return _currentMouseState.LeftButton == ButtonState.Pressed 
+        return _currentMouseState.LeftButton == ButtonState.Pressed
                || IsButtonHeld(Bindings.ShootButton);
     }
     // function for game jumping (space for keyboard and A button for gamepad)
@@ -248,18 +269,26 @@ public static class InputManager
         return keyboardJump || gamepadJump;
     }
 
+    // Function for checking if jump is currently held.
+    public static bool GameJumpHeld()
+    {
+        bool keyboardJump = IsKeyHeld(Bindings.JumpKey);
+        bool gamepadJump = IsButtonHeld(Bindings.JumpButton);
+        return keyboardJump || gamepadJump;
+    }
+
     // function for moving left in game (A key for keyboard and left thumbstick left for gamepad)
     public static bool GameMoveLeft()
     {
         bool keyboardLeft = IsKeyHeld(Bindings.MoveLeftKey);
-        bool gamepadLeft = thumbstickX < -0.3f; 
+        bool gamepadLeft = thumbstickX < -0.3f;
         return keyboardLeft || gamepadLeft;
     }
     // function for moving right in game (D key for keyboard and left thumbstick right for gamepad)
     public static bool GameMoveRight()
     {
         bool keyboardRight = IsKeyHeld(Bindings.MoveRightKey);
-        bool gamepadRight = thumbstickX > 0.3f; 
+        bool gamepadRight = thumbstickX > 0.3f;
         return keyboardRight || gamepadRight;
     }
     // Function for interacting with world objects like doors (W by default for keyboard, X by default for gamepad — both remappable).
@@ -331,12 +360,12 @@ public static class InputManager
                   _menuUpHoldTimer >= 1.0f &&
                   _menuUpAutoRepeatTimer >= MENU_AUTO_REPEAT_INTERVAL;
 
-        if (autoRepeat) 
+        if (autoRepeat)
         {
             _menuUpAutoRepeatTimer = 0f;
         }
         return keyboardUp || gamepadUp || gamepadStickUp || autoRepeat;
-        
+
     }
     //function for navigating down in menus (S key for keyboard and left thumbstick down for gamepad, and hovering over a button with mouse is already handled by GetMousePosition)
     public static bool MenuDown()
@@ -486,20 +515,20 @@ public static class InputManager
     //function for developer payment bypass in payment scene (Ctrl + Shift + D for keyboard, and Start + A for gamepad)
     public static bool DevPaymentBypass()
     {
-        bool keyboardBypass = _currentKeyboardState.IsKeyDown(Keys.LeftControl) 
-                            && _currentKeyboardState.IsKeyDown(Keys.LeftShift) 
-                            && _currentKeyboardState.IsKeyDown(Keys.D) 
-                            && !_previousKeyboardState.IsKeyDown(Keys.LeftControl) 
-                            && !_previousKeyboardState.IsKeyDown(Keys.LeftShift) 
-                            && !_previousKeyboardState.IsKeyDown(Keys.D) 
+        bool keyboardBypass = _currentKeyboardState.IsKeyDown(Keys.LeftControl)
+                            && _currentKeyboardState.IsKeyDown(Keys.LeftShift)
+                            && _currentKeyboardState.IsKeyDown(Keys.D)
+                            && !_previousKeyboardState.IsKeyDown(Keys.LeftControl)
+                            && !_previousKeyboardState.IsKeyDown(Keys.LeftShift)
+                            && !_previousKeyboardState.IsKeyDown(Keys.D)
                             && _escapeKeyCooldown <= 0f;
         bool gamepadBypass = _currentGamepadState.Buttons.Start == ButtonState.Pressed
                                        && _previousGamepadState.Buttons.Start == ButtonState.Released
                                        && _currentGamepadState.Buttons.A == ButtonState.Pressed
                                        && _previousGamepadState.Buttons.A == ButtonState.Released
                                         && _escapeKeyCooldown <= 0f;
-                return keyboardBypass || gamepadBypass;
-            }
+        return keyboardBypass || gamepadBypass;
+    }
 
 
     /// <summary>
