@@ -218,7 +218,7 @@
          "source":"..\/..\/..\/TiledAssets\/TiledSets\/BasicTiles.tsx"
         }, 
         {
-         "firstgid":5,
+         "firstgid":65,
          "source":"..\/..\/..\/TiledAssets\/TiledSets\/CollisionTiles.tsx"
         }, 
         {
