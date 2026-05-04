@@ -199,7 +199,7 @@ public class Entity : Sprite
     {
         // Default implementation marks entity as not alive
         IsAlive = false;
-        audioManager.PlayAudio("deathSfx", true, "null", false); //Play death sound effect
+        audioManager.PlayAudio("deathSfx", true, "null", false); // Play death sound effect
     }
 
     // Physics and collision update for non-player entities (no input)
@@ -209,8 +209,16 @@ public class Entity : Sprite
         IsOnSlipperyTile = false; // Reset each frame, collision handlers will set it if needed
 
         // Apply gravity
-        ChangeY += 0.7f * GravityScale;
-        ChangeY = Math.Clamp(ChangeY, -30f, 20f); // Terminal velocity cap
+        // Stronger gravity when moving slower to create a more responsive feel, but allow for slower falling if the entity is already moving down quickly
+        if (ChangeY < 20f)
+        {
+            ChangeY += 0.7f * GravityScale;
+        // Weaker gravity when past 20f to create a floaty terminal velocity effect, but still allow for faster falling if needed for bouncy tiles
+        } else
+        {
+            ChangeY += 0.3f * GravityScale;
+        }
+        ChangeY = Math.Clamp(ChangeY, -70f, 70f); // Terminal velocity cap
 
         // Handle vertical movement and collisions
         HandleVerticalMovement(deltaTime);
