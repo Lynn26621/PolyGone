@@ -214,10 +214,14 @@ public static class InputManager
             _menuRightHoldTimer = 0f;
         }
 
-        // Update escape key cooldown 
-        if (PauseMenuOpen() || PauseMenuClose() || MenuBack())
+        // Update escape key cooldown: always decrement over time and clamp to zero.
+        if (_escapeKeyCooldown > 0f)
         {
             _escapeKeyCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_escapeKeyCooldown < 0f)
+            {
+                _escapeKeyCooldown = 0f;
+            }
         }
         _menuUpAutoRepeatTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         _menuDownAutoRepeatTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;

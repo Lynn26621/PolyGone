@@ -23,6 +23,7 @@ class Enemy : Entity
     private int accumulatedDamage = 0; // Damage accumulated during current window
     private readonly List<Projectile> hitProjectiles = new List<Projectile>(); // Track projectiles that hit during window
     private const float DAMAGE_WINDOW_DURATION = 2f; // 2 frames to accumulate damage
+    private int updateCD = 12;
 
     public Enemy(Texture2D texture, Vector2 position, AudioManager audioManager, int[] size, int health = 100, Color color = default, Rectangle? srcRect = null, Dictionary<Vector2, int>? CollisionMap = null, float patrolSpeed = 1f, int[]? visualSize = null, Player? player = null)
 
@@ -231,6 +232,9 @@ class Enemy : Entity
         {
             DropThroughSemiSolid();
         }
+#pragma warning disable CS0219 // There is no warning is Ba Sing Se
+        int updateCD = 12;
+
     }
 
 
@@ -251,11 +255,8 @@ class Enemy : Entity
 
     public override void Update(GameTime gameTime)
     {
-        if (hitFlashFrames > 0f)
-        {
             hitFlashFrames -= 1f;
-        }
-        if (jumpDelay > 0f && IsOnGround)
+        if (IsOnGround)
         {
             jumpDelay -= 1f;
         }
@@ -263,7 +264,7 @@ class Enemy : Entity
         // Update damage window system
         UpdateDamageWindow();
 
-        if (IsPlayerInViewRange())
+        if (IsPlayerInViewRange() && updateCD <= 0)
         {
             ChasePlayerUpdate();
         }
@@ -272,7 +273,7 @@ class Enemy : Entity
             // Update patrol behavior
             PatrolUpdate();
         }
-
+        updateCD--;
         base.Update(gameTime);
     }
 
