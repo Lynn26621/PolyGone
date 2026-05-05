@@ -66,7 +66,7 @@ namespace PolyGone.Entities
         public float DashStrength { get; set; } = 35f;
 
         // Strength of horizontal boost applied when wall jumping
-        public float WallBoostStrength { get; set; } = 50f;
+        public float WallBoostStrength { get; set; } = 5f;
 
         public Player(
             Texture2D texture,
@@ -259,7 +259,7 @@ namespace PolyGone.Entities
                     base.ChangeY = JumpStrength;
                     wallCoyoteTime = 0f; // Reset wall coyote time after wall jumping
                     JustWallJumped = true; // Set to true to prevent repeat wall jumps
-                    ChangeX += wallDirection * WallBoostStrength; // Apply horizontal boost away from the wall
+                    ExtraX += wallDirection * WallBoostStrength; // Apply horizontal boost away from the wall
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #if DEBUG
@@ -278,11 +278,11 @@ namespace PolyGone.Entities
                 if (UnlockTracker.IsAbilityUnlocked(dash))
                 {
                     ExtraX += DashStrength * moveDirection;
-                    ChangeX += ExtraX; // Apply dash boost to current velocity
                     InputManager.ConsumeDash();
                 }
             }
 
+            ChangeX += ExtraX; // Apply extra x movement from dashing or wall boosts
         }
 
         protected override void OnEntityCollision(Entity other)
@@ -397,12 +397,11 @@ namespace PolyGone.Entities
 
                 var wallJump = playerAbilityNames[1];
 
-                if ((IsSolidWall(keyLeft) || IsSolidWall(keyRight)) && (!IsOnGround && !(ChangeY <= 0)))
+                if ((IsSolidWall(keyLeft) || IsSolidWall(keyRight)) && !IsOnGround)
                 {
                     if (UnlockTracker.IsAbilityUnlocked(wallJump))
                     {
                         IsOnWall = true;
-                        base.GravityScale = 0.3f; // Reduce gravity for wall cling
 
                         // Determine wall direction for wall jump boost direction
                         if (IsSolidWall(keyLeft) && !IsSolidWall(keyRight))
@@ -416,6 +415,12 @@ namespace PolyGone.Entities
                         else
                         {
                             wallDirection = 0; // Both sides solid, no directional bias
+                        }
+
+                        // Reduce gravity while on wall and falling
+                        if (!(ChangeY <= 0))
+                        {
+                            base.GravityScale = 0.3f; // Reduce gravity for wall cling
                         }
                     }
                 }
