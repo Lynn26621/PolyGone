@@ -57,16 +57,22 @@ public static class UnlockTracker
     public static bool IsLevelUnlocked(string levelFile)
     {
         int idx = Array.IndexOf(_levelOrder, levelFile);
-        if (idx <= 0) return true; // first level (or unknown) always unlocked
+        if (idx <= 0)
+            return true; // first level (or unknown) always unlocked
         return _completedLevels.Contains(_levelOrder[idx - 1]);
     }
+
+    /// <summary>Returns true if the level has been completed.</summary>
+    public static bool IsLevelCompleted(string levelFile) => _completedLevels.Contains(levelFile);
 
     /// <summary>Returns a human-readable hint for a locked level, or null if unlocked.</summary>
     public static string? GetLevelUnlockHint(string levelFile)
     {
         int idx = Array.IndexOf(_levelOrder, levelFile);
-        if (idx <= 0) return null;
-        if (_completedLevels.Contains(_levelOrder[idx - 1])) return null;
+        if (idx <= 0)
+            return null;
+        if (_completedLevels.Contains(_levelOrder[idx - 1]))
+            return null;
         return $"Complete {GetLevelDisplayName(_levelOrder[idx - 1])} to unlock";
     }
 
@@ -80,7 +86,8 @@ public static class UnlockTracker
     public static bool IsItemUnlocked(ItemType item)
     {
 #if DEBUG
-        if (item == ItemType.DevMode) return true;
+        if (item == ItemType.DevMode)
+            return true;
 #endif
         if (!_itemUnlockRequirements.TryGetValue(item, out var requiredLevel))
             return true; // No requirement — always unlocked
@@ -131,10 +138,14 @@ public static class UnlockTracker
     public static int GetPlayerItemSlotCount()
     {
         int slots = 2;
-        if (_completedLevels.Contains("TestLevel"))  slots++;
-        if (_completedLevels.Contains("TestLevel2")) slots++;
-        if (_completedLevels.Contains("TestLevel3")) slots++;
-        if (_completedLevels.Contains("TestLevel4")) slots++;
+        if (_completedLevels.Contains("TestLevel"))
+            slots++;
+        if (_completedLevels.Contains("TestLevel2"))
+            slots++;
+        if (_completedLevels.Contains("TestLevel3"))
+            slots++;
+        if (_completedLevels.Contains("TestLevel4"))
+            slots++;
         return slots; // Max 5
     }
 
@@ -145,19 +156,22 @@ public static class UnlockTracker
     public static int GetBlasterSlotCount()
     {
         int slots = 2;
-        if (_completedLevels.Contains("TestLevel"))  slots++;
-        if (_completedLevels.Contains("TestLevel2")) slots++;
-        if (_completedLevels.Contains("TestLevel3")) slots++;
+        if (_completedLevels.Contains("TestLevel"))
+            slots++;
+        if (_completedLevels.Contains("TestLevel2"))
+            slots++;
+        if (_completedLevels.Contains("TestLevel3"))
+            slots++;
         return slots;
     }
 
     /// <summary>Converts an internal level file name to a display name.</summary>
     public static string GetLevelDisplayName(string levelName) => levelName switch
     {
-        "TestLevel"  => "Level 1",
+        "TestLevel" => "Level 1",
         "TestLevel2" => "Level 2",
         "TestLevel3" => "Level 3",
-        _            => levelName,
+        _ => levelName,
     };
 
     /// <summary>Loads unlock data from disk. Safe to call multiple times.</summary>
@@ -167,7 +181,8 @@ public static class UnlockTracker
         _unlockedAbilities = new HashSet<string>();
         try
         {
-            if (!File.Exists(SavePath)) return;
+            if (!File.Exists(SavePath))
+                return;
             string json = File.ReadAllText(SavePath);
             var raw = JsonSerializer.Deserialize<List<string>>(json);
             if (raw != null)
@@ -202,13 +217,12 @@ public static class UnlockTracker
     {
         _completedLevels = new HashSet<string>();
         _unlockedAbilities = new HashSet<string>();
-        try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
+        try
+        { if (File.Exists(SavePath)) File.Delete(SavePath); }
+        catch { }
     }
 
 #if DEBUG
-    /// <summary>[DEV] Returns whether a specific level is recorded as completed.</summary>
-    public static bool IsLevelCompleted(string levelFile) => _completedLevels.Contains(levelFile);
-
     /// <summary>[DEV] Toggles a level's completed state and saves.</summary>
     public static void ToggleLevelComplete(string levelFile)
     {

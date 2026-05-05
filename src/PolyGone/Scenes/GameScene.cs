@@ -442,6 +442,7 @@ public class GameScene : IScene
                         string connectedLevel = "Hub";
                         int playerLoadX = 0;
                         int playerLoadY = 0;
+                        string? requirement = null;
                         List<JsonElement> properties = obj.GetProperty("properties").EnumerateArray().ToList();
                         foreach (JsonElement prop in properties)
                         {
@@ -457,11 +458,14 @@ public class GameScene : IScene
                                 case "loadY":
                                     playerLoadY = (int)prop.GetProperty("value").GetSingle();
                                     break;
+                                case "requirement":
+                                    requirement = prop.GetProperty("value").GetString();
+                                    break;
                                 default:
                                     break;
                             }
                         }
-                        levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connectedLevel, playerLoadX, playerLoadY));
+                        levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connectedLevel, playerLoadX, playerLoadY, requirement));
                         break;
                     case "Inventory":
                         Vector2 inventoryPos = AdjustCoordinates(
@@ -994,6 +998,11 @@ public class GameScene : IScene
         //Check if player enters door
         foreach (var door in levelDoors)
         {
+            if (!door.IsUnlocked)
+            {
+                continue;
+            }
+
             door.CheckTrigger(player.Rectangle);
             if (door.IsTriggered && door.IsActivated)
             {
@@ -1122,7 +1131,7 @@ public class GameScene : IScene
                 doorRect.Width,
                 doorRect.Height
             );
-            Color doorColor = door.IsTriggered ? Color.Gold : Color.SaddleBrown;
+            Color doorColor = !door.IsUnlocked ? Color.DarkSlateGray : door.IsTriggered ? Color.Gold : Color.SaddleBrown;
             spriteBatch.Draw(uiSheet, doorDest, textureStore[0], doorColor * 0.5f);
         }
 

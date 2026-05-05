@@ -13,13 +13,17 @@ namespace PolyGone.Core
         public string ConnectedLevel { get; private set; }
         public int LoadX;
         public int LoadY;
+        public string? Requirement { get; private set; }
 
-        public LevelDoor(Vector2 position, int width, int height, AudioManager audioManager, string connectedLevel, int loadX, int loadY)
+        public bool IsUnlocked => string.IsNullOrWhiteSpace(Requirement) || UnlockTracker.IsLevelCompleted(Requirement);
+
+        public LevelDoor(Vector2 position, int width, int height, AudioManager audioManager, string connectedLevel, int loadX, int loadY, string? requirement = null)
         : base(position, width, height, audioManager)
         {
             ConnectedLevel = connectedLevel;
             LoadX = loadX;
             LoadY = loadY;
+            Requirement = string.Equals(requirement, "none", StringComparison.OrdinalIgnoreCase) ? null : requirement;
         }
     }
 }
