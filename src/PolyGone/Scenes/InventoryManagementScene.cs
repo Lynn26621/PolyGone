@@ -615,6 +615,9 @@ namespace PolyGone
         // -----------------------------------------------------------------------
         // Start game / reset
         // -----------------------------------------------------------------------
+        public static List<ItemType> GetLastSelectedItems() => new List<ItemType>(_lastSelectedPlayerItems);
+        public static List<BlasterAttachmentType> GetLastSelectedAttachments() => new List<BlasterAttachmentType>(_lastSelectedAttachments);
+
         public static void ResetSavedLoadout()
         {
             _lastSelectedPlayerItems = new List<ItemType> { ItemType.DoubleJump };
