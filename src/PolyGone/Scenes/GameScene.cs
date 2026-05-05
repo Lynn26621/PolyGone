@@ -465,7 +465,14 @@ public class GameScene : IScene
                                     break;
                             }
                         }
-                        levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connectedLevel, playerLoadX, playerLoadY, requirement));
+                        // Extract the object's name from the Tiled object (if present) to use as hover text
+                        string? doorName = null;
+                        if (obj.TryGetProperty("name", out JsonElement nameElem))
+                        {
+                            doorName = nameElem.GetString();
+                        }
+
+                        levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connectedLevel, playerLoadX, playerLoadY, requirement, doorName));
                         break;
                     case "Inventory":
                         Vector2 inventoryPos = AdjustCoordinates(
@@ -1164,6 +1171,32 @@ public class GameScene : IScene
             // Draw goal with a green tint: darker when idle, lighter when touching, gold when activated
             Color goalColor = goalTrigger.IsActivated ? Color.Gold : (goalTrigger.IsTriggered ? Color.LimeGreen : Color.DarkGreen);
             spriteBatch.Draw(uiSheet, goalDest, textureStore[0], goalColor * 0.5f);
+        }
+
+        // Draw door hover text (name set from Tiled) when player is in a door trigger
+        if (hudFont != null)
+        {
+            const float textScale = 0.75f; // slightly smaller than default
+            foreach (var door in levelDoors)
+            {
+                if (door.IsTriggered && !string.IsNullOrWhiteSpace(door.DisplayName))
+                {
+                    Rectangle doorRect = door.GetBounds();
+                    Vector2 textPos = new Vector2(
+                        doorRect.X - camera.position.X + (doorRect.Width / 2f),
+                        doorRect.Y - camera.position.Y - 34f // position above the door for readability
+                    );
+                    string text = door.DisplayName!;
+                    Vector2 textSize = hudFont.MeasureString(text) * textScale;
+                    textPos.X -= textSize.X / 2f;
+                    if (textPos.Y < 0)
+                        textPos.Y = 0;
+
+                    // Draw subtle shadow for readability
+                    spriteBatch.DrawString(hudFont, text, textPos + new Vector2(1f, 1f), Color.Black * 0.6f, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawString(hudFont, text, textPos, Color.White, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+                }
+            }
         }
 
         player.Draw(spriteBatch, camera.position);

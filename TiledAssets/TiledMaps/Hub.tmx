@@ -60,14 +60,14 @@
 </data>
  </layer>
  <objectgroup id="2" name="objects">
-  <object id="2" name="Level3Door" type="Door" x="96" y="224" width="32" height="32">
+  <object id="2" name="Test Level 3" type="Door" x="96" y="224" width="32" height="32">
    <properties>
     <property name="connectedLevel" value="TestLevel3"/>
     <property name="loadX" type="int" value="32"/>
     <property name="loadY" type="int" value="896"/>
    </properties>
   </object>
-  <object id="3" name="Level2Door" type="Door" x="96" y="352" width="32" height="32">
+  <object id="3" name="Test Level 2" type="Door" x="96" y="352" width="32" height="32">
    <properties>
     <property name="connectedLevel" value="TestLevel2"/>
     <property name="loadX" type="int" value="32"/>
@@ -75,7 +75,7 @@
     <property name="requirement" value="TestLevel"/>
    </properties>
   </object>
-  <object id="19" name="Level1Door" type="Door" x="96" y="480" width="32" height="32">
+  <object id="19" name="Test Level" type="Door" x="96" y="480" width="32" height="32">
    <properties>
     <property name="connectedLevel" value="TestLevel"/>
     <property name="loadX" type="int" value="32"/>
@@ -84,7 +84,7 @@
   </object>
   <object id="20" type="Player" gid="81" x="96" y="608" width="32" height="32"/>
   <object id="24" name="Inventory" type="Inventory" x="512" y="608" width="32" height="32"/>
-  <object id="26" name="Level4Door" type="Door" x="96" y="96" width="32" height="32">
+  <object id="26" name="Test Level 4" type="Door" x="96" y="96" width="32" height="32">
    <properties>
     <property name="connectedLevel" value="TestLevel4"/>
     <property name="loadX" type="int" value="64"/>

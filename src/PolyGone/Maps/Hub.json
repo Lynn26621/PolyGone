@@ -88,7 +88,7 @@
                 {
                  "height":32,
                  "id":2,
-                 "name":"Level3Door",
+                 "name":"Test Level 3",
                  "opacity":1,
                  "properties":[
                         {
@@ -116,7 +116,7 @@
                 {
                  "height":32,
                  "id":3,
-                 "name":"Level2Door",
+                 "name":"Test Level 2",
                  "opacity":1,
                  "properties":[
                         {
@@ -149,7 +149,7 @@
                 {
                  "height":32,
                  "id":19,
-                 "name":"Level1Door",
+                 "name":"Test Level",
                  "opacity":1,
                  "properties":[
                         {
@@ -202,7 +202,7 @@
                 {
                  "height":32,
                  "id":26,
-                 "name":"Level4Door",
+                 "name":"Test Level 4",
                  "opacity":1,
                  "properties":[
                         {
