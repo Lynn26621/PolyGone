@@ -26,7 +26,7 @@ public static class UnlockTracker
     /// </summary>
     private static readonly Dictionary<ItemType, string> _itemUnlockRequirements = new()
     {
-        { ItemType.HealingGlow, "TestLevel"  },
+        { ItemType.HealingGlow, "Level"  },
         { ItemType.LowGravity,  "TestLevel2" },
         { ItemType.IronWill,    "TestLevel3" },
     };
@@ -37,7 +37,7 @@ public static class UnlockTracker
     /// </summary>
     private static readonly Dictionary<BlasterAttachmentType, string> _attachmentUnlockRequirements = new()
     {
-        { BlasterAttachmentType.RapidFire,   "TestLevel"  },
+        { BlasterAttachmentType.RapidFire,   "Level"  },
         { BlasterAttachmentType.Piercing,    "TestLevel2" },
         { BlasterAttachmentType.DamageBoost, "TestLevel3" },
     };
@@ -46,7 +46,7 @@ public static class UnlockTracker
     /// The ordered list of level file names. Index 0 is always unlocked;
     /// every subsequent level requires the one before it to be completed.
     /// </summary>
-    private static readonly string[] _levelOrder = { "TestLevel", "TestLevel2", "TestLevel3" };
+    private static readonly string[] _levelOrder = { "Level", "TestLevel2", "TestLevel3" };
 
     /// <summary>
     /// List of all unlockable abilites.
@@ -133,12 +133,12 @@ public static class UnlockTracker
 
     /// <summary>
     /// Returns the number of player item slots available.
-    /// Starts at 1; completing TestLevel adds a 2nd slot; completing TestLevel3 adds a 3rd.
+    /// Starts at 1; completing Level adds a 2nd slot; completing TestLevel3 adds a 3rd.
     /// </summary>
     public static int GetPlayerItemSlotCount()
     {
         int slots = 2;
-        if (_completedLevels.Contains("TestLevel"))
+        if (_completedLevels.Contains("Level1"))
             slots++;
         if (_completedLevels.Contains("TestLevel2"))
             slots++;
@@ -156,7 +156,7 @@ public static class UnlockTracker
     public static int GetBlasterSlotCount()
     {
         int slots = 2;
-        if (_completedLevels.Contains("TestLevel"))
+        if (_completedLevels.Contains("Level1"))
             slots++;
         if (_completedLevels.Contains("TestLevel2"))
             slots++;
@@ -168,9 +168,9 @@ public static class UnlockTracker
     /// <summary>Converts an internal level file name to a display name.</summary>
     public static string GetLevelDisplayName(string levelName) => levelName switch
     {
-        "TestLevel" => "Level 1",
-        "TestLevel2" => "Level 2",
-        "TestLevel3" => "Level 3",
+        "TestLevel" => "Test Level 1",
+        "TestLevel2" => "Test Level 2",
+        "TestLevel3" => "Test Level 3",
         _ => levelName,
     };
 

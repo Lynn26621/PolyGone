@@ -137,7 +137,7 @@
                         {
                          "name":"requirement",
                          "type":"string",
-                         "value":"TestLevel"
+                         "value":"Level1"
                         }],
                  "rotation":0,
                  "type":"Door",
@@ -149,18 +149,18 @@
                 {
                  "height":32,
                  "id":19,
-                 "name":"Test Level",
+                 "name":"Level 1",
                  "opacity":1,
                  "properties":[
                         {
                          "name":"connectedLevel",
                          "type":"string",
-                         "value":"TestLevel"
+                         "value":"Level1"
                         }, 
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":32
+                         "value":160
                         }, 
                         {
                          "name":"loadY",

@@ -70,7 +70,7 @@ public class GameScene : IScene
     private int? loadX;
     private int? loadY;
 
-    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null, int? loadX = null, int? loadY = null)
+    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "Level1", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null, int? loadX = null, int? loadY = null)
     {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
@@ -515,23 +515,7 @@ public class GameScene : IScene
         InputManager.ResetClickCooldown();
 
         //Play level music
-        if (levelName != null)
-        {
-            switch (levelName)
-            {
-                case "TestLevel":
-                    audioManager.PlayAudio("null", false, "level1Song", true);
-                    break;
-                case "TestLevel2":
-                    audioManager.PlayAudio("null", false, "level2Song", true);
-                    break;
-                case "TestLevel3":
-                    audioManager.PlayAudio("null", false, "level3Song", true);
-                    break;
-                default:
-                    break;
-            }
-        }
+        audioManager.PlayAudio("null", false, "level1Song", true);
 
         // Load texture atlas and initialize camera
         playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");

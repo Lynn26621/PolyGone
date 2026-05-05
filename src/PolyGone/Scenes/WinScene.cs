@@ -23,7 +23,7 @@ public class WinScene : IScene
     private readonly string[] options;
     private int selectedIndex;
 
-    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
+    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "Level1", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
     {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
