@@ -38,8 +38,8 @@ namespace PolyGone.Weapons
                     health: 99,                  // Won't die from health damage
                     damage: 40,                  // Same as base blaster
                     color: new Color(180, 0, 220), // Deep violet
-                    xSpeed: (float)(Math.Cos(Rotation) * 700f),
-                    ySpeed: (float)(Math.Sin(Rotation) * 700f),
+                        xSpeed: (float)(Math.Cos(Rotation) * 840f),
+                        ySpeed: (float)(Math.Sin(Rotation) * 840f),
                     owner: Owner.Player,
                     srcRect: srcRect,
                     CollisionMap: CollisionMap,
@@ -66,8 +66,8 @@ namespace PolyGone.Weapons
                             health: 99,
                             damage: 40,
                             color: new Color(180, 0, 220),
-                            xSpeed: (float)(Math.Cos(angle) * 700f),
-                            ySpeed: (float)(Math.Sin(angle) * 700f),
+                                xSpeed: (float)(Math.Cos(angle) * 840f),
+                                ySpeed: (float)(Math.Sin(angle) * 840f),
                             owner: Owner.Player,
                             srcRect: srcRect,
                             CollisionMap: CollisionMap,

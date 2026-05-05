@@ -430,7 +430,7 @@ public class GameScene : IScene
                         );
                         int goalWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
                         int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                        goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight);
+                        goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight, audioManager);
                         break;
                     case "Door":
                         Vector2 doorPos = AdjustCoordinates(
@@ -987,7 +987,9 @@ public class GameScene : IScene
         if (goalTrigger != null && !levelComplete)
         {
             goalTrigger.CheckTrigger(player.Rectangle);
-            if (goalTrigger.IsTriggered)
+            // Let the trigger handle interact input (same as doors)
+            goalTrigger.Update();
+            if (goalTrigger.IsActivated)
             {
                 levelComplete = true;
                 // Transition to win scene with current loadout
@@ -1149,8 +1151,6 @@ public class GameScene : IScene
             spriteBatch.Draw(uiSheet, inventoryDest, textureStore[0], inventoryColor * 0.5f);
         }
 
-        player.Draw(spriteBatch, camera.position);
-
         // Draw goal trigger (if it exists)
         if (goalTrigger != null)
         {
@@ -1161,10 +1161,12 @@ public class GameScene : IScene
                 goalRect.Width,
                 goalRect.Height
             );
-            // Draw goal with a green tint (using tile 0 or any appropriate texture)
-            Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
+            // Draw goal with a green tint: darker when idle, lighter when touching, gold when activated
+            Color goalColor = goalTrigger.IsActivated ? Color.Gold : (goalTrigger.IsTriggered ? Color.LimeGreen : Color.DarkGreen);
             spriteBatch.Draw(uiSheet, goalDest, textureStore[0], goalColor * 0.5f);
         }
+
+        player.Draw(spriteBatch, camera.position);
 
         // Draw new GameUI (health, cooldown, and active items)
         gameUI.Draw(spriteBatch);

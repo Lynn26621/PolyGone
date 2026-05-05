@@ -38,8 +38,8 @@ namespace PolyGone.Weapons
                     health: 1,
                     damage: 15,
                     color: Color.Cyan,
-                    xSpeed: (float)(Math.Cos(Rotation) * 900f),
-                    ySpeed: (float)(Math.Sin(Rotation) * 900f),
+                        xSpeed: (float)(Math.Cos(Rotation) * 1080f),
+                        ySpeed: (float)(Math.Sin(Rotation) * 1080f),
                     owner: Owner.Player,
                     srcRect: srcRect,
                     CollisionMap: CollisionMap
@@ -65,8 +65,8 @@ namespace PolyGone.Weapons
                             health: 1,
                             damage: 15,
                             color: Color.Cyan,
-                            xSpeed: (float)(Math.Cos(angle) * 900f),
-                            ySpeed: (float)(Math.Sin(angle) * 900f),
+                                xSpeed: (float)(Math.Cos(angle) * 1080f),
+                                ySpeed: (float)(Math.Sin(angle) * 1080f),
                             owner: Owner.Player,
                             srcRect: srcRect,
                             CollisionMap: CollisionMap

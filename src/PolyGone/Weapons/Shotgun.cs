@@ -45,8 +45,8 @@ namespace PolyGone.Weapons
                         health: 1,
                         damage: 15, // Weaker than blaster but multiple pellets
                         color: Color.Orange, // Different color to distinguish
-                        xSpeed: (float)(Math.Cos(currentAngle) * 600f), // Slightly slower
-                        ySpeed: (float)(Math.Sin(currentAngle) * 600f),
+                            xSpeed: (float)(Math.Cos(currentAngle) * 720f), // Slightly slower
+                            ySpeed: (float)(Math.Sin(currentAngle) * 720f),
                         owner: Owner.Player,
                         srcRect: srcRect,
                         CollisionMap: CollisionMap

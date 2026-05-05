@@ -432,8 +432,8 @@ namespace PolyGone.Entities
                 default:
                     break;
                 case Projectile projectile:
-                    // Only take damage from non-player projectiles
-                    if (InvincibilityFrames <= 0f)
+                    // Only take damage from enemy projectiles, not from player-fired ones
+                    if (projectile.FiredBy == Owner.Enemy && InvincibilityFrames <= 0f)
                     {
 #if DEBUG
                         if (GetDevModeItem()?.IsActive == true)

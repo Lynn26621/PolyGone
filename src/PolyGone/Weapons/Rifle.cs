@@ -36,8 +36,8 @@ namespace PolyGone.Weapons
                     health: 3,
                     damage: 120, // Stronger than blaster
                     color: Color.Black, // Different color to distinguish
-                    xSpeed: (float)(Math.Cos(Rotation) * 3000), // Fast
-                    ySpeed: (float)(Math.Sin(Rotation) * 3000),
+                        xSpeed: (float)(Math.Cos(Rotation) * 3600), // Fast
+                        ySpeed: (float)(Math.Sin(Rotation) * 3600),
                     owner: Owner.Player,
                     srcRect: srcRect,
                     CollisionMap: CollisionMap
@@ -63,8 +63,8 @@ namespace PolyGone.Weapons
                             health: 3,
                             damage: 120,
                             color: Color.Black,
-                            xSpeed: (float)(Math.Cos(angle) * 3000),
-                            ySpeed: (float)(Math.Sin(angle) * 3000),
+                                xSpeed: (float)(Math.Cos(angle) * 3600),
+                                ySpeed: (float)(Math.Sin(angle) * 3600),
                             owner: Owner.Player,
                             srcRect: srcRect,
                             CollisionMap: CollisionMap
