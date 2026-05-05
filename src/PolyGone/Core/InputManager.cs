@@ -54,6 +54,7 @@ public static class InputManager
     public static Vector2 RightThumbstick => _rightThumbstick;
     private static float _mouseClickCooldown = 0f;
     private static float _escapeKeyCooldown = 0f;
+    private static float _dashCooldown = 0f;
     private static float _menuUpHoldTimer = 0f;
     private static float _menuDownHoldTimer = 0f;
     private static float _menuLeftHoldTimer = 0f;
@@ -66,6 +67,7 @@ public static class InputManager
     private const float MENU_AUTO_REPEAT_INTERVAL = 0.1f;
     private const float CLICK_COOLDOWN = 0.01f; // 10ms between clicks
     private const float ESCAPE_COOLDOWN = 0.2f; // 200ms between escape presses
+    private const float DASH_COOLDOWN = 0.75f; // 750ms between dashes
 
     public static MouseState CurrentMouseState => _currentMouseState;
     public static MouseState PreviousMouseState => _previousMouseState;
@@ -174,6 +176,12 @@ public static class InputManager
             _mouseClickCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
+        // Update dash cooldown
+        if (_dashCooldown > 0f)
+        {
+            _dashCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
         // Update menu hold timers
         if (menuUpHeld)
         {
@@ -249,6 +257,14 @@ public static class InputManager
     {
         _mouseClickCooldown = CLICK_COOLDOWN;
     }
+    /// <summary>
+    /// Consumes the dash by starting the cooldown timer.
+    /// Call this after handling a dash to prevent it from triggering multiple actions.
+    /// </summary>
+    public static void ConsumeDash()
+    {
+        _dashCooldown = DASH_COOLDOWN;
+    }
     // Function for single shooting (left click for mouse and right trigger for gamepad)
     public static bool GameShootSingle()
     {
@@ -279,6 +295,16 @@ public static class InputManager
         bool keyboardJump = IsKeyHeld(Bindings.JumpKey);
         bool gamepadJump = IsButtonHeld(Bindings.JumpButton);
         return keyboardJump || gamepadJump;
+    }
+
+    // function for dashing (left shift for keyboard and B button for gamepad)
+    public static bool GameDash()
+    {
+        bool keyboardDash = IsKeyPressed(Bindings.DashKey)
+                            && _dashCooldown <= 0f;
+        bool gamepadDash = IsButtonPressed(Bindings.DashButton)
+                           && _dashCooldown <= 0f;
+        return keyboardDash || gamepadDash;
     }
 
     // function for moving left in game (A key for keyboard and left thumbstick left for gamepad)
@@ -544,6 +570,14 @@ public static class InputManager
         _mouseClickCooldown = CLICK_COOLDOWN;
     }
 
+    /// <summary>
+    /// Forces a reset of the dash cooldown. Useful when transitioning between scenes
+    /// to ensure old dashes don't carry over.
+    /// </summary>
+    public static void ResetDash()
+    {
+        _dashCooldown = DASH_COOLDOWN;
+    }
 
 
     /// <summary>

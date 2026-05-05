@@ -19,7 +19,9 @@ internal class DevMenuScene : IScene
 
     private static readonly string[] LevelFiles        = { "TestLevel", "TestLevel2", "TestLevel3" };
     private static readonly string[] LevelDisplayNames = { "Level 1",   "Level 2",    "Level 3"    };
-    private int EntryCount => LevelFiles.Length + 3;
+    private static readonly string[] AbilityNames = { "Dash", "WallJump" };
+    private static readonly string[] AbilityDisplayNames = { "Dash", "Wall Jump" };
+    private int EntryCount => LevelFiles.Length + AbilityNames.Length + 3;
 
     public DevMenuScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
     {
@@ -45,7 +47,8 @@ internal class DevMenuScene : IScene
             var viewport  = _graphics.GraphicsDevice.Viewport;
             int startX    = 120;
             int startY    = 200;
-            int actionBaseY = startY + LevelFiles.Length * 40 + 20;
+            int abilityY = startY + LevelFiles.Length * 40 + 40;
+            int actionBaseY = abilityY + AbilityNames.Length * 40 + 20;
 
             for (int i = 0; i < LevelFiles.Length; i++)
             {
@@ -64,14 +67,31 @@ internal class DevMenuScene : IScene
                 }
             }
 
-            string[] actions = { "Unlock All Levels", "Lock All Levels", "Close" };
+            for (int i = 0; i < AbilityNames.Length; i++)
+            {
+                bool completed = UnlockTracker.IsAbilityUnlocked(AbilityNames[i]);
+                string text = (completed ? "[X] " : "[ ] ") + AbilityDisplayNames[i];
+                var size = _font.MeasureString(text);
+                var bounds = new Rectangle(startX, abilityY + i * 40, (int)size.X, (int)size.Y);
+                if (bounds.Contains(InputManager.GetMousePosition()))
+                {
+                    _cursor = LevelFiles.Length + i;
+                    if (InputManager.MenuConfirm())
+                    {
+                        UnlockTracker.ToggleAbilityUnlocked(AbilityNames[i]);
+                        InputManager.ConsumeClick();
+                    }
+                }
+            }
+
+            string[] actions = { "Unlock All Levels", "Lock All Levels", "Unlock All Abilities", "Lock All Abilities", "Close" };
             for (int i = 0; i < actions.Length; i++)
             {
                 var size   = _font.MeasureString(actions[i]);
                 var bounds = new Rectangle(startX, actionBaseY + i * 40, (int)size.X, (int)size.Y);
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
-                    _cursor = LevelFiles.Length + i;
+                    _cursor = LevelFiles.Length + AbilityNames.Length + i;
                     if (InputManager.MenuConfirm())
                     {
                         ExecuteAction(_cursor);
@@ -93,18 +113,43 @@ internal class DevMenuScene : IScene
         {
             UnlockTracker.ToggleLevelComplete(LevelFiles[index]);
         }
+        else if ((index < (LevelFiles.Length + AbilityNames.Length)) && (index > LevelFiles.Length))
+        {
+            UnlockTracker.ToggleAbilityUnlocked(AbilityNames[index - AbilityNames.Length]);
+        }
         else
         {
-            int action = index - LevelFiles.Length;
-            if (action == 0)      // Unlock All
+            int action = index - (LevelFiles.Length + AbilityNames.Length);
+            if (action == 0)      // Unlock All Levels
             {
                 foreach (var lf in LevelFiles)
                     UnlockTracker.RecordLevelComplete(lf);
             }
-            else if (action == 1) // Lock All
+            else if (action == 1) // Lock All Levels
             {
-                UnlockTracker.Reset();
-                InventoryManagement.ResetSavedLoadout();
+                foreach (var lf in LevelFiles)
+                {
+                    if (UnlockTracker.IsLevelCompleted(lf))
+                    {
+                        UnlockTracker.ToggleLevelComplete(lf);
+                        InventoryManagement.ResetSavedLoadout();
+                    }
+                }
+            }
+            else if (action == 2) // Unlock All Abilities
+            {
+                foreach (var ability in AbilityNames)
+                    UnlockTracker.RecordAbilityUnlocked(ability);
+            }
+            else if (action == 3) // Lock All Abilities
+            {
+                foreach (var ability in AbilityNames)
+                {
+                    if (UnlockTracker.IsAbilityUnlocked(ability))
+                    {
+                        UnlockTracker.ToggleAbilityUnlocked(ability);
+                    }
+                }
             }
             else                  // Close
             {
@@ -145,14 +190,28 @@ internal class DevMenuScene : IScene
             spriteBatch.DrawString(_font, prefix + LevelDisplayNames[i], new Vector2(startX, startY + i * 40), color);
         }
 
-        // Action rows
-        string[] actions = { "Unlock All Levels", "Lock All Levels", "Close" };
-        int actionBaseY  = startY + LevelFiles.Length * 40 + 20;
+        // ── Left column: ability toggles ───────────────────────────────────
+        int abilityY = startY + LevelFiles.Length * 40 + 45;
+        spriteBatch.DrawString(_font, "Abilities (toggle unlocked):", new Vector2(startX, abilityY - 40), Color.LightCyan);
+
+        for (int i = 0; i < AbilityNames.Length; i++)
+        {
+            bool completed = UnlockTracker.IsAbilityUnlocked(AbilityNames[i]);
+            int idx = LevelFiles.Length + i;
+            bool isCursor = _cursor == idx;
+            string prefix = completed ? "[X] " : "[ ] ";
+            Color color = isCursor ? Color.Yellow : (completed ? Color.LightGreen : Color.White);
+            spriteBatch.DrawString(_font, prefix + AbilityDisplayNames[i], new Vector2(startX, abilityY + i * 40), color);
+        }
+
+            // Action rows
+            string[] actions = { "Unlock All Levels", "Lock All Levels", "Unlock All Abilities", "Lock All Abilities", "Close" };
+        int actionBaseY  = abilityY + AbilityNames.Length * 40 + 20;
         for (int i = 0; i < actions.Length; i++)
         {
-            int idx       = LevelFiles.Length + i;
+            int idx       = LevelFiles.Length + AbilityNames.Length + i;
             bool isCursor = _cursor == idx;
-            Color color   = isCursor ? Color.Yellow : (i == 1 ? Color.Tomato : Color.White);
+            Color color   = isCursor ? Color.Yellow : ((i == 1 || i == 3) ? Color.Tomato : Color.White);
             string prefix = isCursor ? "> " : "  ";
             spriteBatch.DrawString(_font, prefix + actions[i], new Vector2(startX, actionBaseY + i * 40), color);
         }
@@ -164,7 +223,6 @@ internal class DevMenuScene : IScene
         var allItems = new (ItemType Type, string Name, string Req)[]
         {
             (ItemType.DoubleJump,  "Double Jump",  "always"),
-            (ItemType.SpeedBoost,  "Speed Boost",  "always"),
             (ItemType.HealingGlow, "Healing Glow", "Level 1"),
             (ItemType.LowGravity,  "Low Gravity",  "Level 2"),
             (ItemType.IronWill,    "Iron Will",    "Level 3"),

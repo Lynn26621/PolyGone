@@ -1,14 +1,15 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Numerics;
-using Vector2 = Microsoft.Xna.Framework.Vector2;
-using PolyGone.Weapons;
-using PolyGone.Items;
 using PolyGone.Core;
+using PolyGone.Items;
+using PolyGone.Weapons;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Threading.Channels;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
 
 namespace PolyGone.Entities
 {
@@ -19,6 +20,10 @@ namespace PolyGone.Entities
         private const float VERTICAL_GAP_NUDGE_STRENGTH = 20f; // Strong nudge for vertical movement through gaps
         private const float HORIZONTAL_GAP_NUDGE_STRENGTH = 15f; // Medium nudge for horizontal gap funneling
         private const float BOUNCY_BOUNCE_THRESHOLD = 4f; // Only stronger landings should bounce
+        private const float WALL_CLING_START_SLOW_FACTOR = 0.55f; // Initial damp on downward speed while clinging
+        private const float WALL_CLING_START_SPEED_CAP = 3f; // Initial max downward speed while clinging
+        private const float WALL_CLING_RAMP_FRAMES = 45f; // Time to ramp cling effect back to normal fall
+        private const float SAME_WALL_JUMP_LOCK_FRAMES = 40f; // Stricter lock to prevent same-wall climb loops
 
         private AudioManager audioManager;
         private Item? currentWeapon; // Single selected weapon
@@ -26,6 +31,32 @@ namespace PolyGone.Entities
         public readonly List<Projectile> Bullets = new List<Projectile>(); // Shared projectile list for all weapons
         private float ffCooldown = 0f;
         private float coyoteTime = 0f; // Allows jumping shortly after leaving a platform
+        private float wallCoyoteTime = 0f; // Allows wall jump shortly after leaving a wall
+        private float wallBoostLength = 0f; // Prevents player from immediately moving back towards the wall after a wall jump
+        private int wallDirection = 0; // 1 for left wall, -1 for right wall (player should be boosted away from the wall when wall jumping)
+        protected bool IsOnWall = false; // Indicates if the player is currently clinging to a wall
+        protected bool JustWallJumped = false; // Track if the player just performed a wall jump, used to prevent repeat wall jumps
+        private int lastWallJumpDirection = 0; // Wall side used for last wall jump (1 left, -1 right)
+        private float sameWallJumpLockTimer = 0f;
+        private float wallClingFrames = 0f;
+        private int wallCoyoteDirection = 0;
+        private float wallDashLockTimer = 0f; // Prevents dashing back towards a wall after wall jumping
+        private int wallDashLockDirection = 0; // Direction to prevent dashing towards (1 for left, -1 for right)
+
+        // -----------------------------------------------------------------------
+        // Player Ability Definitions
+        // -----------------------------------------------------------------------
+        private readonly string[] playerAbilityNames =
+        {
+            "Dash",
+            "WallJump"
+        };
+
+        private readonly string[] playerAbilityDescriptions =
+        {
+            "Quickly moves the player 5 blocks in the direction they're moving with a cooldown of 2.5 seconds",
+            "Allows the player to cling to a wall, slowing their descent and giving them a chance to jump from the wall"
+        };
 
         // Public property to access changeY for items
         public new float ChangeY
@@ -39,6 +70,9 @@ namespace PolyGone.Entities
         // Public property to control gravity (used by LowGravityItem)
         public new float GravityScale { get => base.GravityScale; set => base.GravityScale = value; }
 
+        // Exposed for items that must defer to wall-jump/wall-coyote behavior.
+        public bool HasWallJumpAssist => IsOnWall || wallCoyoteTime > 0f;
+
         // Jump velocity — scaled by LowGravityItem to keep peak height constant
         public float JumpStrength { get; set; } = -16.75f;
         private bool isOnSlipperyTile = false;
@@ -46,6 +80,16 @@ namespace PolyGone.Entities
         private bool isOnBouncyTile = false;
         private bool wasOnBouncyTile = false;
         private float preservedMomentumX = 0f;
+
+        // Dash velocity boost applied when dashing
+        public float DashStrength { get; set; } = 20f;
+
+        // Strength of horizontal boost applied when wall jumping
+        public float WallBoostStrength { get; set; } = 5f;
+
+        // Frame-based contact counter to make wall cling detection slightly slower
+        private int wallContactFrames = 0;
+        private const int WALL_CONTACT_REQUIRED = 6; // ~0.1s at 60fps
 
         public Player(
             Texture2D texture,
@@ -73,24 +117,24 @@ namespace PolyGone.Entities
                 switch (attachmentType)
                 {
                     case BlasterAttachmentType.MultiShot:
-                        attachment = new PolyGone.Items.MultiShotItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, srcRect);
+                        attachment = new MultiShotItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, srcRect);
                         break;
                     case BlasterAttachmentType.RapidFire:
-                        attachment = new PolyGone.Items.RapidFireItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Orange, srcRect);
+                        attachment = new RapidFireItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Orange, srcRect);
                         break;
                     case BlasterAttachmentType.Piercing:
-                        attachment = new PolyGone.Items.PiercingAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(140, 0, 200), srcRect);
+                        attachment = new PiercingAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(140, 0, 200), srcRect);
                         break;
                     case BlasterAttachmentType.DamageBoost:
-                        attachment = new PolyGone.Items.DamageBoostAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(255, 60, 0), srcRect);
+                        attachment = new DamageBoostAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(255, 60, 0), srcRect);
                         break;
 #if DEBUG
                     case BlasterAttachmentType.DevBlaster:
                         // DEV: Apply all attachment effects at once
-                        new PolyGone.Items.MultiShotItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, srcRect).Apply(this);
-                        new PolyGone.Items.RapidFireItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Orange, srcRect).Apply(this);
-                        new PolyGone.Items.PiercingAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(140, 0, 200), srcRect).Apply(this);
-                        new PolyGone.Items.DamageBoostAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(255, 60, 0), srcRect).Apply(this);
+                        new MultiShotItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Red, srcRect).Apply(this);
+                        new RapidFireItem(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, Color.Orange, srcRect).Apply(this);
+                        new PiercingAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(140, 0, 200), srcRect).Apply(this);
+                        new DamageBoostAttachment(blasterTexture, Vector2.Zero, new int[] { 32, 32 }, new Color(255, 60, 0), srcRect).Apply(this);
                         break;
 #endif
                 }
@@ -110,9 +154,6 @@ namespace PolyGone.Entities
                     case ItemType.DoubleJump:
                         item = new DoubleJumpItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Blue, srcRect);
                         break;
-                    case ItemType.SpeedBoost:
-                        item = new SpeedBoostItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Yellow, srcRect);
-                        break;
                     case ItemType.HealingGlow:
                         item = new HealingGlowItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Green, srcRect);
                         break;
@@ -124,7 +165,7 @@ namespace PolyGone.Entities
                         break;
 #if DEBUG
                     case ItemType.DevMode:
-                        item = new PolyGone.Items.DevModeItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Magenta, srcRect);
+                        item = new DevModeItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Magenta, srcRect);
                         break;
 #endif
                 }
@@ -229,6 +270,7 @@ namespace PolyGone.Entities
         private void HandleInput()
         {
             float moveDirection = 0f;
+            bool performedWallJumpThisFrame = false;
 
             // Horizontal movement with speed boost consideration
             if (InputManager.GameMoveLeft() && !InputManager.GameMoveRight())
@@ -237,14 +279,25 @@ namespace PolyGone.Entities
             }
             else if (InputManager.GameMoveRight() && !InputManager.GameMoveLeft())
             {
-                moveDirection = isOnSlipperyTile ? 0.00000000001f : 1f;
+                moveDirection = 1;
+            }
+
+            // Prevent moving back toward wall immediately after a wall jump
+            if (JustWallJumped && wallBoostLength > 0f && wallDirection != 0)
+            {
+                // If wall is on left (1) prevent left input; if on right (-1) prevent right input
+                if ((wallDirection == 1 && InputManager.GameMoveLeft()) || (wallDirection == -1 && InputManager.GameMoveRight()))
+                {
+                    moveDirection = 0f;
+                }
             }
 
             // Apply acceleration with speed boost
             float baseAcceleration = isOnSlipperyTile ? 0.0001f : 1f; // Much slower acceleration on ice
-            float speedMultiplier = GetSpeedBoostMultiplier();
+            float speedMultiplier = 1.5f;
             ChangeX += moveDirection * baseAcceleration * speedMultiplier;
             ChangeX = MathHelper.Clamp(ChangeX, -5f * speedMultiplier, 5f * speedMultiplier);
+            ChangeX += ExtraX; // Apply any additional speed boosts (like from dashing)
 
             // Jumping with coyote time and double jump
             bool JumpTriggered = InputManager.GameJump();
@@ -285,21 +338,91 @@ namespace PolyGone.Entities
             }
             else
             {
-                // Check for double jump
-                var doubleJumpItem = GetActiveDoubleJumpItem();
-                if (doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, JumpTriggered, wasOnGroundLastFrame))
+                var wallJump = playerAbilityNames[1];
+
+                int jumpWallDirection = ResolveWallJumpDirection();
+                bool usingWallAssist = IsOnWall || wallCoyoteTime > 0f;
+                bool lockedToSameWall =
+                    sameWallJumpLockTimer > 0f &&
+                    jumpWallDirection != 0 &&
+                    jumpWallDirection == lastWallJumpDirection;
+
+                bool consumedAirJump = false;
+
+                // Check for wall jump with coyote time
+                if (usingWallAssist && !lockedToSameWall && jumpWallDirection != 0 && (JumpTriggered && UnlockTracker.IsAbilityUnlocked(wallJump)))
                 {
-                    base.ChangeY = JumpStrength; // Same jump strength for double jump
+                    base.ChangeY = JumpStrength * 0.95f; // Slightly reduced jump strength for wall jumps to balance the added mobility
+                    wallCoyoteTime = 0f; // Reset wall coyote time after wall jumping
+                    JustWallJumped = true; // Set to true to prevent repeat wall jumps
+                    wallBoostLength = 15f; // prevent immediate movement back toward the wall
+                    ExtraX += jumpWallDirection * WallBoostStrength; // Apply horizontal boost away from the wall
+                    // After jumping off the wall, clear wall cling state and lock same-side re-jumps briefly
+                    IsOnWall = false;
+                    wallContactFrames = 0;
+                    lastWallJumpDirection = jumpWallDirection;
+                    sameWallJumpLockTimer = SAME_WALL_JUMP_LOCK_FRAMES;
+                    // Prevent dashing back towards the wall for ~1 second (60 frames at 60fps)
+                    wallDashLockTimer = 60f;
+                    wallDashLockDirection = jumpWallDirection; // Lock the direction the player jumped from
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
+                    consumedAirJump = true;
+                    performedWallJumpThisFrame = true;
+                }
+                // Check for double jump (only when wall jump is not currently available)
+                else
+                {
+                    var doubleJumpItem = GetActiveDoubleJumpItem();
+                    if (!usingWallAssist && doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, JumpTriggered, wasOnGroundLastFrame))
+                    {
+                        base.ChangeY = JumpStrength; // Same jump strength for double jump
+                        audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
+                        consumedAirJump = true;
+                    }
                 }
 #if DEBUG
-                else if (GetDevModeItem()?.IsActive == true && JumpTriggered)
+                if (!consumedAirJump && GetDevModeItem()?.IsActive == true && JumpTriggered)
                 {
                     base.ChangeY = JumpStrength; // DEV: infinite jumps
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                 }
 #endif
             }
+
+            // Dashing with coyote time (require explicit left/right input)
+            if (InputManager.GameDash() && (InputManager.GameMoveLeft() || InputManager.GameMoveRight()))
+            {
+                var dash = playerAbilityNames[0];
+                if (UnlockTracker.IsAbilityUnlocked(dash))
+                {
+                    // Check if player is trying to dash back towards a locked wall
+                    bool dashingTowardLockedWall = wallDashLockTimer > 0f && wallDashLockDirection != 0 &&
+                        ((wallDashLockDirection == 1 && moveDirection < 0) || (wallDashLockDirection == -1 && moveDirection > 0));
+
+                    if (!dashingTowardLockedWall)
+                    {
+                        ExtraX += DashStrength * moveDirection;
+                        InputManager.ConsumeDash();
+                    }
+                }
+            }
+
+            // If player inputs opposite direction to current ExtraX (dash/wall boost), reduce ExtraX so player can slow/stop the dash
+            if (!performedWallJumpThisFrame && Math.Abs(ExtraX) > 0.1f && moveDirection != 0)
+            {
+                if (Math.Sign(ExtraX) != Math.Sign(moveDirection))
+                {
+                    float opposeStrength = DashStrength * 0.6f; // How quickly opposing input cancels ExtraX
+                    ExtraX += moveDirection * opposeStrength;
+                    // Prevent overshoot reversing ExtraX immediately; clamp toward zero
+                    if (Math.Sign(ExtraX) == Math.Sign(moveDirection))
+                    {
+                        ExtraX = 0f;
+                    }
+                }
+            }
+
+            ChangeX += ExtraX; // Apply extra x movement from dashing or wall boosts
         }
 
         protected override void OnEntityCollision(Entity other)
@@ -402,6 +525,162 @@ namespace PolyGone.Entities
             }
         }
 
+        private void HandleWallCling()
+        {
+            if (CollisionMap != null)
+            {
+                int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
+                int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);
+
+                var keyLeft = new Vector2(playerTileX - 1, playerTileY);
+                var keyRight = new Vector2(playerTileX + 1, playerTileY);
+
+                var wallJump = playerAbilityNames[1];
+
+                if (!IsOnGround)
+                {
+                    bool leftWall = IsSolidWall(keyLeft);
+                    bool rightWall = IsSolidWall(keyRight);
+
+                    // Determine player's horizontal input/movement direction
+                    int horizontalInput = 0;
+                    if (InputManager.GameMoveLeft())
+                        horizontalInput = -1;
+                    else if (InputManager.GameMoveRight())
+                        horizontalInput = 1;
+                    else if (ChangeX < -0.1f)
+                        horizontalInput = -1;
+                    else if (ChangeX > 0.1f)
+                        horizontalInput = 1;
+
+                    bool movingIntoLeft = leftWall && horizontalInput < 0;
+                    bool movingIntoRight = rightWall && horizontalInput > 0;
+
+                    // Only count contact frames when player is both colliding with a wall and moving into it
+                    if ((movingIntoLeft || movingIntoRight) && UnlockTracker.IsAbilityUnlocked(wallJump))
+                    {
+                        wallContactFrames = Math.Min(WALL_CONTACT_REQUIRED, wallContactFrames + 1);
+                    }
+                    else
+                    {
+                        wallContactFrames = Math.Max(0, wallContactFrames - 1);
+                    }
+
+                    if (wallContactFrames >= WALL_CONTACT_REQUIRED && UnlockTracker.IsAbilityUnlocked(wallJump))
+                    {
+                        IsOnWall = true;
+
+                        // Determine wall direction for wall jump boost direction
+                        if (leftWall && !rightWall)
+                        {
+                            wallDirection = 1; // Left wall
+                        }
+                        else if (rightWall && !leftWall)
+                        {
+                            wallDirection = -1; // Right wall
+                        }
+                        else
+                        {
+                            wallDirection = 0; // Both sides solid, no directional bias
+                        }
+
+                    }
+                    else
+                    {
+                        IsOnWall = false;
+                    }
+                }
+                else
+                {
+                    IsOnWall = false;
+
+                    // Set wall direction to 0 after wall boost length expires to allow normal movement again
+                    if (wallBoostLength <= 0f)
+                    {
+                        wallDirection = 0;
+                    }
+                }
+
+                if (IsOnGround)
+                {
+                    JustWallJumped = false; // Reset wall jump when touching the ground
+                    wallBoostLength = 0f;
+                    wallContactFrames = 0;
+                    wallClingFrames = 0f;
+                    sameWallJumpLockTimer = 0f;
+                    lastWallJumpDirection = 0;
+                    wallCoyoteDirection = 0;
+                    wallDashLockTimer = 0f; // Allow dashing normally when on ground
+                    wallDashLockDirection = 0;
+                }
+            }
+        }
+
+        private int ResolveWallJumpDirection()
+        {
+            if (IsOnWall && wallDirection != 0)
+            {
+                return wallDirection;
+            }
+
+            if (wallCoyoteTime > 0f && wallCoyoteDirection != 0)
+            {
+                return wallCoyoteDirection;
+            }
+
+            if (CollisionMap != null)
+            {
+                int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
+                int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);
+
+                var keyLeft = new Vector2(playerTileX - 1, playerTileY);
+                var keyRight = new Vector2(playerTileX + 1, playerTileY);
+
+                bool leftWall = IsSolidWall(keyLeft);
+                bool rightWall = IsSolidWall(keyRight);
+
+                if (leftWall && !rightWall)
+                {
+                    return 1;
+                }
+
+                if (rightWall && !leftWall)
+                {
+                    return -1;
+                }
+
+                if (leftWall && rightWall)
+                {
+                    if (InputManager.GameMoveLeft() && !InputManager.GameMoveRight())
+                    {
+                        return 1;
+                    }
+
+                    if (InputManager.GameMoveRight() && !InputManager.GameMoveLeft())
+                    {
+                        return -1;
+                    }
+
+                    if (ChangeX < -0.1f)
+                    {
+                        return 1;
+                    }
+
+                    if (ChangeX > 0.1f)
+                    {
+                        return -1;
+                    }
+
+                    if (lastWallJumpDirection != 0)
+                    {
+                        return -lastWallJumpDirection;
+                    }
+                }
+            }
+
+            return 0;
+        }
+
         protected override void PhysicsUpdate(float deltaTime)
         {
             Friction = 0.8f;
@@ -409,6 +688,26 @@ namespace PolyGone.Entities
             isOnSlipperyTile = IsOnSlipperyTile; // Reset each frame
             wasOnBouncyTile = isOnBouncyTile; // Remember previous bouncy-ground state
             isOnBouncyTile = false; // Reset each frame; collision handling sets it when standing on bounce tiles
+
+            // Wall cling descent ramp: start slow, then ease back to normal gravity behavior over time.
+            if (IsOnWall)
+            {
+                wallClingFrames = Math.Min(WALL_CLING_RAMP_FRAMES, wallClingFrames + 1f);
+
+                if (ChangeY > 0f)
+                {
+                    float clingT = MathHelper.Clamp(wallClingFrames / WALL_CLING_RAMP_FRAMES, 0f, 1f);
+                    float currentSlowFactor = MathHelper.Lerp(WALL_CLING_START_SLOW_FACTOR, 1f, clingT);
+                    float currentSpeedCap = MathHelper.Lerp(WALL_CLING_START_SPEED_CAP, 70f, clingT);
+
+                    ChangeY *= currentSlowFactor;
+                    ChangeY = Math.Min(ChangeY, currentSpeedCap);
+                }
+            }
+            else
+            {
+                wallClingFrames = 0f;
+            }
 
             // Apply preserved momentum if we were on ice
             if (wasOnSlipperyTile && Math.Abs(preservedMomentumX) > 0.1f)
@@ -483,12 +782,6 @@ namespace PolyGone.Entities
             }
         }
 
-        private float GetSpeedBoostMultiplier()
-        {
-            var speedBoostItem = itemInventory.OfType<SpeedBoostItem>().FirstOrDefault();
-            return speedBoostItem?.GetSpeedMultiplier() ?? 1.0f;
-        }
-
         private DoubleJumpItem? GetActiveDoubleJumpItem()
         {
             return itemInventory.OfType<DoubleJumpItem>().FirstOrDefault(item => item.IsActive);
@@ -543,6 +836,8 @@ namespace PolyGone.Entities
 
         public void Update(GameTime gameTime, Vector2 cameraOffset)
         {
+            HandleInput();
+            HandleWallCling();
 
             base.Update(gameTime);
 
@@ -551,6 +846,29 @@ namespace PolyGone.Entities
             coyoteTime = IsOnGround
                 ? 6f // 0.1 seconds at 60fps
                 : Math.Max(0f, coyoteTime - 1f);
+
+            // Update wall coyote time after physics update to use current frame's wall state
+            if (IsOnWall)
+            {
+                wallCoyoteTime = 6f; // 0.1 seconds at 60fps
+                wallCoyoteDirection = wallDirection;
+            }
+            else
+            {
+                wallCoyoteTime = Math.Max(0f, wallCoyoteTime - 1f);
+                if (wallCoyoteTime <= 0f)
+                {
+                    wallCoyoteDirection = 0;
+                }
+            }
+
+            // Update wall boost length after physics update to use current frame's wall state
+            wallBoostLength = IsOnWall
+                ? 15f // 0.25 seconds at 60fps
+                : Math.Max(0f, wallBoostLength - 1f);
+
+            sameWallJumpLockTimer = Math.Max(0f, sameWallJumpLockTimer - 1f);
+            wallDashLockTimer = Math.Max(0f, wallDashLockTimer - 1f);
 
             // Update only the currently equipped weapon
             var currentBlaster = GetBlaster();

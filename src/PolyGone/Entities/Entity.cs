@@ -14,6 +14,7 @@ public class Entity : Sprite
     protected readonly Dictionary<Vector2, int>? CollisionMap;
     protected float ChangeX;
     protected float ChangeY;
+    protected float ExtraX; //Added to help smooth dashing
     protected bool IsOnGround;
     public int Health;
     public readonly int MaxHealth;
@@ -50,6 +51,7 @@ public class Entity : Sprite
             this.VisualSize[1] - size[1] // Align bottom edges
         );
         this.audioManager = audioManager;
+        ExtraX = 0f;
     }
 
     protected virtual List<(Rectangle, CollisionType)> GetIntersectingTiles(Rectangle target)
@@ -128,7 +130,7 @@ public class Entity : Sprite
                 if (deltaY > 0)
                 {
                     position.Y = tileRect.Top - size[1];
-                    deltaY = -ChangeY * 1.2f; // Reverse and amplify vertical velocity for bounce effect
+                    deltaY = -deltaY; // Reverse velocity
                     onGround = false;
                 }
                 else
@@ -325,6 +327,16 @@ public class Entity : Sprite
         else
         {
             ChangeX = 0f;
+        }
+
+        // Apply friction for ExtraX to smooth out dashes
+        if (Math.Abs(ExtraX) > 0.5f)
+        {
+            ExtraX *= Friction;
+        }
+        else
+        {
+            ExtraX = 0f;
         }
     }
 

@@ -26,7 +26,7 @@ namespace PolyGone.Items
         /// <summary>Resets the double-jump charge, e.g. after a ground or coyote jump.</summary>
         public void Reset() => hasDoubleJumped = false;
 
-        protected override Color GetActiveColor()   => new Color(0, 150, 255, 200);
+        protected override Color GetActiveColor() => new Color(0, 150, 255, 200);
         protected override Color GetInactiveColor() => new Color(0, 75, 127, 150);
 
         /// <summary>
@@ -35,7 +35,11 @@ namespace PolyGone.Items
         /// </summary>
         public bool TryDoubleJump(PolyGone.Entities.Player player, bool spacePressed, bool wasOnGround)
         {
-            if (!IsActive) return false;
+            if (!IsActive)
+                return false;
+
+            if (player.HasWallJumpAssist)
+                return false;
 
             if (wasOnGround)
                 hasDoubleJumped = false;
