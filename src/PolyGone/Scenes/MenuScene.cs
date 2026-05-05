@@ -166,10 +166,12 @@ namespace PolyGone
         {
             if (_selectedIndex == 0)
             {
-                // If the player has already paid for all levels, go straight to loadout selection
+                // If the player has already paid for all levels, go straight to the hub level
                 if (PurchaseTracker.HasPurchased(FormbarSession.UserId, FormbarSession.AllLevelsKey))
                 {
-                    _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _audioManager, _graphics, "Hub"));
+                    _sceneManager.AddScene(new GameScene(_content, _sceneManager, _audioManager, _graphics, "Hub",
+                        InventoryManagement.GetLastSelectedItems(), InventoryManagement.GetLastSelectedAttachments()));
+                    InputManager.ResetClickCooldown();
                 }
                 else
                 {

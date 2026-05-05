@@ -24,8 +24,9 @@ internal class PauseScene : IScene
     private readonly AudioManager _audioManager;
     private readonly GraphicsDeviceManager _graphics;
     private readonly GameScene _gameScene;
-    private readonly string[] _options = { "Continue", "Restart Level", "Exit to Menu" };
+    private readonly string[] _options;
     private int _selectedIndex;
+    private readonly bool _isHub;
 
     public PauseScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, GameScene gameScene)
     {
@@ -34,6 +35,10 @@ internal class PauseScene : IScene
         _audioManager = audioManager;
         _graphics = graphics;
         _gameScene = gameScene;
+        _isHub = gameScene.GetLevelName() == "Hub";
+        _options = _isHub
+            ? new[] { "Continue", "Inventory", "Exit to Menu" }
+            : new[] { "Continue", "Exit to Menu" };
         _selectedIndex = 0;
     }
 
@@ -98,23 +103,16 @@ internal class PauseScene : IScene
             // Continue
             _sceneManager.PopScene(this);
         }
-        else if (_selectedIndex == 1)
+        else if (_selectedIndex == 1 && _isHub)
         {
-            // Restart Level - reload with same loadout
-            string levelName = _gameScene.GetLevelName();
-            List<ItemType> currentItems = _gameScene.GetSelectedItems();
-            List<BlasterAttachmentType> currentAttachments = _gameScene.GetSelectedAttachments();
-
-            _sceneManager.PopScene(this); // Pop pause scene
-            _sceneManager.PopScene(_gameScene); // Pop game scene
-            // Create fresh game scene with same settings
-            var newGameScene = new GameScene(_content, _sceneManager, _audioManager, _graphics, levelName, currentItems, currentAttachments);
-            _sceneManager.AddScene(newGameScene);
+            // Inventory — only available in the hub
+            _sceneManager.PopScene(this);
+            _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _audioManager, _graphics, "Hub"));
             InputManager.ResetClickCooldown();
         }
-        else if (_selectedIndex == 2)
+        else
         {
-            // Exit to Menu - clear all and go to menu
+            // Exit to Menu — clear all and go to menu
             _sceneManager.PopScene(this);
             _sceneManager.PopScene(_gameScene);
             // Pop any remaining scenes to get to a clean menu
