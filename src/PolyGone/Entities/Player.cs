@@ -40,6 +40,8 @@ namespace PolyGone.Entities
         private float sameWallJumpLockTimer = 0f;
         private float wallClingFrames = 0f;
         private int wallCoyoteDirection = 0;
+        private float wallDashLockTimer = 0f; // Prevents dashing back towards a wall after wall jumping
+        private int wallDashLockDirection = 0; // Direction to prevent dashing towards (1 for left, -1 for right)
 
         // -----------------------------------------------------------------------
         // Player Ability Definitions
@@ -360,6 +362,9 @@ namespace PolyGone.Entities
                     wallContactFrames = 0;
                     lastWallJumpDirection = jumpWallDirection;
                     sameWallJumpLockTimer = SAME_WALL_JUMP_LOCK_FRAMES;
+                    // Prevent dashing back towards the wall for ~1 second (60 frames at 60fps)
+                    wallDashLockTimer = 60f;
+                    wallDashLockDirection = jumpWallDirection; // Lock the direction the player jumped from
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
                     consumedAirJump = true;
                     performedWallJumpThisFrame = true;
@@ -390,8 +395,15 @@ namespace PolyGone.Entities
                 var dash = playerAbilityNames[0];
                 if (UnlockTracker.IsAbilityUnlocked(dash))
                 {
-                    ExtraX += DashStrength * moveDirection;
-                    InputManager.ConsumeDash();
+                    // Check if player is trying to dash back towards a locked wall
+                    bool dashingTowardLockedWall = wallDashLockTimer > 0f && wallDashLockDirection != 0 &&
+                        ((wallDashLockDirection == 1 && moveDirection < 0) || (wallDashLockDirection == -1 && moveDirection > 0));
+
+                    if (!dashingTowardLockedWall)
+                    {
+                        ExtraX += DashStrength * moveDirection;
+                        InputManager.ConsumeDash();
+                    }
                 }
             }
 
@@ -532,10 +544,14 @@ namespace PolyGone.Entities
 
                     // Determine player's horizontal input/movement direction
                     int horizontalInput = 0;
-                    if (InputManager.GameMoveLeft()) horizontalInput = -1;
-                    else if (InputManager.GameMoveRight()) horizontalInput = 1;
-                    else if (ChangeX < -0.1f) horizontalInput = -1;
-                    else if (ChangeX > 0.1f) horizontalInput = 1;
+                    if (InputManager.GameMoveLeft())
+                        horizontalInput = -1;
+                    else if (InputManager.GameMoveRight())
+                        horizontalInput = 1;
+                    else if (ChangeX < -0.1f)
+                        horizontalInput = -1;
+                    else if (ChangeX > 0.1f)
+                        horizontalInput = 1;
 
                     bool movingIntoLeft = leftWall && horizontalInput < 0;
                     bool movingIntoRight = rightWall && horizontalInput > 0;
@@ -594,6 +610,8 @@ namespace PolyGone.Entities
                     sameWallJumpLockTimer = 0f;
                     lastWallJumpDirection = 0;
                     wallCoyoteDirection = 0;
+                    wallDashLockTimer = 0f; // Allow dashing normally when on ground
+                    wallDashLockDirection = 0;
                 }
             }
         }
@@ -850,6 +868,7 @@ namespace PolyGone.Entities
                 : Math.Max(0f, wallBoostLength - 1f);
 
             sameWallJumpLockTimer = Math.Max(0f, sameWallJumpLockTimer - 1f);
+            wallDashLockTimer = Math.Max(0f, wallDashLockTimer - 1f);
 
             // Update only the currently equipped weapon
             var currentBlaster = GetBlaster();
