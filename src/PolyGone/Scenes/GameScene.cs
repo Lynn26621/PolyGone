@@ -22,6 +22,7 @@ public class GameScene : IScene
     private Texture2D miscSheet = null!;
     private Texture2D textureSheet = null!;
     private Texture2D foregroundSheet = null!;
+    private Texture2D uiSheet = null!;
     private Texture2D? backgroundSheet;
     private Texture2D collisionSheet = null!;
     private Vector2 backgroundLayerOffset = Vector2.Zero;
@@ -40,7 +41,11 @@ public class GameScene : IScene
     private readonly GraphicsDeviceManager graphics;
     private Dictionary<Vector2, int> tileMap = null!;
     private Dictionary<Vector2, int> CollisionMap = null!;
+    private Dictionary<string, int> layerFirstGid = new(); // Store firstgid for each layer
     private List<Rectangle> textureStore;
+    private List<Rectangle> tileTextureStore;
+    private string tileTextureAssetName = "Textures/Tiles/PolyGoneTextureSheet";
+    private int[] tileTextureGridSize = new int[2] { 8, 8 };
     private Vector2 playerPos;
     private bool playerSpawnFound = false;
     private readonly List<Vector2> enemySpawns = new(); // Store enemy spawn positions
@@ -78,7 +83,8 @@ public class GameScene : IScene
         this.loadY = loadY;
 
         LoadMapFromJson("Maps/" + levelName + ".json");
-        textureStore = GetTextureStore(32, new int[2] { 2, 2 });
+        textureStore = GetTextureStore(32, new int[2] { 8, 8 });
+        tileTextureStore = GetTextureStore(32, tileTextureGridSize);
     }
 
     // Public method to get the level name for restart functionality
@@ -155,6 +161,52 @@ public class GameScene : IScene
         };
     }
 
+    private static int ResolveTilesetFirstGid(int globalTileId, List<int> sortedFirstGids)
+    {
+        // Tiled encodes flip flags in the top three bits of the gid.
+        const uint GidMask = 0x1FFFFFFF;
+        int cleanGid = (int)((uint)globalTileId & GidMask);
+
+        int resolvedFirstGid = 1;
+        foreach (int firstGid in sortedFirstGids)
+        {
+            if (cleanGid >= firstGid)
+            {
+                resolvedFirstGid = firstGid;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return resolvedFirstGid;
+    }
+
+    private void ConfigureTileTextureFromTilesetSource(string tilesetSource)
+    {
+        string filename = Path.GetFileName(tilesetSource);
+        if (string.Equals(filename, "Basic.tsx", StringComparison.OrdinalIgnoreCase))
+        {
+            tileTextureAssetName = "Textures/Tiles/PolyGoneBasic";
+            tileTextureGridSize = new int[2] { 2, 2 };
+            return;
+        }
+
+        if (string.Equals(filename, "Proto.tsx", StringComparison.OrdinalIgnoreCase))
+        {
+            tileTextureAssetName = "Textures/Tiles/PolyGoneProto";
+            tileTextureGridSize = new int[2] { 8, 8 };
+            return;
+        }
+
+        if (string.Equals(filename, "TextureSheet.tsx", StringComparison.OrdinalIgnoreCase))
+        {
+            tileTextureAssetName = "Textures/Tiles/PolyGoneTextureSheet";
+            tileTextureGridSize = new int[2] { 8, 8 };
+        }
+    }
+
     // Loads tile and collision maps from a JSON file exported from Tiled
     public void LoadMapFromJson(string filepath)
     {
@@ -168,6 +220,39 @@ public class GameScene : IScene
 
         mapWidth = root.GetProperty("width").GetInt32();
         mapHeight = root.GetProperty("height").GetInt32();
+
+        // Extract firstgid values from tilesets
+        layerFirstGid.Clear();
+        List<int> sortedFirstGids = new();
+        Dictionary<int, string> tilesetSourceByFirstGid = new();
+        if (root.TryGetProperty("tilesets", out JsonElement tilesetsArray))
+        {
+            foreach (JsonElement tileset in tilesetsArray.EnumerateArray())
+            {
+                if (tileset.TryGetProperty("firstgid", out JsonElement firstgidElement))
+                {
+                    int firstgid = firstgidElement.GetInt32();
+                    sortedFirstGids.Add(firstgid);
+
+                    if (tileset.TryGetProperty("source", out JsonElement sourceElement))
+                    {
+                        string tilesetSource = sourceElement.GetString() ?? string.Empty;
+                        tilesetSourceByFirstGid[firstgid] = tilesetSource;
+                    }
+
+                    if (tileset.TryGetProperty("name", out JsonElement nameElement))
+                    {
+                        string tilesetName = nameElement.GetString() ?? "";
+                        layerFirstGid[tilesetName] = firstgid;
+                    }
+                }
+            }
+        }
+        sortedFirstGids.Sort();
+
+        // Default visual tileset unless a tiles layer indicates otherwise.
+        tileTextureAssetName = "Textures/Tiles/PolyGoneTextureSheet";
+        tileTextureGridSize = new int[2] { 8, 8 };
 
         tileMap = new Dictionary<Vector2, int>();
         CollisionMap = new Dictionary<Vector2, int>();
@@ -211,25 +296,58 @@ public class GameScene : IScene
             if (layerType == "tilelayer")
             {
                 JsonElement dataArray = layer.GetProperty("data");
+                bool isTileLayer = string.Equals(layerName, "tiles", StringComparison.OrdinalIgnoreCase);
+                bool isCollisionLayer = string.Equals(layerName, "collisions", StringComparison.OrdinalIgnoreCase);
+
+                // Some legacy maps encode collision gids from different source tilesets.
+                // Use the first non-zero gid on the layer as a fallback base when firstgid-based
+                // conversion produces ids outside our CollisionTypeMapper range.
+                int collisionLayerBaseGid = 0;
+                if (isCollisionLayer)
+                {
+                    foreach (JsonElement tile in dataArray.EnumerateArray())
+                    {
+                        int cleanTileValue = (int)((uint)tile.GetInt32() & 0x1FFFFFFF);
+                        if (cleanTileValue > 0)
+                        {
+                            collisionLayerBaseGid = cleanTileValue;
+                            break;
+                        }
+                    }
+                }
 
                 int index = 0;
                 foreach (JsonElement tile in dataArray.EnumerateArray())
                 {
                     int tileValue = tile.GetInt32();
+                    int cleanTileValue = (int)((uint)tileValue & 0x1FFFFFFF);
                     int x = index % mapWidth;
                     int y = index / mapWidth;
 
-                    if (tileValue > 0)
+                    if (cleanTileValue > 0)
                     {
-                        // Tiled's firstgid is 1, so we subtract 1 to convert to 0-based index.
-                        // Wrap tileValue to fit within our texture store (assuming 16 tiles per layer in Tiled)
-                        if (layerName == "Tiles")
+                        int firstgid = ResolveTilesetFirstGid(cleanTileValue, sortedFirstGids);
+                        int localTileId = cleanTileValue - firstgid;
+
+                        if (isTileLayer && tilesetSourceByFirstGid.TryGetValue(firstgid, out string? tilesetSource) && !string.IsNullOrEmpty(tilesetSource))
                         {
-                            tileMap[new Vector2(x, y)] = tileValue % 16 - 1;
+                            ConfigureTileTextureFromTilesetSource(tilesetSource);
                         }
-                        else if (layerName == "Collisions")
+
+                        if (isTileLayer)
                         {
-                            CollisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
+                            tileMap[new Vector2(x, y)] = Math.Max(localTileId, 0);
+                        }
+                        else if (isCollisionLayer)
+                        {
+                            // Preferred conversion uses tileset firstgid. Fallback handles maps where
+                            // collision gids are authored from a non-collision tileset palette.
+                            if ((localTileId < 0 || localTileId > 4) && collisionLayerBaseGid > 0)
+                            {
+                                localTileId = cleanTileValue - collisionLayerBaseGid;
+                            }
+
+                            CollisionMap[new Vector2(x, y)] = localTileId;
                         }
                     }
 
@@ -360,6 +478,8 @@ public class GameScene : IScene
             }
         }
 
+        tileTextureStore = GetTextureStore(32, tileTextureGridSize);
+
         // If no player marker exists in the map, allow door-provided coordinates.
         if (!playerSpawnFound && loadX.HasValue && loadY.HasValue)
         {
@@ -406,7 +526,8 @@ public class GameScene : IScene
         playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
         enemySheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneEnemySheet");
         miscSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneMiscSpriteSheet");
-        textureSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneMgSheet");
+        uiSheet = contentManager.Load<Texture2D>("Textures/UI/PolyGoneUI");
+        textureSheet = contentManager.Load<Texture2D>(tileTextureAssetName);
         foregroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneFgSheet");
         collisionSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneCollisionSheet");
         try
@@ -435,7 +556,7 @@ public class GameScene : IScene
         );
 
         // Initialize GameUI
-        gameUI = new GameUI(player, textureSheet, textureStore[2], hudFont);
+        gameUI = new GameUI(player, uiSheet, textureStore[2], hudFont);
         // Initialize turret enemies
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
             texture: enemySheet,
@@ -965,7 +1086,7 @@ public class GameScene : IScene
                 64,
                 64
             );
-            Rectangle src = textureStore[tile.Value % textureStore.Count]; // Ensure we don't go out of bounds
+            Rectangle src = tileTextureStore[tile.Value % tileTextureStore.Count]; // Ensure we don't go out of bounds
             spriteBatch.Draw(textureSheet, dest, src, Color.White);
         }
         foreach (var enemy in enemies)
@@ -1002,7 +1123,7 @@ public class GameScene : IScene
                 doorRect.Height
             );
             Color doorColor = door.IsTriggered ? Color.Gold : Color.SaddleBrown;
-            spriteBatch.Draw(textureSheet, doorDest, textureStore[0], doorColor * 0.5f);
+            spriteBatch.Draw(uiSheet, doorDest, textureStore[0], doorColor * 0.5f);
         }
 
         //Draw inventory access trigger (if it exists)
@@ -1016,7 +1137,7 @@ public class GameScene : IScene
                 inventoryRect.Height
             );
             Color inventoryColor = inventoryAccess.IsTriggered ? Color.Gold : Color.SaddleBrown;
-            spriteBatch.Draw(textureSheet, inventoryDest, textureStore[0], inventoryColor * 0.5f);
+            spriteBatch.Draw(uiSheet, inventoryDest, textureStore[0], inventoryColor * 0.5f);
         }
 
         player.Draw(spriteBatch, camera.position);
@@ -1033,7 +1154,7 @@ public class GameScene : IScene
             );
             // Draw goal with a green tint (using tile 0 or any appropriate texture)
             Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
-            spriteBatch.Draw(textureSheet, goalDest, textureStore[0], goalColor * 0.5f);
+            spriteBatch.Draw(uiSheet, goalDest, textureStore[0], goalColor * 0.5f);
         }
 
         // Draw new GameUI (health, cooldown, and active items)

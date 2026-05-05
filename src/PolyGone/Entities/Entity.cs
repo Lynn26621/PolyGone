@@ -26,6 +26,7 @@ public class Entity : Sprite
     private AudioManager audioManager;
     /// <summary>Multiplier applied to gravity each physics tick. 1 = normal, lower = floatier.</summary>
     protected float GravityScale = 1f;
+    protected bool IsOnSlipperyTile = false;
 
     // Constants for tile-based calculations
     protected const int TILE_SIZE = 64;
@@ -92,7 +93,7 @@ public class Entity : Sprite
         }
 
         CollisionType colType = CollisionTypeMapper.GetCollisionType(tileId);
-        return colType == CollisionType.Solid || colType == CollisionType.Rough || colType == CollisionType.Slippery;
+        return colType == CollisionType.Solid || colType == CollisionType.Damage || colType == CollisionType.Slippery;
     }
 
     protected virtual void HandleVerticalCollision(ref bool onGround, ref float deltaY, List<(Rectangle, CollisionType)> collisions)
@@ -102,14 +103,11 @@ public class Entity : Sprite
         {
             default:
             case CollisionType.Solid:
-            case CollisionType.Rough:
-            case CollisionType.Slippery:
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
-                onGround = deltaY > 0;
+                onGround = deltaY > 0;  // Check deltaY before setting it to 0
                 deltaY = 0;
                 break;
-            case CollisionType.SemiSolid:
-                // By default, entities do not drop through platforms
+            case CollisionType.SemiSolid: 
                 if (deltaY > 0 && (position.Y + size[1]) <= tileRect.Top + 10)
                 {
                     position.Y = tileRect.Top - size[1];
@@ -121,6 +119,32 @@ public class Entity : Sprite
                     position.Y += deltaY;
                 }
                 break;
+            case CollisionType.Slippery:
+                position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
+                onGround = deltaY > 0;
+                deltaY = 0;
+                IsOnSlipperyTile = true;
+                Friction = 0.95f;
+                break;
+            case CollisionType.Bouncy: //Keep track of velocity. Reverse it when colliding with bouncy tile top.
+                if (deltaY > 0)
+                {
+                    position.Y = tileRect.Top - size[1];
+                    deltaY = -ChangeY * 1.2f; // Reverse and amplify vertical velocity for bounce effect
+                    onGround = false;
+                }
+                else
+                {
+                    position.Y = tileRect.Bottom;
+                    deltaY = 0;
+                }
+                break;
+            case CollisionType.Damage:
+                position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
+                onGround = deltaY > 0;
+                deltaY = 0;
+                TakeDamage(10); 
+                break;
         }
     }
 
@@ -130,15 +154,19 @@ public class Entity : Sprite
         switch (colType)
         {
             default:
-            case CollisionType.Solid:
-            case CollisionType.Rough:
             case CollisionType.Slippery:
-                // Standard wall collision
-                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                deltaX = 0;
-                break;
+            case CollisionType.Bouncy:
+            case CollisionType.Solid:
+                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+                    deltaX = 0;
+                    break;
             case CollisionType.SemiSolid:
                 position.X += deltaX;
+                break;
+            case CollisionType.Damage:
+                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+                deltaX = 0;
+                TakeDamage(10); 
                 break;
         }
     }
@@ -173,15 +201,26 @@ public class Entity : Sprite
     {
         // Default implementation marks entity as not alive
         IsAlive = false;
-        audioManager.PlayAudio("deathSfx", true, "null", false); //Play death sound effect
+        audioManager.PlayAudio("deathSfx", true, "null", false); // Play death sound effect
     }
 
     // Physics and collision update for non-player entities (no input)
     protected virtual void PhysicsUpdate(float deltaTime)
     {
+        Friction = 0.9f; // Reset to normal each frame
+        IsOnSlipperyTile = false; // Reset each frame, collision handlers will set it if needed
+
         // Apply gravity
-        ChangeY += 0.7f * GravityScale;
-        ChangeY = Math.Min(ChangeY, 14f);
+        // Stronger gravity when moving slower to create a more responsive feel, but allow for slower falling if the entity is already moving down quickly
+        if (ChangeY < 20f)
+        {
+            ChangeY += 0.7f * GravityScale;
+        // Weaker gravity when past 20f to create a floaty terminal velocity effect, but still allow for faster falling if needed for bouncy tiles
+        } else
+        {
+            ChangeY += 0.3f * GravityScale;
+        }
+        ChangeY = Math.Clamp(ChangeY, -70f, 70f); // Terminal velocity cap
 
         // Handle vertical movement and collisions
         HandleVerticalMovement(deltaTime);
@@ -386,7 +425,7 @@ public class Entity : Sprite
             foreach (var (tileRect, colType) in visualCollisions)
             {
                 // Only adjust for solid collision types
-                if (colType == CollisionType.Solid || colType == CollisionType.Rough || colType == CollisionType.Slippery)
+                if (colType == CollisionType.Solid || colType == CollisionType.Damage || colType == CollisionType.Slippery)
                 {
                     // Check if hitbox is not colliding (meaning only visual extends into tile)
                     Rectangle hitboxRect = new Rectangle((int)position.X, (int)position.Y, size[0], size[1]);
