@@ -130,7 +130,7 @@ public class Entity : Sprite
                 if (deltaY > 0)
                 {
                     position.Y = tileRect.Top - size[1];
-                    deltaY = -ChangeY * 1.2f; // Reverse and amplify vertical velocity for bounce effect
+                    deltaY = -deltaY; // Reverse velocity
                     onGround = false;
                 }
                 else
