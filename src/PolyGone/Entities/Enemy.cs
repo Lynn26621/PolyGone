@@ -232,9 +232,6 @@ class Enemy : Entity
         {
             DropThroughSemiSolid();
         }
-#pragma warning disable CS0219 // There is no warning is Ba Sing Se
-        int updateCD = 12;
-
     }
 
 
