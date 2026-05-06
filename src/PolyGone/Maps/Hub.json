@@ -116,18 +116,18 @@
                 {
                  "height":32,
                  "id":3,
-                 "name":"Test Level 2",
+                 "name":"Level 2",
                  "opacity":1,
                  "properties":[
                         {
                          "name":"connectedLevel",
                          "type":"string",
-                         "value":"TestLevel2"
+                         "value":"Level2"
                         }, 
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":32
+                         "value":128
                         }, 
                         {
                          "name":"loadY",

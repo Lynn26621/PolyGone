@@ -67,10 +67,10 @@
     <property name="loadY" type="int" value="896"/>
    </properties>
   </object>
-  <object id="3" name="Test Level 2" type="Door" x="96" y="352" width="32" height="32">
+  <object id="3" name="Level 2" type="Door" x="96" y="352" width="32" height="32">
    <properties>
-    <property name="connectedLevel" value="TestLevel2"/>
-    <property name="loadX" type="int" value="32"/>
+    <property name="connectedLevel" value="Level2"/>
+    <property name="loadX" type="int" value="128"/>
     <property name="loadY" type="int" value="160"/>
     <property name="requirement" value="Level1"/>
    </properties>
