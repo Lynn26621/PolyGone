@@ -169,7 +169,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Textures/Tiles/PolyGoneTextureSheet.png;Textures/Tiles/PolyGoneMgSheet.png
+/build:Textures/Tiles/PolyGoneTextureSheet.png;Textures/Tiles/PolyGoneTexureSheet.png
 
 #begin Textures/UI/PolyGoneUI.png
 /importer:TextureImporter
