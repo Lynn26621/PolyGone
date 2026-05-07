@@ -30,7 +30,7 @@ namespace PolyGone
         private readonly SceneManager _sceneManager;
         private readonly AudioManager _audioManager;
         private readonly GraphicsDeviceManager _graphics;
-        private readonly string[] _options = { "Play", "Help", "Options", "Log Out", "Exit to Desktop" };
+        private readonly string[] _options = { "Play", "Options", "Help", "Log Out", "Exit to Desktop" };
         private int _selectedIndex;
         private bool _confirmingAction;
         private string? _confirmMessage;
@@ -181,14 +181,14 @@ namespace PolyGone
             }
             else if (_selectedIndex == 1)
             {
-                // Help
-                _sceneManager.AddScene(new HelpScene(_content, _sceneManager, _graphics));
-                InputManager.ResetClickCooldown();
+                // Options
+                _sceneManager.AddScene(new OptionsScene(_content, _sceneManager, _audioManager, _graphics));
             }
             else if (_selectedIndex == 2)
             {
-                // Options
-                _sceneManager.AddScene(new OptionsScene(_content, _sceneManager, _audioManager, _graphics));
+                // Help
+                _sceneManager.AddScene(new HelpScene(_content, _sceneManager, _graphics));
+                InputManager.ResetClickCooldown();
             }
             else if (_selectedIndex == 3)
             {

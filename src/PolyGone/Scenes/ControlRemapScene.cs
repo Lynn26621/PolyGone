@@ -103,6 +103,9 @@ internal class ControlRemapScene : IScene
     private GamePadState _previousGamepadState;
     private MouseState _previousMouseState;
     private int _captureFramesToSkip;
+    private bool _hasUnappliedChanges;
+    private bool _confirmingDiscard;
+    private int _confirmDiscardSelectedIndex;
 
     public ControlRemapScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
     {
@@ -146,6 +149,8 @@ internal class ControlRemapScene : IScene
         _scrollOffset = 0;
         _currentTab = Tab.Keyboard;
         _selectedIndex = FirstSelectableIndex();
+        _hasUnappliedChanges = false;
+        _confirmingDiscard = false;
 
         if (_font == null)
         {
@@ -164,6 +169,43 @@ internal class ControlRemapScene : IScene
         if (_waitingForBinding)
         {
             HandleBindingCapture(keyboardState, gamepadState);
+            _previousKeyboardState = keyboardState;
+            _previousGamepadState = gamepadState;
+            _previousMouseState = mouseState;
+            return;
+        }
+
+        // Handle the "discard changes?" overlay independently
+        if (_confirmingDiscard)
+        {
+            string[] opts = ["Discard & Go Back", "Keep Editing"];
+            if (_font != null)
+            {
+                var viewport = _graphics.GraphicsDevice.Viewport;
+                var confirmStartY = viewport.Height / 2f - 20f;
+                for (var i = 0; i < opts.Length; i++)
+                {
+                    var textSize = _font.MeasureString(opts[i]);
+                    var pos = new Vector2(viewport.Width / 2f - textSize.X / 2f, confirmStartY + i * 50f);
+                    var bounds = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int)textSize.Y);
+                    if (bounds.Contains(mouseState.Position))
+                    {
+                        _confirmDiscardSelectedIndex = i;
+                        if (mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+                        {
+                            ExecuteDiscardConfirm();
+                        }
+                    }
+                }
+            }
+            if (RawNavUp(keyboardState, gamepadState) || RawNavLeft(keyboardState, gamepadState))
+                _confirmDiscardSelectedIndex = (_confirmDiscardSelectedIndex - 1 + 2) % 2;
+            if (RawNavDown(keyboardState, gamepadState) || RawNavRight(keyboardState, gamepadState))
+                _confirmDiscardSelectedIndex = (_confirmDiscardSelectedIndex + 1) % 2;
+            if (RawConfirm(keyboardState, gamepadState))
+                ExecuteDiscardConfirm();
+            if (RawBack(keyboardState, gamepadState))
+                _confirmingDiscard = false;
             _previousKeyboardState = keyboardState;
             _previousGamepadState = gamepadState;
             _previousMouseState = mouseState;
@@ -209,6 +251,7 @@ internal class ControlRemapScene : IScene
                 _pendingBindings.MoveStick = _pendingBindings.MoveStick == StickBinding.Left
                     ? StickBinding.Right
                     : StickBinding.Left;
+                _hasUnappliedChanges = true;
             }
         }
         else if (currentRow.Kind == RowKind.AimStick)
@@ -218,6 +261,7 @@ internal class ControlRemapScene : IScene
                 _pendingBindings.AimStick = _pendingBindings.AimStick == StickBinding.Left
                     ? StickBinding.Right
                     : StickBinding.Left;
+                _hasUnappliedChanges = true;
             }
         }
 
@@ -226,7 +270,12 @@ internal class ControlRemapScene : IScene
 
         // Escape always exits this scene (matching the hardcoded MenuBack behaviour).
         if (RawBack(keyboardState, gamepadState))
-            _sceneManager.PopScene(this);
+        {
+            if (_hasUnappliedChanges)
+            { _confirmingDiscard = true; _confirmDiscardSelectedIndex = 1; }
+            else
+            { _sceneManager.PopScene(this); }
+        }
 
         _previousKeyboardState = keyboardState;
         _previousGamepadState = gamepadState;
@@ -312,6 +361,42 @@ internal class ControlRemapScene : IScene
             spriteBatch.DrawString(_font, below,
                 new Vector2(viewport.Width / 2f - sz.X / 2f, belowY),
                 Color.Gray);
+        }
+
+        // Discard-changes confirmation overlay
+        if (_confirmingDiscard)
+        {
+            // Dim background
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, viewport.Height), Color.Black * 0.6f);
+
+            // Dialog box
+            var overlayRect = new Rectangle(viewport.Width / 4, viewport.Height / 4,
+                viewport.Width / 2, viewport.Height / 2);
+            spriteBatch.Draw(_pixel, overlayRect, new Color(40, 40, 40));
+            int b = 2;
+            spriteBatch.Draw(_pixel, new Rectangle(overlayRect.X, overlayRect.Y, overlayRect.Width, b), Color.White);
+            spriteBatch.Draw(_pixel, new Rectangle(overlayRect.X, overlayRect.Bottom - b, overlayRect.Width, b), Color.White);
+            spriteBatch.Draw(_pixel, new Rectangle(overlayRect.X, overlayRect.Y, b, overlayRect.Height), Color.White);
+            spriteBatch.Draw(_pixel, new Rectangle(overlayRect.Right - b, overlayRect.Y, b, overlayRect.Height), Color.White);
+
+            const string warnMsg = "You have unapplied changes.";
+            var warnSize = _font.MeasureString(warnMsg);
+            float warnScale = Math.Min(0.8f, (overlayRect.Width - 20f) / warnSize.X);
+            spriteBatch.DrawString(_font, warnMsg,
+                new Vector2(viewport.Width / 2f - warnSize.X * warnScale / 2f,
+                            overlayRect.Y + 30f),
+                Color.White, 0f, Vector2.Zero, warnScale, SpriteEffects.None, 0f);
+
+            string[] opts = ["Discard & Go Back", "Keep Editing"];
+            float confirmStartY = viewport.Height / 2f - 20f;
+            for (int i = 0; i < opts.Length; i++)
+            {
+                var optSize = _font.MeasureString(opts[i]);
+                var optColor = i == _confirmDiscardSelectedIndex ? Color.Yellow : Color.White;
+                spriteBatch.DrawString(_font, opts[i],
+                    new Vector2(viewport.Width / 2f - optSize.X / 2f, confirmStartY + i * 50f),
+                    optColor);
+            }
         }
     }
 
@@ -506,6 +591,7 @@ internal class ControlRemapScene : IScene
         if (_bindingRow.Kind == RowKind.KeyboardBinding && key.HasValue)
         {
             KeyboardMappings[_bindingRow.MappingIndex].Set(_pendingBindings, key.Value);
+            _hasUnappliedChanges = true;
             _waitingForBinding = false;
             _bindingRow = null;
             return;
@@ -514,6 +600,7 @@ internal class ControlRemapScene : IScene
         if (_bindingRow.Kind == RowKind.GamepadBinding && button.HasValue)
         {
             GamepadMappings[_bindingRow.MappingIndex].Set(_pendingBindings, button.Value);
+            _hasUnappliedChanges = true;
             _waitingForBinding = false;
             _bindingRow = null;
         }
@@ -566,23 +653,38 @@ internal class ControlRemapScene : IScene
                 _pendingBindings.MoveStick = _pendingBindings.MoveStick == StickBinding.Left
                     ? StickBinding.Right
                     : StickBinding.Left;
+                _hasUnappliedChanges = true;
                 break;
             case RowKind.AimStick:
                 _pendingBindings.AimStick = _pendingBindings.AimStick == StickBinding.Left
                     ? StickBinding.Right
                     : StickBinding.Left;
+                _hasUnappliedChanges = true;
                 break;
             case RowKind.Apply:
                 InputBindings.Apply(_pendingBindings, save: true);
+                _hasUnappliedChanges = false;
                 _sceneManager.PopScene(this);
                 break;
             case RowKind.ResetDefaults:
                 _pendingBindings = InputBindings.CreateDefaults();
+                _hasUnappliedChanges = true;
                 break;
             case RowKind.Back:
-                _sceneManager.PopScene(this);
+                if (_hasUnappliedChanges)
+                { _confirmingDiscard = true; _confirmDiscardSelectedIndex = 1; }
+                else
+                { _sceneManager.PopScene(this); }
                 break;
         }
+    }
+
+    private void ExecuteDiscardConfirm()
+    {
+        if (_confirmDiscardSelectedIndex == 0)
+            _sceneManager.PopScene(this);  // Discard & Go Back
+        else
+            _confirmingDiscard = false;    // Keep Editing
     }
 
     // ── Display helpers ──────────────────────────────────────────────────────
