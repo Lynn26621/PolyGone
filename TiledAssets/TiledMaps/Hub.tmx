@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="6" nextobjectid="27">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#ffffff" nextlayerid="6" nextobjectid="27">
  <editorsettings>
   <export target="../../src/PolyGone/Maps/Hub.json" format="json"/>
  </editorsettings>
@@ -84,11 +84,11 @@
   </object>
   <object id="20" type="Player" gid="81" x="96" y="608" width="32" height="32"/>
   <object id="24" name="Inventory" type="Inventory" x="512" y="608" width="32" height="32"/>
-  <object id="26" name="Test Level 4" type="Door" x="96" y="96" width="32" height="32">
+  <object id="26" name="Level 4" type="Door" x="96" y="96" width="32" height="32">
    <properties>
-    <property name="connects" value="TestLevel4"/>
-    <property name="loadX" type="int" value="64"/>
-    <property name="loadY" type="int" value="608"/>
+    <property name="connects" value="Level4"/>
+    <property name="loadX" type="int" value="0"/>
+    <property name="loadY" type="int" value="0"/>
    </properties>
   </object>
  </objectgroup>
