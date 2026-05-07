@@ -92,7 +92,7 @@
                  "opacity":1,
                  "properties":[
                         {
-                         "name":"connectedLevel",
+                         "name":"connects",
                          "type":"string",
                          "value":"TestLevel3"
                         }, 
@@ -120,7 +120,7 @@
                  "opacity":1,
                  "properties":[
                         {
-                         "name":"connectedLevel",
+                         "name":"connects",
                          "type":"string",
                          "value":"Level2"
                         }, 
@@ -153,7 +153,7 @@
                  "opacity":1,
                  "properties":[
                         {
-                         "name":"connectedLevel",
+                         "name":"connects",
                          "type":"string",
                          "value":"Level1"
                         }, 
@@ -206,7 +206,7 @@
                  "opacity":1,
                  "properties":[
                         {
-                         "name":"connectedLevel",
+                         "name":"connects",
                          "type":"string",
                          "value":"TestLevel4"
                         }, 
