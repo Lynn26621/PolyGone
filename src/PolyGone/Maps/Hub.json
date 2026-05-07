@@ -88,23 +88,23 @@
                 {
                  "height":32,
                  "id":2,
-                 "name":"Test Level 3",
+                 "name":"Level 3",
                  "opacity":1,
                  "properties":[
                         {
                          "name":"connects",
                          "type":"string",
-                         "value":"TestLevel3"
+                         "value":"Level3"
                         }, 
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":32
+                         "value":96
                         }, 
                         {
                          "name":"loadY",
                          "type":"int",
-                         "value":896
+                         "value":544
                         }],
                  "rotation":0,
                  "type":"Door",

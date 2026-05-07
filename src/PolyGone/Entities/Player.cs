@@ -582,7 +582,15 @@ namespace PolyGone.Entities
                         wallContactFrames = Math.Max(0, wallContactFrames - 1);
                     }
 
-                    if (wallContactFrames >= WALL_CONTACT_REQUIRED && UnlockTracker.IsAbilityUnlocked(wallJump))
+                    // Determine whether we should allow a cling.
+                    // Normal cling requires sustained contact frames, but we also allow
+                    // a short grace period (wall coyote time) so players can still
+                    // cling / re-cling for a few frames after stepping off the wall
+                    // as long as they're pressing into the wall.
+                    bool pressingIntoWall = movingIntoLeft || movingIntoRight;
+                    bool clingFromCoyote = wallCoyoteTime > 0f && pressingIntoWall;
+
+                    if ((wallContactFrames >= WALL_CONTACT_REQUIRED || clingFromCoyote) && UnlockTracker.IsAbilityUnlocked(wallJump))
                     {
                         IsOnWall = true;
 
@@ -595,11 +603,16 @@ namespace PolyGone.Entities
                         {
                             wallDirection = -1; // Right wall
                         }
+                        else if (clingFromCoyote && wallCoyoteDirection != 0)
+                        {
+                            // If we're relying on coyote grace but no tile probe currently
+                            // indicates a wall, fall back to the last known wall direction
+                            wallDirection = wallCoyoteDirection;
+                        }
                         else
                         {
                             wallDirection = 0; // Both sides solid, no directional bias
                         }
-
                     }
                     else
                     {
