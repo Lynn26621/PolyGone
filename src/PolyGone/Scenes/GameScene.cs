@@ -395,21 +395,21 @@ public class GameScene : IScene
                         );
                         enemySpawns.Add(enemyPos);
                         break;
-                    case "TurretEnemy":
+                    case "Turret":
                         Vector2 turretPos = AdjustCoordinates(
                             obj.GetProperty("x").GetSingle(),
                             obj.GetProperty("y").GetSingle()
                         );
                         turretEnemySpawns.Add(turretPos);
                         break;
-                    case "BerserkEnemy":
+                    case "Berserk":
                         Vector2 berserkPos = AdjustCoordinates(
                             obj.GetProperty("x").GetSingle(),
                             obj.GetProperty("y").GetSingle()
                         );
                         berserkEnemySpawns.Add(berserkPos);
                         break;
-                    case "FactoryEnemy":
+                    case "Factory":
                         Vector2 factoryPos = AdjustCoordinates(
                             obj.GetProperty("x").GetSingle(),
                             obj.GetProperty("y").GetSingle()
