@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="6" nextobjectid="27">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="6" nextobjectid="27">
  <editorsettings>
   <export target="../../src/PolyGone/Maps/Hub.json" format="json"/>
  </editorsettings>
@@ -62,22 +62,22 @@
  <objectgroup id="2" name="objects">
   <object id="2" name="Test Level 3" type="Door" x="96" y="224" width="32" height="32">
    <properties>
-    <property name="connectedLevel" value="TestLevel3"/>
+    <property name="connects" value="TestLevel3"/>
     <property name="loadX" type="int" value="32"/>
     <property name="loadY" type="int" value="896"/>
    </properties>
   </object>
-  <object id="3" name="Test Level 2" type="Door" x="96" y="352" width="32" height="32">
+  <object id="3" name="Level 2" type="Door" x="96" y="352" width="32" height="32">
    <properties>
-    <property name="connectedLevel" value="TestLevel2"/>
-    <property name="loadX" type="int" value="32"/>
+    <property name="connects" value="Level2"/>
+    <property name="loadX" type="int" value="128"/>
     <property name="loadY" type="int" value="160"/>
     <property name="requirement" value="Level1"/>
    </properties>
   </object>
   <object id="19" name="Level 1" type="Door" x="96" y="480" width="32" height="32">
    <properties>
-    <property name="connectedLevel" value="Level1-StephenResch"/>
+    <property name="connects" value="Level1"/>
     <property name="loadX" type="int" value="160"/>
     <property name="loadY" type="int" value="864"/>
    </properties>
@@ -86,7 +86,7 @@
   <object id="24" name="Inventory" type="Inventory" x="512" y="608" width="32" height="32"/>
   <object id="26" name="Test Level 4" type="Door" x="96" y="96" width="32" height="32">
    <properties>
-    <property name="connectedLevel" value="TestLevel4"/>
+    <property name="connects" value="TestLevel4"/>
     <property name="loadX" type="int" value="64"/>
     <property name="loadY" type="int" value="608"/>
    </properties>
