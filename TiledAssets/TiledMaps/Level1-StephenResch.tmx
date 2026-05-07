@@ -83,7 +83,7 @@
   <object id="23" name="Goal" type="Goal" x="2624" y="416" width="32" height="32"/>
   <object id="22" name="Hub" type="Door" x="128" y="864" width="32" height="32">
    <properties>
-    <property name="connectedLevel" value="Hub"/>
+    <property name="connects" value="Hub"/>
     <property name="loadX" type="int" value="96"/>
     <property name="loadY" type="int" value="608"/>
    </properties>

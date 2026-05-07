@@ -89,22 +89,21 @@
                  "height":32,
                  "id":2,
                  "name":"Test Level 3",
-                 "opacity":1,
                  "properties":[
                         {
-                         "name":"connectedLevel",
+                         "name":"connects",
                          "type":"string",
-                         "value":"TestLevel3"
+                         "value":"Level3-StephenResch"
                         }, 
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":32
+                         "value":128
                         }, 
                         {
                          "name":"loadY",
                          "type":"int",
-                         "value":896
+                         "value":384
                         }],
                  "rotation":0,
                  "type":"Door",
@@ -117,22 +116,21 @@
                  "height":32,
                  "id":3,
                  "name":"Level 2",
-                 "opacity":1,
                  "properties":[
                         {
-                         "name":"connectedLevel",
+                         "name":"connects",
                          "type":"string",
-                         "value":"Level2"
+                         "value":"Level2-StephenResch"
                         }, 
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":128
+                         "value":160
                         }, 
                         {
                          "name":"loadY",
                          "type":"int",
-                         "value":160
+                         "value":1504
                         }, 
                         {
                          "name":"requirement",
@@ -150,10 +148,9 @@
                  "height":32,
                  "id":19,
                  "name":"Level 1",
-                 "opacity":1,
                  "properties":[
                         {
-                         "name":"connectedLevel",
+                         "name":"connects",
                          "type":"string",
                          "value":"Level1"
                         }, 
@@ -179,7 +176,6 @@
                  "height":32,
                  "id":20,
                  "name":"",
-                 "opacity":1,
                  "rotation":0,
                  "type":"Player",
                  "visible":true,
@@ -191,7 +187,6 @@
                  "height":32,
                  "id":24,
                  "name":"Inventory",
-                 "opacity":1,
                  "rotation":0,
                  "type":"Inventory",
                  "visible":true,
@@ -203,22 +198,21 @@
                  "height":32,
                  "id":26,
                  "name":"Test Level 4",
-                 "opacity":1,
                  "properties":[
                         {
-                         "name":"connectedLevel",
+                         "name":"connects",
                          "type":"string",
-                         "value":"TestLevel4"
+                         "value":"Level5-StephenResch"
                         }, 
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":64
+                         "value":160
                         }, 
                         {
                          "name":"loadY",
                          "type":"int",
-                         "value":608
+                         "value":864
                         }],
                  "rotation":0,
                  "type":"Door",
@@ -268,7 +262,7 @@
  "nextobjectid":27,
  "orientation":"orthogonal",
  "renderorder":"right-down",
- "tiledversion":"1.12.1",
+ "tiledversion":"1.11.2",
  "tileheight":32,
  "tilesets":[
         {
