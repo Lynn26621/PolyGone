@@ -64,7 +64,7 @@
   <object id="41" name="Frog" type="Frog" gid="6" x="736" y="128" width="32" height="32"/>
   <object id="42" name="HubDoor" type="Door" x="32" y="576" width="32" height="32">
    <properties>
-    <property name="connectedLevel" value="Hub"/>
+    <property name="connects" value="Hub"/>
     <property name="loadX" type="int" value="96"/>
     <property name="loadY" type="int" value="224"/>
    </properties>

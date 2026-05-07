@@ -10,7 +10,7 @@ namespace PolyGone.Core
 {
     public class LevelDoor : SwitchTrigger
     {
-        public string ConnectedLevel { get; private set; }
+        public string Connects { get; private set; }
         public int LoadX;
         public int LoadY;
         public string? Requirement { get; private set; }
@@ -18,10 +18,10 @@ namespace PolyGone.Core
 
         public bool IsUnlocked => string.IsNullOrWhiteSpace(Requirement) || UnlockTracker.IsLevelCompleted(Requirement);
 
-        public LevelDoor(Vector2 position, int width, int height, AudioManager audioManager, string connectedLevel, int loadX, int loadY, string? requirement = null, string? displayName = null)
+        public LevelDoor(Vector2 position, int width, int height, AudioManager audioManager, string connects, int loadX, int loadY, string? requirement = null, string? displayName = null)
         : base(position, width, height, audioManager)
         {
-            ConnectedLevel = connectedLevel;
+            this.Connects = connects;
             LoadX = loadX;
             LoadY = loadY;
             Requirement = string.Equals(requirement, "none", StringComparison.OrdinalIgnoreCase) ? null : requirement;

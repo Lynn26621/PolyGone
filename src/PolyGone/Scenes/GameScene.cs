@@ -439,7 +439,7 @@ public class GameScene : IScene
                         );
                         int doorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
                         int doorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                        string connectedLevel = "Hub";
+                        string connects = "Hub";
                         int playerLoadX = 0;
                         int playerLoadY = 0;
                         string? requirement = null;
@@ -449,8 +449,8 @@ public class GameScene : IScene
                             string? propName = prop.GetProperty("name").GetString();
                             switch (propName)
                             {
-                                case "connectedLevel":
-                                    connectedLevel = (string)(prop.GetProperty("value").GetString() ?? "Hub");
+                                case "connects":
+                                    connects = (string)(prop.GetProperty("value").GetString() ?? "Hub");
                                     break;
                                 case "loadX":
                                     playerLoadX = (int)prop.GetProperty("value").GetSingle();
@@ -472,7 +472,7 @@ public class GameScene : IScene
                             doorName = nameElem.GetString();
                         }
 
-                        levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connectedLevel, playerLoadX, playerLoadY, requirement, doorName));
+                        levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connects, playerLoadX, playerLoadY, requirement, doorName));
                         break;
                     case "Inventory":
                         Vector2 inventoryPos = AdjustCoordinates(
@@ -1000,7 +1000,7 @@ public class GameScene : IScene
             if (door.IsTriggered && door.IsActivated)
             {
                 sceneManager.PopScene(this);
-                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.ConnectedLevel, selectedItems, selectedAttachments, door.LoadX, door.LoadY));
+                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.Connects, selectedItems, selectedAttachments, door.LoadX, door.LoadY));
             }
         }
     }

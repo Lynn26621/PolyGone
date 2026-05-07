@@ -33,7 +33,6 @@ class Frog : Enemy
         : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, patrolSpeed: 0.8f, visualSize: visualSize, player: player)
     {
         this.player = player;
-        this.Friction = 0.93f;
         this.GravityScale = 1.1f;
     }
 
@@ -79,7 +78,10 @@ class Frog : Enemy
         // In air, keep leap momentum instead of snapping to patrol speed.
         if (IsOnGround)
         {
-            ChangeX = Math.Abs(deltaX) > 2f ? Math.Sign(deltaX) * chaseSpeed : 0f;
+            if (Math.Abs(deltaX) > 2f)
+            {
+                ApplyHorizontalIntent(Math.Sign(deltaX), chaseSpeed, 0.95f, 0.6f);
+            }
         }
 
         if (IsOnGround && jumpCooldown <= 0f)
