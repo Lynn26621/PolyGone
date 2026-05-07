@@ -32,33 +32,8 @@ internal class HelpScene : IScene
     // A line starting with "## " is rendered as a section header (cyan, slightly larger).
     // A line starting with "##SWATCH:" draws a coloured tile square followed by the text.
     // A blank "" is a spacer. All other lines are body text.
-    private static readonly string[][] TabContent =
+    private static readonly string[][] StaticTabContent =
     {
-        // ----- Player -----
-        new[]
-        {
-            "## Movement",
-            "Move Left / Right: A and D keys, or Left Analog Stick",
-            "Jump:              Space bar, or A button (gamepad)",
-            "Drop through platform: S key, or DPad Down (gamepad)",
-            "",
-            "## Dash",
-            "Press Left Shift (or B button) to dash 5 tiles in your",
-            "current movement direction. Has a 2.5-second cooldown.",
-            "",
-            "## Wall Jump",
-            "Move into a wall while airborne to cling to it.",
-            "Clinging slows your fall. Press Jump to leap off the wall.",
-            "You cannot jump off the same wall twice in a row.",
-            "",
-            "## Shooting",
-            "Left Mouse Button to fire (aim with the mouse cursor).",
-            "Right Trigger fires; Right Analog Stick aims (gamepad).",
-            "",
-            "## Interact",
-            "Press W key (or X button) near doors and switches to use them.",
-        },
-
         // ----- Enemies -----
         new[]
         {
@@ -122,8 +97,8 @@ internal class HelpScene : IScene
             "##SWATCH:GRAY Solid - Standard wall or floor tile.",
             "Blocks all movement in every direction.",
             "",
-            "##SWATCH:LIGHTGRAY Semi-Solid - One-way platform.",
-            "Stand on top; drop through by pressing S (or DPad Down).",
+            "##SWATCH:BROWN Semi-Solid - One-way platform.",
+            "Stand on top; drop through by pressing {DROP_KEY} (or {DROP_BUTTON}).",
             "",
             "##SWATCH:BLUE Slippery - Icy surface.",
             "Greatly reduced friction. You slide with little control.",
@@ -187,6 +162,16 @@ internal class HelpScene : IScene
             ScrollContent(-1);
         if (InputManager.MenuDown())
             ScrollContent(1);
+
+        // Mouse wheel scrolling
+        int wheelDelta = InputManager.CurrentMouseState.ScrollWheelValue - InputManager.PreviousMouseState.ScrollWheelValue;
+        if (wheelDelta != 0)
+        {
+            int steps = Math.Max(1, Math.Abs(wheelDelta) / 120);
+            int direction = wheelDelta > 0 ? -1 : 1;
+            for (int i = 0; i < steps; i++)
+                ScrollContent(direction);
+        }
 
         // Back / escape
         if (InputManager.MenuBack())
@@ -264,7 +249,7 @@ internal class HelpScene : IScene
         DrawTabBar(spriteBatch, viewport);
 
         // Hint line
-        const string hint = "A/D or Left/Right = switch tab  |  W/S or Up/Down = scroll  |  Esc = back";
+        string hint = BuildHintText();
         var hintSize = _font.MeasureString(hint);
         float hintScale = Math.Min(0.55f, (viewport.Width - 20f) / hintSize.X);
         spriteBatch.DrawString(_font, hint,
@@ -333,7 +318,7 @@ internal class HelpScene : IScene
         if (_font == null || _pixel == null)
             return;
 
-        var lines = TabContent[(int)_currentTab];
+        var lines = GetCurrentTabContent();
         float availableHeight = viewport.Height - ContentStartY - 60f; // leave room for Back button
         int maxVisible = (int)(availableHeight / LineSpacing);
 
@@ -377,6 +362,7 @@ internal class HelpScene : IScene
                 {
                     "GRAY" => Color.Gray,
                     "LIGHTGRAY" => Color.LightGray,
+                    "BROWN" => new Color(139, 94, 60),
                     "BLUE" => new Color(80, 160, 220),
                     "GREEN" => new Color(60, 180, 80),
                     "RED" => new Color(200, 60, 60),
@@ -447,7 +433,7 @@ internal class HelpScene : IScene
             }
         }
 
-        var lines = TabContent[(int)_currentTab];
+        var lines = GetCurrentTabContent();
         int maxScroll = Math.Max(0, lines.Length - maxVisible);
         if (_scrollOffset < maxScroll)
         {
@@ -474,5 +460,65 @@ internal class HelpScene : IScene
     private void ScrollContent(int direction)
     {
         _scrollOffset = Math.Max(0, _scrollOffset + direction);
+    }
+
+    private string[] GetCurrentTabContent()
+    {
+        if (_currentTab == HelpTab.Player)
+            return BuildPlayerTabContent();
+        if (_currentTab == HelpTab.Collisions)
+            return BuildCollisionsTabContent();
+        return StaticTabContent[(int)_currentTab - 1];
+    }
+
+    private static string[] BuildPlayerTabContent()
+    {
+        var bindings = InputBindings.Current;
+        string moveStick = bindings.MoveStick == StickBinding.Left ? "Left" : "Right";
+        string aimStick = bindings.AimStick == StickBinding.Left ? "Left" : "Right";
+
+        return
+        [
+            "## Movement",
+            $"Move Left / Right: {bindings.MoveLeftKey} and {bindings.MoveRightKey} keys, or {moveStick} Analog Stick",
+            $"Jump:              {bindings.JumpKey} key, or {bindings.JumpButton} button (gamepad)",
+            $"Drop through platform: {bindings.DropKey} key, or {bindings.DropButton} (gamepad)",
+            "",
+            "## Dash",
+            $"Press {bindings.DashKey} (or {bindings.DashButton}) to dash 5 tiles in your",
+            "current movement direction. Has a 2.5-second cooldown.",
+            "",
+            "## Wall Jump",
+            "Move into a wall while airborne to cling to it.",
+            "Clinging slows your fall. Press Jump to leap off the wall.",
+            "You cannot jump off the same wall twice in a row.",
+            "",
+            "## Shooting",
+            "Left Mouse Button to fire (aim with the mouse cursor).",
+            $"{bindings.ShootButton} fires; {aimStick} Analog Stick aims (gamepad).",
+            "",
+            "## Interact",
+            $"Press {bindings.InteractKey} key (or {bindings.InteractButton} button) near doors and switches to use them.",
+        ];
+    }
+
+    private static string[] BuildCollisionsTabContent()
+    {
+        var lines = (string[])StaticTabContent[(int)HelpTab.Collisions - 1].Clone();
+        var bindings = InputBindings.Current;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            lines[i] = lines[i]
+                .Replace("{DROP_KEY}", bindings.DropKey.ToString(), StringComparison.Ordinal)
+                .Replace("{DROP_BUTTON}", bindings.DropButton.ToString(), StringComparison.Ordinal);
+        }
+        return lines;
+    }
+
+    private static string BuildHintText()
+    {
+        var bindings = InputBindings.Current;
+        return $"{bindings.MenuLeftKey}/{bindings.MenuRightKey} or DPad Left/Right = switch tab  |  " +
+               $"{bindings.MenuUpKey}/{bindings.MenuDownKey} or DPad Up/Down = scroll  |  Esc/{bindings.MenuBackButton} = back";
     }
 }
