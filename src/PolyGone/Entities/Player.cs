@@ -320,26 +320,14 @@ namespace PolyGone.Entities
                 // Check if standing on bouncy tile for jump boost
                 float jumpPower = JumpStrength;
 
-                // Check if the player is standing on a bouncy tile
-                if (wasOnBouncyTile || CollisionMap != null)
+                // Check if the player is standing on a bouncy tile: use wasOnBouncyTile (from last frame),
+                // isOnBouncyTile (set during this frame's collision), and a direct ground probe for consistency.
+                // This ensures that holding jump will always trigger the larger jump on bouncy tiles.
+                bool standingOnBouncy = wasOnBouncyTile || isOnBouncyTile || IsStandingOnCollisionType(CollisionType.Bouncy);
+
+                if (standingOnBouncy)
                 {
-                    bool standingOnBouncy = wasOnBouncyTile;
-
-                    if (!standingOnBouncy && CollisionMap != null)
-                    {
-                        int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
-                        int playerTileY = (int)((position.Y + size[1]) / TILE_SIZE);
-                        var keyBelow = new Vector2(playerTileX, playerTileY + 1);
-
-                        standingOnBouncy = CollisionMap.TryGetValue(keyBelow, out int belowTileId) &&
-                                           belowTileId != -1 &&
-                                           CollisionTypeMapper.GetCollisionType(belowTileId) == CollisionType.Bouncy;
-                    }
-
-                    if (standingOnBouncy)
-                    {
-                        jumpPower = JumpStrength * 1.5f; // 50% jump boost on bouncy tiles
-                    }
+                    jumpPower = JumpStrength * 1.5f; // 50% jump boost on bouncy tiles
                 }
 
                 base.ChangeY = jumpPower;

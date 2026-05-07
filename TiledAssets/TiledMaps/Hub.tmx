@@ -87,8 +87,8 @@
   <object id="26" name="Level 4" type="Door" x="96" y="96" width="32" height="32">
    <properties>
     <property name="connects" value="Level4"/>
-    <property name="loadX" type="int" value="0"/>
-    <property name="loadY" type="int" value="0"/>
+    <property name="loadX" type="int" value="96"/>
+    <property name="loadY" type="int" value="2784"/>
    </properties>
   </object>
  </objectgroup>

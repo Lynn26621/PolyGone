@@ -1,4 +1,5 @@
-{ "compressionlevel":-1,
+{ "backgroundcolor":"#ffffff",
+ "compressionlevel":-1,
  "height":20,
  "infinite":false,
  "layers":[
@@ -213,12 +214,12 @@
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":0
+                         "value":96
                         }, 
                         {
                          "name":"loadY",
                          "type":"int",
-                         "value":0
+                         "value":2784
                         }],
                  "rotation":0,
                  "type":"Door",
