@@ -120,12 +120,12 @@
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":96
+                         "value":320
                         }, 
                         {
                          "name":"loadY",
                          "type":"int",
-                         "value":352
+                         "value":576
                         }],
                  "rotation":0,
                  "type":"Door",
