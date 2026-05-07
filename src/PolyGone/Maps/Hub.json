@@ -89,7 +89,6 @@
                  "height":32,
                  "id":2,
                  "name":"Test Level 3",
-                 "opacity":1,
                  "properties":[
                         {
                          "name":"connectedLevel",
@@ -117,7 +116,6 @@
                  "height":32,
                  "id":3,
                  "name":"Test Level 2",
-                 "opacity":1,
                  "properties":[
                         {
                          "name":"connectedLevel",
@@ -150,12 +148,11 @@
                  "height":32,
                  "id":19,
                  "name":"Level 1",
-                 "opacity":1,
                  "properties":[
                         {
                          "name":"connectedLevel",
                          "type":"string",
-                         "value":"Level1"
+                         "value":"Level1-StephenResch"
                         }, 
                         {
                          "name":"loadX",
@@ -179,7 +176,6 @@
                  "height":32,
                  "id":20,
                  "name":"",
-                 "opacity":1,
                  "rotation":0,
                  "type":"Player",
                  "visible":true,
@@ -191,7 +187,6 @@
                  "height":32,
                  "id":24,
                  "name":"Inventory",
-                 "opacity":1,
                  "rotation":0,
                  "type":"Inventory",
                  "visible":true,
@@ -203,7 +198,6 @@
                  "height":32,
                  "id":26,
                  "name":"Test Level 4",
-                 "opacity":1,
                  "properties":[
                         {
                          "name":"connectedLevel",
@@ -268,7 +262,7 @@
  "nextobjectid":27,
  "orientation":"orthogonal",
  "renderorder":"right-down",
- "tiledversion":"1.12.1",
+ "tiledversion":"1.11.2",
  "tileheight":32,
  "tilesets":[
         {
