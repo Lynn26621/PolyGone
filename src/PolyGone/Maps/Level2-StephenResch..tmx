@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="50" tilewidth="32" tileheight="32" infinite="0" nextlayerid="6" nextobjectid="20">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="50" tilewidth="32" tileheight="32" infinite="0" nextlayerid="6" nextobjectid="31">
  <tileset firstgid="1" source="../../../TiledAssets/TiledSets/Proto.tsx"/>
  <tileset firstgid="65" source="../../../TiledAssets/TiledSets/CollisionTiles.tsx"/>
  <tileset firstgid="81" source="../../../TiledAssets/TiledSets/TextureSheet.tsx"/>
  <tileset firstgid="145" source="../../../TiledAssets/TiledSets/EnemySheet.tsx"/>
- <tileset firstgid="149" source="../../../TiledAssets/TiledSets/PlayerSheet.tsx"/>
+ <tileset firstgid="161" source="../../../TiledAssets/TiledSets/PlayerSheet.tsx"/>
  <imagelayer id="5" name="Background" repeatx="1" repeaty="1">
   <image source="../Content/Textures/Backgrounds/CastleBackground.png" width="256" height="256"/>
  </imagelayer>
@@ -117,14 +117,7 @@
 </data>
  </layer>
  <objectgroup id="3" name="Objects">
-  <object id="3" type="TurretEnemy" gid="146" x="704" y="320" width="32" height="32"/>
-  <object id="4" type="TurretEnemy" gid="146" x="608" y="736" width="32" height="32"/>
-  <object id="5" type="TurretEnemy" gid="146" x="448" y="736" width="32" height="32"/>
-  <object id="6" type="TurretEnemy" gid="146" x="288" y="736" width="32" height="32"/>
-  <object id="8" type="TurretEnemy" gid="146" x="256" y="1088" width="32" height="32"/>
-  <object id="9" type="TurretEnemy" gid="146" x="768" y="1248" width="32" height="32"/>
-  <object id="10" type="TurretEnemy" gid="146" x="640" y="1376" width="32" height="32"/>
-  <object id="12" type="Player" gid="149" x="160" y="1504" width="32" height="32"/>
+  <object id="12" type="Player" gid="161" x="160" y="1504" width="32" height="32"/>
   <object id="13" name="Hub" type="Door" x="128" y="1504" width="32" height="32">
    <properties>
     <property name="connects" value="Hub"/>
@@ -135,9 +128,16 @@
   <object id="14" name="Goal" type="Goal" x="160" y="160" width="32" height="32"/>
   <object id="15" type="Enemy" gid="145" x="480" y="1024" width="32" height="32"/>
   <object id="16" type="Enemy" gid="145" x="256" y="1024" width="32" height="32"/>
-  <object id="17" type="Enemy" gid="145" x="416" y="896" width="32" height="32"/>
-  <object id="18" type="Enemy" gid="145" x="672" y="896" width="32" height="32"/>
-  <object id="19" type="Enemy" gid="145" x="608" y="512" width="32" height="32"/>
+  <object id="20" type="Turret" gid="146" x="256" y="1088" width="32" height="32"/>
+  <object id="21" type="Turret" gid="146" x="768" y="1248" width="32" height="32"/>
+  <object id="23" type="Turret" gid="146" x="288" y="736" width="32" height="32"/>
+  <object id="24" type="Turret" gid="146" x="448" y="736" width="32" height="32"/>
+  <object id="25" type="Turret" gid="146" x="608" y="736" width="32" height="32"/>
+  <object id="26" type="Turret" gid="146" x="704" y="320" width="32" height="32"/>
+  <object id="27" type="Berserk" gid="148" x="480" y="896" width="32" height="32"/>
+  <object id="28" type="Frog" gid="147" x="576" y="1504" width="32" height="32"/>
+  <object id="29" type="Factory" gid="149" x="480" y="512" width="32" height="32"/>
+  <object id="30" type="Turret" gid="146" x="640" y="1376" width="32" height="32"/>
  </objectgroup>
  <layer id="2" name="Collisions" width="30" height="50">
   <data encoding="csv">
