@@ -243,6 +243,118 @@
                  "width":32,
                  "x":800,
                  "y":576
+                }, 
+                {
+                 "height":32,
+                 "id":30,
+                 "name":"Level 1 - Dylan",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level1-Dylan"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":864
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":160,
+                 "y":288
+                }, 
+                {
+                 "height":32,
+                 "id":31,
+                 "name":"Level 2 - Dylan",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level2-Dylan"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":224
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":864
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":320,
+                 "y":288
+                }, 
+                {
+                 "height":32,
+                 "id":32,
+                 "name":"Level 3 - Dylan",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level3-Dylan"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":864
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":480,
+                 "y":288
+                }, 
+                {
+                 "height":32,
+                 "id":33,
+                 "name":"Level 4 - Dylan",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level4-Dylan"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":160
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":1824
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":640,
+                 "y":288
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -282,7 +394,7 @@
          "y":0
         }],
  "nextlayerid":6,
- "nextobjectid":28,
+ "nextobjectid":34,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",
