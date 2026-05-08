@@ -91,13 +91,6 @@
     <property name="loadY" type="int" value="608"/>
    </properties>
   </object>
-  <object id="27" name="Test Door" type="Door" x="96" y="512" width="32" height="32">
-   <properties>
-    <property name="connectedLevel" value="Level3-Dylan"/>
-    <property name="loadX" type="int" value="128"/>
-    <property name="loadY" type="int" value="864"/>
-   </properties>
-  </object>
  </objectgroup>
  <layer id="3" name="collisions" width="30" height="20">
   <data encoding="csv">
