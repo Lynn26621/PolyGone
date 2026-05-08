@@ -226,6 +226,34 @@
                  "width":32,
                  "x":96,
                  "y":96
+                }, 
+                {
+                 "height":32,
+                 "id":27,
+                 "name":"Test Door",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connectedLevel",
+                         "type":"string",
+                         "value":"Level3-Dylan"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":864
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":96,
+                 "y":512
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -265,7 +293,7 @@
          "y":0
         }],
  "nextlayerid":6,
- "nextobjectid":27,
+ "nextobjectid":28,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",
