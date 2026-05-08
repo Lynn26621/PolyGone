@@ -67,7 +67,7 @@ public static class InputManager
     private const float MENU_AUTO_REPEAT_INTERVAL = 0.1f;
     private const float CLICK_COOLDOWN = 0.01f; // 10ms between clicks
     private const float ESCAPE_COOLDOWN = 0.2f; // 200ms between escape presses
-    private const float DASH_COOLDOWN = 0.75f; // 750ms between dashes
+    private const float DASH_COOLDOWN = 0.50f; // 500ms between dashes
 
     public static MouseState CurrentMouseState => _currentMouseState;
     public static MouseState PreviousMouseState => _previousMouseState;
