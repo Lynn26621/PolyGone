@@ -96,8 +96,8 @@
   <object id="18" name="Hub" type="Door" x="160" y="864" width="32" height="32">
    <properties>
     <property name="connects" value="Hub"/>
-    <property name="loadX" type="int" value="96"/>
-    <property name="loadY" type="int" value="480"/>
+    <property name="loadX" type="int" value="160"/>
+    <property name="loadY" type="int" value="576"/>
    </properties>
   </object>
   <object id="19" gid="81" x="160" y="864" width="32" height="32"/>
