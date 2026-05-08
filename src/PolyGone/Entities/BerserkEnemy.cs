@@ -107,7 +107,10 @@ class BerserkEnemy : Enemy
             float deltaX = playerCenterX - myCenterX;
             float chaseSpeed = PatrolSpeed * GetPatrolSpeedMultiplier();
 
-            ChangeX = Math.Abs(deltaX) > 2f ? Math.Sign(deltaX) * chaseSpeed : 0f;
+            if (Math.Abs(deltaX) > 2f)
+            {
+                ApplyHorizontalIntent(Math.Sign(deltaX), chaseSpeed, 1.05f, 0.5f);
+            }
         }
 
         // Count down and fire while berserk

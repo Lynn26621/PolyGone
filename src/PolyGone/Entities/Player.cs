@@ -24,6 +24,17 @@ namespace PolyGone.Entities
         private const float WALL_CLING_START_SPEED_CAP = 3f; // Initial max downward speed while clinging
         private const float WALL_CLING_RAMP_FRAMES = 45f; // Time to ramp cling effect back to normal fall
         private const float SAME_WALL_JUMP_LOCK_FRAMES = 40f; // Stricter lock to prevent same-wall climb loops
+        private const float WALL_CLING_PROBE_TOP_RATIO = 0.35f; // Upper torso wall probe
+        private const float WALL_CLING_PROBE_BOTTOM_RATIO = 0.75f; // Lower torso wall probe
+        private const float NORMAL_MOVE_ACCELERATION = 1.15f;
+        private const float SLIPPERY_REVERSE_ACCELERATION_FACTOR = 0.18f;
+        private const float NORMAL_MAX_MOVE_SPEED = 7.5f;
+        private const float PLAYER_GROUND_DECEL = 2.2f;
+        private const float PLAYER_AIR_DECEL = 0.25f;
+        private const float PLAYER_SLIPPERY_GROUND_DECEL = 0.03f;
+        private const float PLAYER_EXTRA_VELOCITY_DECEL = 1.9f;
+        private const float DASH_EXTRA_SPEED_CAP = 25f;
+        private const float DASH_TOTAL_SPEED_CAP = 25f;
 
         private AudioManager audioManager;
         private Item? currentWeapon; // Single selected weapon
@@ -75,11 +86,8 @@ namespace PolyGone.Entities
 
         // Jump velocity — scaled by LowGravityItem to keep peak height constant
         public float JumpStrength { get; set; } = -16.75f;
-        private bool isOnSlipperyTile = false;
-        private bool wasOnSlipperyTile = false;
         private bool isOnBouncyTile = false;
         private bool wasOnBouncyTile = false;
-        private float preservedMomentumX = 0f;
 
         // Dash velocity boost applied when dashing
         public float DashStrength { get; set; } = 20f;
@@ -177,7 +185,13 @@ namespace PolyGone.Entities
                 }
             }
 
-            this.Friction = 0.8f; // Player has more friction for tighter control
+            ConfigureHorizontalDamping(
+                PLAYER_GROUND_DECEL,
+                PLAYER_AIR_DECEL,
+                PLAYER_SLIPPERY_GROUND_DECEL,
+                PLAYER_EXTRA_VELOCITY_DECEL,
+                slipperyControlMultiplier: 0.2f
+            );
             this.audioManager = audioManager; // Store reference to AudioManager for playing audio
         }
 
@@ -214,8 +228,6 @@ namespace PolyGone.Entities
                     position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                     onGround = deltaY > 0;
                     deltaY = 0;
-                    isOnSlipperyTile = true;
-                    Friction = 0.95f;
                     break;
                 case CollisionType.Bouncy: //Keep track of velocity. Reverse it when colliding with bouncy tile top. holding down input when landing on bouncy tile will negate the bounce effect. Also, when the player is just standing on the tile and jumps, their jump is boosted by 50%.
                     if (deltaY > 0)
@@ -275,11 +287,11 @@ namespace PolyGone.Entities
             // Horizontal movement with speed boost consideration
             if (InputManager.GameMoveLeft() && !InputManager.GameMoveRight())
             {
-                moveDirection = isOnSlipperyTile ? -0.00000000001f : -1f;
+                moveDirection = -1f;
             }
             else if (InputManager.GameMoveRight() && !InputManager.GameMoveLeft())
             {
-                moveDirection = 1;
+                moveDirection = 1f;
             }
 
             // Prevent moving back toward wall immediately after a wall jump
@@ -293,11 +305,10 @@ namespace PolyGone.Entities
             }
 
             // Apply acceleration with speed boost
-            float baseAcceleration = isOnSlipperyTile ? 0.0001f : 1f; // Much slower acceleration on ice
-            float speedMultiplier = 1.5f;
-            ChangeX += moveDirection * baseAcceleration * speedMultiplier;
-            ChangeX = MathHelper.Clamp(ChangeX, -5f * speedMultiplier, 5f * speedMultiplier);
-            ChangeX += ExtraX; // Apply any additional speed boosts (like from dashing)
+            float reverseFactor = IsStandingOnCollisionType(CollisionType.Slippery)
+                ? SLIPPERY_REVERSE_ACCELERATION_FACTOR
+                : 1f;
+            ApplyHorizontalIntent(moveDirection, NORMAL_MAX_MOVE_SPEED, NORMAL_MOVE_ACCELERATION, reverseFactor);
 
             // Jumping with coyote time and double jump
             bool JumpTriggered = InputManager.GameJump();
@@ -309,26 +320,14 @@ namespace PolyGone.Entities
                 // Check if standing on bouncy tile for jump boost
                 float jumpPower = JumpStrength;
 
-                // Check if the player is standing on a bouncy tile
-                if (wasOnBouncyTile || CollisionMap != null)
+                // Check if the player is standing on a bouncy tile: use wasOnBouncyTile (from last frame),
+                // isOnBouncyTile (set during this frame's collision), and a direct ground probe for consistency.
+                // This ensures that holding jump will always trigger the larger jump on bouncy tiles.
+                bool standingOnBouncy = wasOnBouncyTile || isOnBouncyTile || IsStandingOnCollisionType(CollisionType.Bouncy);
+
+                if (standingOnBouncy)
                 {
-                    bool standingOnBouncy = wasOnBouncyTile;
-
-                    if (!standingOnBouncy && CollisionMap != null)
-                    {
-                        int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
-                        int playerTileY = (int)((position.Y + size[1]) / TILE_SIZE);
-                        var keyBelow = new Vector2(playerTileX, playerTileY + 1);
-
-                        standingOnBouncy = CollisionMap.TryGetValue(keyBelow, out int belowTileId) &&
-                                           belowTileId != -1 &&
-                                           CollisionTypeMapper.GetCollisionType(belowTileId) == CollisionType.Bouncy;
-                    }
-
-                    if (standingOnBouncy)
-                    {
-                        jumpPower = JumpStrength * 1.5f; // 50% jump boost on bouncy tiles
-                    }
+                    jumpPower = JumpStrength * 1.5f; // 50% jump boost on bouncy tiles
                 }
 
                 base.ChangeY = jumpPower;
@@ -401,7 +400,7 @@ namespace PolyGone.Entities
 
                     if (!dashingTowardLockedWall)
                     {
-                        ExtraX += DashStrength * moveDirection;
+                        ExtraX = MathHelper.Clamp(ExtraX + DashStrength * moveDirection, -DASH_EXTRA_SPEED_CAP, DASH_EXTRA_SPEED_CAP);
                         InputManager.ConsumeDash();
                     }
                 }
@@ -423,6 +422,7 @@ namespace PolyGone.Entities
             }
 
             ChangeX += ExtraX; // Apply extra x movement from dashing or wall boosts
+            ChangeX = MathHelper.Clamp(ChangeX, -DASH_TOTAL_SPEED_CAP, DASH_TOTAL_SPEED_CAP);
         }
 
         protected override void OnEntityCollision(Entity other)
@@ -529,29 +529,33 @@ namespace PolyGone.Entities
         {
             if (CollisionMap != null)
             {
-                int playerTileX = (int)((position.X + size[0] / 2f) / TILE_SIZE);
-                int playerTileY = (int)((position.Y + size[1] / 2f) / TILE_SIZE);
-
-                var keyLeft = new Vector2(playerTileX - 1, playerTileY);
-                var keyRight = new Vector2(playerTileX + 1, playerTileY);
+                float probeTopY = position.Y + size[1] * WALL_CLING_PROBE_TOP_RATIO;
+                float probeBottomY = position.Y + size[1] * WALL_CLING_PROBE_BOTTOM_RATIO;
+                float leftProbeX = position.X - 1f;
+                float rightProbeX = position.X + size[0] + 1f;
 
                 var wallJump = playerAbilityNames[1];
 
                 if (!IsOnGround)
                 {
-                    bool leftWall = IsSolidWall(keyLeft);
-                    bool rightWall = IsSolidWall(keyRight);
+                    // Smaller cling zone: only side probes along the torso count as valid wall contact.
+                    bool leftWall =
+                        IsWallJumpSurfaceAtWorldPoint(leftProbeX, probeTopY) ||
+                        IsWallJumpSurfaceAtWorldPoint(leftProbeX, probeBottomY);
+                    bool rightWall =
+                        IsWallJumpSurfaceAtWorldPoint(rightProbeX, probeTopY) ||
+                        IsWallJumpSurfaceAtWorldPoint(rightProbeX, probeBottomY);
 
-                    // Determine player's horizontal input/movement direction
+                    // Cling should only engage while actively holding into the wall.
                     int horizontalInput = 0;
-                    if (InputManager.GameMoveLeft())
+                    if (InputManager.GameMoveLeft() && !InputManager.GameMoveRight())
+                    {
                         horizontalInput = -1;
-                    else if (InputManager.GameMoveRight())
+                    }
+                    else if (InputManager.GameMoveRight() && !InputManager.GameMoveLeft())
+                    {
                         horizontalInput = 1;
-                    else if (ChangeX < -0.1f)
-                        horizontalInput = -1;
-                    else if (ChangeX > 0.1f)
-                        horizontalInput = 1;
+                    }
 
                     bool movingIntoLeft = leftWall && horizontalInput < 0;
                     bool movingIntoRight = rightWall && horizontalInput > 0;
@@ -566,7 +570,15 @@ namespace PolyGone.Entities
                         wallContactFrames = Math.Max(0, wallContactFrames - 1);
                     }
 
-                    if (wallContactFrames >= WALL_CONTACT_REQUIRED && UnlockTracker.IsAbilityUnlocked(wallJump))
+                    // Determine whether we should allow a cling.
+                    // Normal cling requires sustained contact frames, but we also allow
+                    // a short grace period (wall coyote time) so players can still
+                    // cling / re-cling for a few frames after stepping off the wall
+                    // as long as they're pressing into the wall.
+                    bool pressingIntoWall = movingIntoLeft || movingIntoRight;
+                    bool clingFromCoyote = wallCoyoteTime > 0f && pressingIntoWall;
+
+                    if ((wallContactFrames >= WALL_CONTACT_REQUIRED || clingFromCoyote) && UnlockTracker.IsAbilityUnlocked(wallJump))
                     {
                         IsOnWall = true;
 
@@ -579,11 +591,16 @@ namespace PolyGone.Entities
                         {
                             wallDirection = -1; // Right wall
                         }
+                        else if (clingFromCoyote && wallCoyoteDirection != 0)
+                        {
+                            // If we're relying on coyote grace but no tile probe currently
+                            // indicates a wall, fall back to the last known wall direction
+                            wallDirection = wallCoyoteDirection;
+                        }
                         else
                         {
                             wallDirection = 0; // Both sides solid, no directional bias
                         }
-
                     }
                     else
                     {
@@ -616,6 +633,29 @@ namespace PolyGone.Entities
             }
         }
 
+        private bool IsWallJumpSurfaceAtWorldPoint(float worldX, float worldY)
+        {
+            int tileX = (int)(worldX / TILE_SIZE);
+            int tileY = (int)(worldY / TILE_SIZE);
+            return IsWallJumpSurface(new Vector2(tileX, tileY));
+        }
+
+        private bool IsWallJumpSurface(Vector2 tileKey)
+        {
+            if (CollisionMap == null)
+            {
+                return false;
+            }
+
+            if (!CollisionMap.TryGetValue(tileKey, out int tileId) || tileId == -1)
+            {
+                return false;
+            }
+
+            CollisionType collisionType = CollisionTypeMapper.GetCollisionType(tileId);
+            return collisionType != CollisionType.None && collisionType != CollisionType.SemiSolid;
+        }
+
         private int ResolveWallJumpDirection()
         {
             if (IsOnWall && wallDirection != 0)
@@ -636,8 +676,8 @@ namespace PolyGone.Entities
                 var keyLeft = new Vector2(playerTileX - 1, playerTileY);
                 var keyRight = new Vector2(playerTileX + 1, playerTileY);
 
-                bool leftWall = IsSolidWall(keyLeft);
-                bool rightWall = IsSolidWall(keyRight);
+                bool leftWall = IsWallJumpSurface(keyLeft);
+                bool rightWall = IsWallJumpSurface(keyRight);
 
                 if (leftWall && !rightWall)
                 {
@@ -683,9 +723,6 @@ namespace PolyGone.Entities
 
         protected override void PhysicsUpdate(float deltaTime)
         {
-            Friction = 0.8f;
-            wasOnSlipperyTile = isOnSlipperyTile; // Remember previous state
-            isOnSlipperyTile = IsOnSlipperyTile; // Reset each frame
             wasOnBouncyTile = isOnBouncyTile; // Remember previous bouncy-ground state
             isOnBouncyTile = false; // Reset each frame; collision handling sets it when standing on bounce tiles
 
@@ -707,13 +744,6 @@ namespace PolyGone.Entities
             else
             {
                 wallClingFrames = 0f;
-            }
-
-            // Apply preserved momentum if we were on ice
-            if (wasOnSlipperyTile && Math.Abs(preservedMomentumX) > 0.1f)
-            {
-                ChangeX = preservedMomentumX * 0.998f; // Slower decay (was 0.98f)
-                preservedMomentumX *= 0.998f;
             }
 
             base.PhysicsUpdate(deltaTime);
