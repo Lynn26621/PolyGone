@@ -115,7 +115,6 @@
   <object id="54" gid="149" x="672" y="640" width="32" height="32"/>
   <object id="55" gid="152" x="512" y="320" width="32" height="32"/>
   <object id="56" gid="152" x="1056" y="320" width="32" height="32"/>
-  <object id="57" gid="151" x="1760" y="864" width="32" height="32"/>
   <object id="58" gid="151" x="192" y="640" width="32" height="32"/>
  </objectgroup>
  <layer id="2" name="Collisions" width="60" height="30">

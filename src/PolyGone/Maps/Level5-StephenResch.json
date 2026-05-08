@@ -468,18 +468,6 @@
                 {
                  "gid":151,
                  "height":32,
-                 "id":57,
-                 "name":"",
-                 "rotation":0,
-                 "type":"Frog",
-                 "visible":true,
-                 "width":32,
-                 "x":1760,
-                 "y":864
-                }, 
-                {
-                 "gid":151,
-                 "height":32,
                  "id":58,
                  "name":"",
                  "rotation":0,
