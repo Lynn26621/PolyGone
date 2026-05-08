@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#ffffff" nextlayerid="6" nextobjectid="28">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#ffffff" nextlayerid="6" nextobjectid="33">
  <editorsettings>
   <export target="../../src/PolyGone/Maps/Hub.json" format="json"/>
  </editorsettings>
@@ -93,6 +93,41 @@
   <object id="27" name="Level 5" type="Door" x="800" y="576" width="32" height="32">
    <properties>
     <property name="connects" value="Level5"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="1504"/>
+   </properties>
+  </object>
+  <object id="28" name="Level 8" type="Door" x="480" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level8"/>
+    <property name="loadX" type="int" value="96"/>
+    <property name="loadY" type="int" value="128"/>
+   </properties>
+  </object>
+  <object id="29" name="Level 7" type="Door" x="320" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level7"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="324"/>
+   </properties>
+  </object>
+  <object id="30" name="Level 6" type="Door" x="160" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level6"/>
+    <property name="loadX" type="int" value="352"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
+  <object id="31" name="Level 9" type="Door" x="640" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level9"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
+  <object id="32" name="Level 10" type="Door" x="800" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level10"/>
     <property name="loadX" type="int" value="128"/>
     <property name="loadY" type="int" value="1504"/>
    </properties>
