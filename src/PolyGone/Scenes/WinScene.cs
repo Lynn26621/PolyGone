@@ -22,9 +22,8 @@ public class WinScene : IScene
     private Texture2D? pixel;
     private readonly string[] options;
     private int selectedIndex;
-    private static List<string>? levelOrder;
 
-    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
+    public WinScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string currentLevel = "Level1", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null)
     {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
@@ -34,16 +33,8 @@ public class WinScene : IScene
         this.selectedItems = selectedItems ?? new List<ItemType>();
         this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
 
-        // Build options list based on whether there's a next level
-        string? nextLevel = GetNextLevel(currentLevel);
-        if (nextLevel != null)
-        {
-            options = new[] { "Hub", "Next Level", "Main Menu" };
-        }
-        else
-        {
-            options = new[] { "Hub", "Main Menu" };
-        }
+        // Default options for the win screen
+        options = new string[] { "Hub", "Main Menu" }; // "Next Level" option will not be used
 
         selectedIndex = 0;
 
@@ -117,18 +108,7 @@ public class WinScene : IScene
     {
         string selectedOption = options[selectedIndex];
 
-        if (selectedOption == "Next Level")
-        {
-            string? nextLevel = GetNextLevel(currentLevel);
-            if (nextLevel != null)
-            {
-                sceneManager.PopScene(this); // Remove WinScene
-                sceneManager.PopScene(sceneManager.GetCurrentScene()); // Remove old GameScene
-                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, nextLevel, selectedItems, selectedAttachments));
-                InputManager.ResetClickCooldown();
-            }
-        }
-        else if (selectedOption == "Hub")
+        if (selectedOption == "Hub")
         {
             sceneManager.PopScene(this); // Remove WinScene
             sceneManager.PopScene(sceneManager.GetCurrentScene()); // Remove old GameScene
@@ -147,50 +127,6 @@ public class WinScene : IScene
             InputManager.ResetClickCooldown();
             audioManager.PlayAudio("null", false, "menuSong", true); //Plays menu song, will not play song otherwise
         }
-    }
-
-    private static void LoadLevelOrder()
-    {
-        if (levelOrder != null)
-            return; // Already loaded
-
-        try
-        {
-            string jsonPath = Path.Combine("Maps/LevelOrder.json");
-            string jsonContent = File.ReadAllText(jsonPath);
-            using JsonDocument doc = JsonDocument.Parse(jsonContent);
-            JsonElement root = doc.RootElement;
-            JsonElement levelsArray = root.GetProperty("levels");
-
-            levelOrder = new List<string>();
-            foreach (JsonElement level in levelsArray.EnumerateArray())
-            {
-                levelOrder.Add(level.GetString() ?? "");
-            }
-        }
-        catch
-        {
-            // Fallback to hardcoded levels if file doesn't exist
-            levelOrder = new List<string> { "TestLevel", "TestLevel2", "TestLevel3", "TestLevel4" };
-        }
-    }
-
-    private string? GetNextLevel(string currentLevel)
-    {
-        LoadLevelOrder();
-
-        if (levelOrder == null || levelOrder.Count == 0)
-        {
-            return null;
-        }
-
-        int currentIndex = levelOrder.IndexOf(currentLevel);
-        if (currentIndex == -1 || currentIndex == levelOrder.Count - 1)
-        {
-            return null; // Current level not found or it's the last level
-        }
-
-        return levelOrder[currentIndex + 1];
     }
 
     public void Draw(SpriteBatch spriteBatch)

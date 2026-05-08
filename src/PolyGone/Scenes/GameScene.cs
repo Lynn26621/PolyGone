@@ -70,7 +70,7 @@ public class GameScene : IScene
     private int? loadX;
     private int? loadY;
 
-    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null, int? loadX = null, int? loadY = null)
+    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "Level1", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null, int? loadX = null, int? loadY = null)
     {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
@@ -395,21 +395,21 @@ public class GameScene : IScene
                         );
                         enemySpawns.Add(enemyPos);
                         break;
-                    case "TurretEnemy":
+                    case "Turret":
                         Vector2 turretPos = AdjustCoordinates(
                             obj.GetProperty("x").GetSingle(),
                             obj.GetProperty("y").GetSingle()
                         );
                         turretEnemySpawns.Add(turretPos);
                         break;
-                    case "BerserkEnemy":
+                    case "Berserk":
                         Vector2 berserkPos = AdjustCoordinates(
                             obj.GetProperty("x").GetSingle(),
                             obj.GetProperty("y").GetSingle()
                         );
                         berserkEnemySpawns.Add(berserkPos);
                         break;
-                    case "FactoryEnemy":
+                    case "Factory":
                         Vector2 factoryPos = AdjustCoordinates(
                             obj.GetProperty("x").GetSingle(),
                             obj.GetProperty("y").GetSingle()
@@ -430,7 +430,7 @@ public class GameScene : IScene
                         );
                         int goalWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
                         int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                        goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight);
+                        goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight, audioManager);
                         break;
                     case "Door":
                         Vector2 doorPos = AdjustCoordinates(
@@ -439,17 +439,18 @@ public class GameScene : IScene
                         );
                         int doorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
                         int doorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                        string connectedLevel = "Hub";
+                        string connects = "Hub";
                         int playerLoadX = 0;
                         int playerLoadY = 0;
+                        string? requirement = null;
                         List<JsonElement> properties = obj.GetProperty("properties").EnumerateArray().ToList();
                         foreach (JsonElement prop in properties)
                         {
                             string? propName = prop.GetProperty("name").GetString();
                             switch (propName)
                             {
-                                case "connectedLevel":
-                                    connectedLevel = (string)(prop.GetProperty("value").GetString() ?? "Hub");
+                                case "connects":
+                                    connects = (string)(prop.GetProperty("value").GetString() ?? "Hub");
                                     break;
                                 case "loadX":
                                     playerLoadX = (int)prop.GetProperty("value").GetSingle();
@@ -457,11 +458,21 @@ public class GameScene : IScene
                                 case "loadY":
                                     playerLoadY = (int)prop.GetProperty("value").GetSingle();
                                     break;
+                                case "requirement":
+                                    requirement = prop.GetProperty("value").GetString();
+                                    break;
                                 default:
                                     break;
                             }
                         }
-                        levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connectedLevel, playerLoadX, playerLoadY));
+                        // Extract the object's name from the Tiled object (if present) to use as hover text
+                        string? doorName = null;
+                        if (obj.TryGetProperty("name", out JsonElement nameElem))
+                        {
+                            doorName = nameElem.GetString();
+                        }
+
+                        levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connects, playerLoadX, playerLoadY, requirement, doorName));
                         break;
                     case "Inventory":
                         Vector2 inventoryPos = AdjustCoordinates(
@@ -504,23 +515,7 @@ public class GameScene : IScene
         InputManager.ResetClickCooldown();
 
         //Play level music
-        if (levelName != null)
-        {
-            switch (levelName)
-            {
-                case "TestLevel":
-                    audioManager.PlayAudio("null", false, "level1Song", true);
-                    break;
-                case "TestLevel2":
-                    audioManager.PlayAudio("null", false, "level2Song", true);
-                    break;
-                case "TestLevel3":
-                    audioManager.PlayAudio("null", false, "level3Song", true);
-                    break;
-                default:
-                    break;
-            }
-        }
+        audioManager.PlayAudio("null", false, "level1Song", true);
 
         // Load texture atlas and initialize camera
         playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
@@ -983,7 +978,9 @@ public class GameScene : IScene
         if (goalTrigger != null && !levelComplete)
         {
             goalTrigger.CheckTrigger(player.Rectangle);
-            if (goalTrigger.IsTriggered)
+            // Let the trigger handle interact input (same as doors)
+            goalTrigger.Update();
+            if (goalTrigger.IsActivated)
             {
                 levelComplete = true;
                 // Transition to win scene with current loadout
@@ -994,11 +991,16 @@ public class GameScene : IScene
         //Check if player enters door
         foreach (var door in levelDoors)
         {
+            if (!door.IsUnlocked)
+            {
+                continue;
+            }
+
             door.CheckTrigger(player.Rectangle);
             if (door.IsTriggered && door.IsActivated)
             {
                 sceneManager.PopScene(this);
-                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.ConnectedLevel, selectedItems, selectedAttachments, door.LoadX, door.LoadY));
+                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.Connects, selectedItems, selectedAttachments, door.LoadX, door.LoadY));
             }
         }
     }
@@ -1122,7 +1124,7 @@ public class GameScene : IScene
                 doorRect.Width,
                 doorRect.Height
             );
-            Color doorColor = door.IsTriggered ? Color.Gold : Color.SaddleBrown;
+            Color doorColor = !door.IsUnlocked ? Color.DarkSlateGray : door.IsTriggered ? Color.Gold : Color.SaddleBrown;
             spriteBatch.Draw(uiSheet, doorDest, textureStore[0], doorColor * 0.5f);
         }
 
@@ -1140,8 +1142,6 @@ public class GameScene : IScene
             spriteBatch.Draw(uiSheet, inventoryDest, textureStore[0], inventoryColor * 0.5f);
         }
 
-        player.Draw(spriteBatch, camera.position);
-
         // Draw goal trigger (if it exists)
         if (goalTrigger != null)
         {
@@ -1152,10 +1152,38 @@ public class GameScene : IScene
                 goalRect.Width,
                 goalRect.Height
             );
-            // Draw goal with a green tint (using tile 0 or any appropriate texture)
-            Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
+            // Draw goal with a green tint: darker when idle, lighter when touching, gold when activated
+            Color goalColor = goalTrigger.IsActivated ? Color.Gold : (goalTrigger.IsTriggered ? Color.LimeGreen : Color.DarkGreen);
             spriteBatch.Draw(uiSheet, goalDest, textureStore[0], goalColor * 0.5f);
         }
+
+        // Draw door hover text (name set from Tiled) when player is in a door trigger
+        if (hudFont != null)
+        {
+            const float textScale = 0.75f; // slightly smaller than default
+            foreach (var door in levelDoors)
+            {
+                if (door.IsTriggered && !string.IsNullOrWhiteSpace(door.DisplayName))
+                {
+                    Rectangle doorRect = door.GetBounds();
+                    Vector2 textPos = new Vector2(
+                        doorRect.X - camera.position.X + (doorRect.Width / 2f),
+                        doorRect.Y - camera.position.Y - 34f // position above the door for readability
+                    );
+                    string text = door.DisplayName!;
+                    Vector2 textSize = hudFont.MeasureString(text) * textScale;
+                    textPos.X -= textSize.X / 2f;
+                    if (textPos.Y < 0)
+                        textPos.Y = 0;
+
+                    // Draw subtle shadow for readability
+                    spriteBatch.DrawString(hudFont, text, textPos + new Vector2(1f, 1f), Color.Black * 0.6f, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawString(hudFont, text, textPos, Color.White, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+                }
+            }
+        }
+
+        player.Draw(spriteBatch, camera.position);
 
         // Draw new GameUI (health, cooldown, and active items)
         gameUI.Draw(spriteBatch);

@@ -19,7 +19,13 @@ public class Entity : Sprite
     public int Health;
     public readonly int MaxHealth;
     protected float InvincibilityFrames;
-    protected float Friction; // Horizontal friction multiplier in range [0, 1]; 1 keeps full velocity (no friction), 0 stops movement immediately (maximum friction)
+    // Horizontal damping model (units of velocity reduced per frame at 60 FPS)
+    protected float GroundDeceleration;
+    protected float AirDeceleration;
+    protected float SlipperyGroundDeceleration;
+    protected float ExtraVelocityDeceleration;
+    protected float StopSpeedThreshold;
+    protected float SlipperyControlMultiplier;
     protected readonly int[] VisualSize; // Visual size for drawing (can be larger than hitbox)
     protected Vector2 HitboxOffset; // Offset to center the hitbox within the visual sprite
     public bool IsAlive = true;
@@ -43,7 +49,12 @@ public class Entity : Sprite
         this.Health = health;
         this.MaxHealth = health; // Set max health to initial health
         this.InvincibilityFrames = 0f;
-        this.Friction = 0.9f; // Default friction
+        this.GroundDeceleration = 1.4f;
+        this.AirDeceleration = 0.2f;
+        this.SlipperyGroundDeceleration = 0.25f;
+        this.ExtraVelocityDeceleration = 1.8f;
+        this.StopSpeedThreshold = 0.05f;
+        this.SlipperyControlMultiplier = 0.35f;
         this.VisualSize = visualSize ?? size; // Use provided visual size or default to hitbox size
         // Calculate offset so hitbox bottom aligns with visual bottom
         this.HitboxOffset = new Vector2(
@@ -107,7 +118,7 @@ public class Entity : Sprite
                 onGround = deltaY > 0;  // Check deltaY before setting it to 0
                 deltaY = 0;
                 break;
-            case CollisionType.SemiSolid: 
+            case CollisionType.SemiSolid:
                 if (deltaY > 0 && (position.Y + size[1]) <= tileRect.Top + 10)
                 {
                     position.Y = tileRect.Top - size[1];
@@ -124,7 +135,6 @@ public class Entity : Sprite
                 onGround = deltaY > 0;
                 deltaY = 0;
                 IsOnSlipperyTile = true;
-                Friction = 0.95f;
                 break;
             case CollisionType.Bouncy: //Keep track of velocity. Reverse it when colliding with bouncy tile top.
                 if (deltaY > 0)
@@ -143,7 +153,7 @@ public class Entity : Sprite
                 position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                 onGround = deltaY > 0;
                 deltaY = 0;
-                TakeDamage(10); 
+                TakeDamage(10);
                 break;
         }
     }
@@ -157,18 +167,33 @@ public class Entity : Sprite
             case CollisionType.Slippery:
             case CollisionType.Bouncy:
             case CollisionType.Solid:
-                    position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
-                    deltaX = 0;
-                    break;
+                position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
+                deltaX = 0;
+                break;
             case CollisionType.SemiSolid:
                 position.X += deltaX;
                 break;
             case CollisionType.Damage:
                 position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
                 deltaX = 0;
-                TakeDamage(10); 
+                TakeDamage(10);
                 break;
         }
+    }
+
+    protected bool IsStandingOnCollisionType(CollisionType collisionType)
+    {
+        if (CollisionMap == null)
+        {
+            return false;
+        }
+
+        int probeWidth = Math.Max(1, size[0] - 4);
+        int probeX = (int)position.X + 2;
+        int probeY = (int)(position.Y + size[1] - 2);
+        Rectangle groundProbe = new Rectangle(probeX, probeY, probeWidth, 4);
+
+        return GetIntersectingTiles(groundProbe).Any(tile => tile.Item2 == collisionType);
     }
 
     protected virtual List<Entity> GetIntersectingEntities(Rectangle target, List<Entity> others)
@@ -207,7 +232,6 @@ public class Entity : Sprite
     // Physics and collision update for non-player entities (no input)
     protected virtual void PhysicsUpdate(float deltaTime)
     {
-        Friction = 0.9f; // Reset to normal each frame
         IsOnSlipperyTile = false; // Reset each frame, collision handlers will set it if needed
 
         // Apply gravity
@@ -215,8 +239,9 @@ public class Entity : Sprite
         if (ChangeY < 20f)
         {
             ChangeY += 0.7f * GravityScale;
-        // Weaker gravity when past 20f to create a floaty terminal velocity effect, but still allow for faster falling if needed for bouncy tiles
-        } else
+            // Weaker gravity when past 20f to create a floaty terminal velocity effect, but still allow for faster falling if needed for bouncy tiles
+        }
+        else
         {
             ChangeY += 0.3f * GravityScale;
         }
@@ -228,8 +253,8 @@ public class Entity : Sprite
         // Handle horizontal movement and collisions
         HandleHorizontalMovement(deltaTime);
 
-        // Apply friction to horizontal movement
-        ApplyFriction();
+        // Apply horizontal damping after movement/collision resolution.
+        ApplyFriction(deltaTime);
     }
 
     protected virtual void HandleVerticalMovement(float deltaTime)
@@ -317,27 +342,79 @@ public class Entity : Sprite
         }
     }
 
-    protected virtual void ApplyFriction()
+    protected virtual void ApplyFriction(float deltaTime)
     {
-        // Apply friction to horizontal movement
-        if (Math.Abs(ChangeX) > 0.5f)
-        {
-            ChangeX *= Friction;
-        }
-        else
+        bool onSlipperyGround = IsOnGround && IsStandingOnCollisionType(CollisionType.Slippery);
+        float groundDecel = onSlipperyGround ? SlipperyGroundDeceleration : GroundDeceleration;
+        float horizontalDecel = IsOnGround ? groundDecel : AirDeceleration;
+
+        ChangeX = MoveTowards(ChangeX, 0f, horizontalDecel * deltaTime);
+        if (Math.Abs(ChangeX) <= StopSpeedThreshold)
         {
             ChangeX = 0f;
         }
 
-        // Apply friction for ExtraX to smooth out dashes
-        if (Math.Abs(ExtraX) > 0.5f)
-        {
-            ExtraX *= Friction;
-        }
-        else
+        ExtraX = MoveTowards(ExtraX, 0f, ExtraVelocityDeceleration * deltaTime);
+        if (Math.Abs(ExtraX) <= StopSpeedThreshold)
         {
             ExtraX = 0f;
         }
+    }
+
+    protected void ConfigureHorizontalDamping(
+        float groundDeceleration,
+        float airDeceleration,
+        float slipperyGroundDeceleration,
+        float extraVelocityDeceleration,
+        float stopSpeedThreshold = 0.05f,
+        float slipperyControlMultiplier = 0.35f)
+    {
+        GroundDeceleration = Math.Max(0f, groundDeceleration);
+        AirDeceleration = Math.Max(0f, airDeceleration);
+        SlipperyGroundDeceleration = Math.Max(0f, slipperyGroundDeceleration);
+        ExtraVelocityDeceleration = Math.Max(0f, extraVelocityDeceleration);
+        StopSpeedThreshold = Math.Max(0f, stopSpeedThreshold);
+        SlipperyControlMultiplier = Math.Clamp(slipperyControlMultiplier, 0f, 1f);
+    }
+
+    protected static float MoveTowards(float current, float target, float maxDelta)
+    {
+        if (maxDelta <= 0f)
+        {
+            return current;
+        }
+
+        float delta = target - current;
+        if (Math.Abs(delta) <= maxDelta)
+        {
+            return target;
+        }
+
+        return current + Math.Sign(delta) * maxDelta;
+    }
+
+    protected void ApplyHorizontalIntent(float direction, float maxSpeed, float acceleration, float reverseAccelerationFactor = 1f)
+    {
+        if (Math.Abs(direction) < 0.001f)
+        {
+            return;
+        }
+
+        float intent = Math.Sign(direction);
+        float targetSpeed = intent * Math.Abs(maxSpeed);
+        float appliedAcceleration = Math.Max(0f, acceleration);
+
+        if (Math.Abs(ChangeX) > StopSpeedThreshold && Math.Sign(ChangeX) != Math.Sign(intent))
+        {
+            appliedAcceleration *= Math.Max(0f, reverseAccelerationFactor);
+        }
+
+        if (IsOnGround && IsStandingOnCollisionType(CollisionType.Slippery))
+        {
+            appliedAcceleration *= SlipperyControlMultiplier;
+        }
+
+        ChangeX = MoveTowards(ChangeX, targetSpeed, appliedAcceleration);
     }
 
     public void EntityCollisionUpdate(List<Entity> others)

@@ -9,6 +9,8 @@ namespace PolyGone;
 
 class Enemy : Entity
 {
+    private const float ENEMY_STEER_ACCELERATION = 0.85f;
+    private const float ENEMY_REVERSE_ACCELERATION_FACTOR = 0.55f;
     private readonly float patrolSpeed;
     private float patrolDirection = 1f; // 1 for right, -1 for left
     private AudioManager audioManager;
@@ -29,7 +31,12 @@ class Enemy : Entity
 
         : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, visualSize)
     {
-        this.Friction = 0.9f; // Enemy has default friction
+        ConfigureHorizontalDamping(
+            groundDeceleration: 1.6f,
+            airDeceleration: 0.15f,
+            slipperyGroundDeceleration: 0.12f,
+            extraVelocityDeceleration: 1.4f
+        );
         this.patrolSpeed = patrolSpeed;
         this.audioManager = audioManager;
         this.player = player;
@@ -151,8 +158,8 @@ class Enemy : Entity
             patrolDirection *= -1f;
         }
 
-        // Set horizontal velocity (not position directly)
-        ChangeX = patrolDirection * patrolSpeed * GetPatrolSpeedMultiplier();
+        float targetSpeed = patrolSpeed * GetPatrolSpeedMultiplier();
+        ApplyHorizontalIntent(patrolDirection, targetSpeed, ENEMY_STEER_ACCELERATION, ENEMY_REVERSE_ACCELERATION_FACTOR);
     }
 
     private bool IsPlayerInViewRange()
@@ -205,7 +212,11 @@ class Enemy : Entity
         float playerCenterX = player.position.X + player.size[0] / 2f;
         float deltaX = playerCenterX - myCenterX;
 
-        ChangeX = Math.Abs(deltaX) > 2f ? Math.Sign(deltaX) * patrolSpeed * GetPatrolSpeedMultiplier() : 0f;
+        if (Math.Abs(deltaX) > 2f)
+        {
+            float targetSpeed = patrolSpeed * GetPatrolSpeedMultiplier();
+            ApplyHorizontalIntent(Math.Sign(deltaX), targetSpeed, ENEMY_STEER_ACCELERATION, ENEMY_REVERSE_ACCELERATION_FACTOR);
+        }
 
         bool playerIsAbove = player.position.Y + player.size[1] < position.Y + 5f;
         bool playerIsNext = player.position.X + player.size[1] < position.X + 10f;
@@ -252,7 +263,7 @@ class Enemy : Entity
 
     public override void Update(GameTime gameTime)
     {
-            hitFlashFrames -= 1f;
+        hitFlashFrames -= 1f;
         if (IsOnGround)
         {
             jumpDelay -= 1f;

@@ -17,7 +17,7 @@ internal class DevMenuScene : IScene
     // Cursor: 0..LevelFiles.Length-1 = level toggles, then Unlock All, Lock All, Close
     private int _cursor = 0;
 
-    private static readonly string[] LevelFiles        = { "TestLevel", "TestLevel2", "TestLevel3" };
+    private static readonly string[] LevelFiles        = { "Level", "TestLevel2", "TestLevel3" };
     private static readonly string[] LevelDisplayNames = { "Level 1",   "Level 2",    "Level 3"    };
     private static readonly string[] AbilityNames = { "Dash", "WallJump" };
     private static readonly string[] AbilityDisplayNames = { "Dash", "Wall Jump" };
