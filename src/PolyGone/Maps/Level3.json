@@ -514,32 +514,6 @@
                  "y":704
                 }, 
                 {
-                 "gid":84,
-                 "height":32,
-                 "id":42,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"Berserk",
-                 "visible":true,
-                 "width":32,
-                 "x":128,
-                 "y":832
-                }, 
-                {
-                 "gid":84,
-                 "height":32,
-                 "id":43,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"Berserk",
-                 "visible":true,
-                 "width":32,
-                 "x":352,
-                 "y":1024
-                }, 
-                {
                  "gid":83,
                  "height":32,
                  "id":44,
@@ -601,7 +575,7 @@
                  "type":"Berserk",
                  "visible":true,
                  "width":32,
-                 "x":832,
+                 "x":384,
                  "y":2816
                 }, 
                 {
@@ -615,19 +589,6 @@
                  "visible":true,
                  "width":32,
                  "x":256,
-                 "y":2816
-                }, 
-                {
-                 "gid":85,
-                 "height":32,
-                 "id":50,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"Factory",
-                 "visible":true,
-                 "width":32,
-                 "x":704,
                  "y":2816
                 }],
          "opacity":1,

@@ -212,8 +212,7 @@
   <object id="5" gid="69" x="672" y="2592" width="32" height="32"/>
   <object id="6" gid="70" x="608" y="1600" width="32" height="32"/>
   <object id="7" gid="70" x="352" y="1600" width="32" height="32"/>
-  <object id="8" gid="73" x="480" y="1728" width="32" height="32"/>
-  <object id="12" gid="72" x="288" y="2112" width="32" height="32"/>
+  <object id="12" gid="72" x="480" y="1728" width="32" height="32"/>
   <object id="13" gid="69" x="224" y="1984" width="32" height="32"/>
   <object id="14" gid="70" x="480" y="1344" width="32" height="32"/>
   <object id="15" gid="71" x="224" y="1376" width="32" height="32"/>
