@@ -94,17 +94,17 @@
                         {
                          "name":"connects",
                          "type":"string",
-                         "value":"Level3-StephenResch"
+                         "value":"Level3"
                         }, 
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":128
+                         "value":96
                         }, 
                         {
                          "name":"loadY",
                          "type":"int",
-                         "value":384
+                         "value":544
                         }],
                  "rotation":0,
                  "type":"Door",
@@ -121,22 +121,22 @@
                         {
                          "name":"connects",
                          "type":"string",
-                         "value":"Level2-StephenResch"
+                         "value":"Level2"
                         }, 
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":160
+                         "value":128
                         }, 
                         {
                          "name":"loadY",
                          "type":"int",
-                         "value":1504
+                         "value":192
                         }, 
                         {
                          "name":"requirement",
                          "type":"string",
-                         "value":"Level1-StephenResch"
+                         "value":"Level1"
                         }],
                  "rotation":0,
                  "type":"Door",
@@ -153,12 +153,12 @@
                         {
                          "name":"connects",
                          "type":"string",
-                         "value":"Level1-StephenResch"
+                         "value":"Level1"
                         }, 
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":162
+                         "value":160
                         }, 
                         {
                          "name":"loadY",
@@ -192,6 +192,146 @@
                         {
                          "name":"connects",
                          "type":"string",
+                         "value":"Level4"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":96
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":2784
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":640,
+                 "y":576
+                }, 
+                {
+                 "height":32,
+                 "id":27,
+                 "name":"Level 5",
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level5"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":1504
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":800,
+                 "y":576
+                }, 
+                {
+                 "height":32,
+                 "id":28,
+                 "name":"Level 1",
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level1-StephenResch"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":162
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":864
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":160,
+                 "y":384
+                }, 
+                {
+                 "height":32,
+                 "id":29,
+                 "name":"Level 2",
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level2-StephenResch"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":160
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":1504
+                        }, 
+                        {
+                         "name":"requirement",
+                         "type":"string",
+                         "value":"Level1-StephenResch"
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":320,
+                 "y":384
+                }, 
+                {
+                 "height":32,
+                 "id":31,
+                 "name":"Level 3",
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level3-StephenResch"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":384
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":480,
+                 "y":384
+                }, 
+                {
+                 "height":32,
+                 "id":32,
+                 "name":"Level 4",
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
                          "value":"Level4-StephenResch"
                         }, 
                         {
@@ -209,11 +349,11 @@
                  "visible":true,
                  "width":32,
                  "x":640,
-                 "y":576
+                 "y":384
                 }, 
                 {
                  "height":32,
-                 "id":27,
+                 "id":33,
                  "name":"Level 5",
                  "properties":[
                         {
@@ -236,7 +376,7 @@
                  "visible":true,
                  "width":32,
                  "x":800,
-                 "y":576
+                 "y":384
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -276,7 +416,7 @@
          "y":0
         }],
  "nextlayerid":6,
- "nextobjectid":28,
+ "nextobjectid":34,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",
