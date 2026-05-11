@@ -123,7 +123,6 @@ internal class ControlRemapScene : IScene
     private KeyboardState _previousKeyboardState;
     private GamePadState _previousGamepadState;
     private MouseState _previousMouseState;
-    private int _captureFramesToSkip;
     private bool _hasUnappliedChanges;
     private bool _confirmingDiscard;
     private int _confirmDiscardSelectedIndex;
@@ -179,6 +178,7 @@ internal class ControlRemapScene : IScene
         _selectedIndex = FirstSelectableIndex();
         _hasUnappliedChanges = false;
         _confirmingDiscard = false;
+        SyncPreviousInputStates();
 
         if (_font == null)
         {
@@ -582,12 +582,6 @@ internal class ControlRemapScene : IScene
 
     private void HandleBindingCapture(KeyboardState keyboardState, GamePadState gamepadState, MouseState mouseState)
     {
-        if (_captureFramesToSkip > 0)
-        {
-            _captureFramesToSkip--;
-            return;
-        }
-
         if (TryGetNewKeyPress(keyboardState, out var key))
         {
             // Escape always cancels capture — it is never stored as a binding value.
@@ -735,7 +729,7 @@ internal class ControlRemapScene : IScene
             case RowKind.MouseBinding:
                 _waitingForBinding = true;
                 _bindingRow = row;
-                _captureFramesToSkip = 2; // skip the frame where Enter was pressed
+                SyncPreviousInputStates();
                 break;
             case RowKind.MoveStick:
                 _pendingBindings.MoveStick = _pendingBindings.MoveStick == StickBinding.Left
@@ -765,6 +759,13 @@ internal class ControlRemapScene : IScene
                 { _sceneManager.PopScene(this); }
                 break;
         }
+    }
+
+    private void SyncPreviousInputStates()
+    {
+        _previousKeyboardState = Keyboard.GetState();
+        _previousGamepadState = GamePad.GetState(PlayerIndex.One);
+        _previousMouseState = Mouse.GetState();
     }
 
     private void ExecuteDiscardConfirm()
