@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System.Linq;
 
 namespace PolyGone;
 
@@ -17,8 +18,8 @@ internal class DevMenuScene : IScene
     // Cursor: 0..LevelFiles.Length-1 = level toggles, then Unlock All, Lock All, Close
     private int _cursor = 0;
 
-    private static readonly string[] LevelFiles        = { "Level", "TestLevel2", "TestLevel3" };
-    private static readonly string[] LevelDisplayNames = { "Level 1",   "Level 2",    "Level 3"    };
+    private static readonly string[] LevelFiles = UnlockTracker.GetPlannedLevels().ToArray();
+    private static readonly string[] LevelDisplayNames = LevelFiles.Select(UnlockTracker.GetLevelDisplayName).ToArray();
     private static readonly string[] AbilityNames = { "Dash", "WallJump" };
     private static readonly string[] AbilityDisplayNames = { "Dash", "Wall Jump" };
     private int EntryCount => LevelFiles.Length + AbilityNames.Length + 3;
@@ -113,9 +114,9 @@ internal class DevMenuScene : IScene
         {
             UnlockTracker.ToggleLevelComplete(LevelFiles[index]);
         }
-        else if ((index < (LevelFiles.Length + AbilityNames.Length)) && (index > LevelFiles.Length))
+        else if (index >= LevelFiles.Length && index < (LevelFiles.Length + AbilityNames.Length))
         {
-            UnlockTracker.ToggleAbilityUnlocked(AbilityNames[index - AbilityNames.Length]);
+            UnlockTracker.ToggleAbilityUnlocked(AbilityNames[index - LevelFiles.Length]);
         }
         else
         {
@@ -222,7 +223,6 @@ internal class DevMenuScene : IScene
 
         var allItems = new (ItemType Type, string Name, string Req)[]
         {
-            (ItemType.DoubleJump,  "Double Jump",  "always"),
             (ItemType.HealingGlow, "Healing Glow", "Level 1"),
             (ItemType.LowGravity,  "Low Gravity",  "Level 2"),
             (ItemType.IronWill,    "Iron Will",    "Level 3"),
@@ -244,10 +244,10 @@ internal class DevMenuScene : IScene
         spriteBatch.DrawString(_font, "Blaster Attachment Unlocks:", new Vector2(rightX, attY - 30), Color.LightCyan);
         var allAttachments = new (BlasterAttachmentType Type, string Name, string Req)[]
         {
-            (BlasterAttachmentType.MultiShot,   "Multi-Shot",     "always"),
-            (BlasterAttachmentType.RapidFire,   "Rapid Fire",     "Level 1"),
-            (BlasterAttachmentType.Piercing,    "Piercing Rounds","Level 2"),
-            (BlasterAttachmentType.DamageBoost, "Damage Amp",     "Level 3"),
+            (BlasterAttachmentType.MultiShot,   "Multi-Shot",     "Level 1"),
+            (BlasterAttachmentType.RapidFire,   "Rapid Fire",     "Level 2"),
+            (BlasterAttachmentType.Piercing,    "Piercing Rounds","Level 3"),
+            (BlasterAttachmentType.DamageBoost, "Damage Amp",     "Level 4"),
             (BlasterAttachmentType.DevBlaster,  "Dev Blaster",    "always [DEV]"),
         };
         for (int i = 0; i < allAttachments.Length; i++)
