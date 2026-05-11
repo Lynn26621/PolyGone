@@ -77,6 +77,7 @@ internal class ControlRemapScene : IScene
     private static readonly (string Label, Func<InputBindingProfile, MouseButtonBinding> Get, Action<InputBindingProfile, MouseButtonBinding> Set)[] MouseMappings =
     [
         ("Shoot", p => p.ShootMouseButton, (p, v) => p.ShootMouseButton = v),
+        ("Dash", p => p.DashMouseButton ?? MouseButtonBinding.None, (p, v) => p.DashMouseButton = v),
     ];
 
     // Layout constants
@@ -771,7 +772,7 @@ internal class ControlRemapScene : IScene
 
     private string GetValueText(Row row, bool isSelected)
     {
-        if (_waitingForBinding && isSelected && (row.Kind == RowKind.KeyboardBinding || row.Kind == RowKind.GamepadBinding))
+        if (_waitingForBinding && isSelected && (row.Kind == RowKind.KeyboardBinding || row.Kind == RowKind.GamepadBinding || row.Kind == RowKind.MouseBinding))
         {
             return "[Press key / button...]";
         }
@@ -799,7 +800,7 @@ internal class ControlRemapScene : IScene
 
     private static string MouseButtonDisplayName(MouseButtonBinding button)
     {
-        return button.ToString();
+        return button == MouseButtonBinding.None ? "-" : button.ToString();
     }
 
     // ── Scrolling helpers ────────────────────────────────────────────────────

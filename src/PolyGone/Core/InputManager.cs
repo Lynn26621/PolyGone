@@ -93,28 +93,30 @@ public static class InputManager
         return _currentGamepadState.IsButtonDown(button);
     }
 
-    private static bool IsShootMousePressed()
+    private static bool IsMousePressed(MouseButtonBinding binding)
     {
-        return Bindings.ShootMouseButton switch
+        return binding switch
         {
             MouseButtonBinding.Left => _currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released,
             MouseButtonBinding.Right => _currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released,
             MouseButtonBinding.Middle => _currentMouseState.MiddleButton == ButtonState.Pressed && _previousMouseState.MiddleButton == ButtonState.Released,
             MouseButtonBinding.XButton1 => _currentMouseState.XButton1 == ButtonState.Pressed && _previousMouseState.XButton1 == ButtonState.Released,
             MouseButtonBinding.XButton2 => _currentMouseState.XButton2 == ButtonState.Pressed && _previousMouseState.XButton2 == ButtonState.Released,
+            MouseButtonBinding.None => false,
             _ => false,
         };
     }
 
-    private static bool IsShootMouseHeld()
+    private static bool IsMouseHeld(MouseButtonBinding binding)
     {
-        return Bindings.ShootMouseButton switch
+        return binding switch
         {
             MouseButtonBinding.Left => _currentMouseState.LeftButton == ButtonState.Pressed,
             MouseButtonBinding.Right => _currentMouseState.RightButton == ButtonState.Pressed,
             MouseButtonBinding.Middle => _currentMouseState.MiddleButton == ButtonState.Pressed,
             MouseButtonBinding.XButton1 => _currentMouseState.XButton1 == ButtonState.Pressed,
             MouseButtonBinding.XButton2 => _currentMouseState.XButton2 == ButtonState.Pressed,
+            MouseButtonBinding.None => false,
             _ => false,
         };
     }
@@ -294,7 +296,7 @@ public static class InputManager
     // Function for single shooting (left click for mouse and right trigger for gamepad)
     public static bool GameShootSingle()
     {
-        bool mouseClicked = IsShootMousePressed()
+        bool mouseClicked = IsMousePressed(Bindings.ShootMouseButton)
                             && _mouseClickCooldown <= 0f;
         bool keyboardClicked = IsKeyPressed(Bindings.ShootKey)
                                && _mouseClickCooldown <= 0f;
@@ -305,7 +307,7 @@ public static class InputManager
     // function for automatic shooting (holding left click for mouse and holding right trigger for gamepad)
     public static bool GameShootHold()
     {
-        return IsShootMouseHeld()
+        return IsMouseHeld(Bindings.ShootMouseButton)
                || IsKeyHeld(Bindings.ShootKey)
                || IsButtonHeld(Bindings.ShootButton);
     }
@@ -328,11 +330,14 @@ public static class InputManager
     // function for dashing (left shift for keyboard and B button for gamepad)
     public static bool GameDash()
     {
+        bool mouseDash = Bindings.DashMouseButton.HasValue
+                         && IsMousePressed(Bindings.DashMouseButton.Value)
+                         && _dashCooldown <= 0f;
         bool keyboardDash = IsKeyPressed(Bindings.DashKey)
                             && _dashCooldown <= 0f;
         bool gamepadDash = IsButtonPressed(Bindings.DashButton)
                            && _dashCooldown <= 0f;
-        return keyboardDash || gamepadDash;
+        return mouseDash || keyboardDash || gamepadDash;
     }
 
     // function for moving left in game (A key for keyboard and left thumbstick left for gamepad)

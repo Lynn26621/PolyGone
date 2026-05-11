@@ -13,11 +13,12 @@ public enum StickBinding
 
 public enum MouseButtonBinding
 {
-    Left,
-    Right,
-    Middle,
-    XButton1,
-    XButton2,
+    Left = 0,
+    Right = 1,
+    Middle = 2,
+    XButton1 = 3,
+    XButton2 = 4,
+    None = 5,
 }
 
 public sealed class InputBindingProfile
@@ -52,6 +53,7 @@ public sealed class InputBindingProfile
     public Buttons LoadoutSkipButton { get; set; }
     public Buttons InteractButton { get; set; }
     public MouseButtonBinding ShootMouseButton { get; set; }
+    public MouseButtonBinding? DashMouseButton { get; set; }
 
     public StickBinding MoveStick { get; set; }
     public StickBinding AimStick { get; set; }
@@ -89,6 +91,7 @@ public sealed class InputBindingProfile
             LoadoutSkipButton = LoadoutSkipButton,
             InteractButton = InteractButton,
             ShootMouseButton = ShootMouseButton,
+            DashMouseButton = DashMouseButton,
             MoveStick = MoveStick,
             AimStick = AimStick,
         };
@@ -129,6 +132,7 @@ public static class InputBindings
         LoadoutSkipButton = Buttons.Back,
         InteractButton = Buttons.X,
         ShootMouseButton = MouseButtonBinding.Left,
+        DashMouseButton = MouseButtonBinding.None,
         MoveStick = StickBinding.Left,
         AimStick = StickBinding.Right,
     };
@@ -257,6 +261,9 @@ public static class InputBindings
         sanitized.ShootMouseButton = Enum.IsDefined(typeof(MouseButtonBinding), profile.ShootMouseButton)
             ? profile.ShootMouseButton
             : defaults.ShootMouseButton;
+        sanitized.DashMouseButton = profile.DashMouseButton.HasValue && Enum.IsDefined(typeof(MouseButtonBinding), profile.DashMouseButton.Value)
+            ? profile.DashMouseButton.Value
+            : defaults.DashMouseButton;
 
         sanitized.MoveStick = Enum.IsDefined(typeof(StickBinding), profile.MoveStick) ? profile.MoveStick : defaults.MoveStick;
         sanitized.AimStick = Enum.IsDefined(typeof(StickBinding), profile.AimStick) ? profile.AimStick : defaults.AimStick;
