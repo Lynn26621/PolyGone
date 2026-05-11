@@ -76,8 +76,15 @@ internal class ControlRemapScene : IScene
 
     private static readonly (string Label, Func<InputBindingProfile, MouseButtonBinding> Get, Action<InputBindingProfile, MouseButtonBinding> Set)[] MouseMappings =
     [
+        ("Menu Confirm", p => p.MenuConfirmMouseButton ?? MouseButtonBinding.None, (p, v) => p.MenuConfirmMouseButton = v),
+        ("Menu Back", p => p.MenuBackMouseButton ?? MouseButtonBinding.None, (p, v) => p.MenuBackMouseButton = v),
+        ("Pause", p => p.PauseMouseButton ?? MouseButtonBinding.None, (p, v) => p.PauseMouseButton = v),
+        ("Jump", p => p.JumpMouseButton ?? MouseButtonBinding.None, (p, v) => p.JumpMouseButton = v),
         ("Shoot", p => p.ShootMouseButton, (p, v) => p.ShootMouseButton = v),
         ("Dash", p => p.DashMouseButton ?? MouseButtonBinding.None, (p, v) => p.DashMouseButton = v),
+        ("Drop", p => p.DropMouseButton ?? MouseButtonBinding.None, (p, v) => p.DropMouseButton = v),
+        ("Interact", p => p.InteractMouseButton ?? MouseButtonBinding.None, (p, v) => p.InteractMouseButton = v),
+        ("Loadout Skip", p => p.LoadoutSkipMouseButton ?? MouseButtonBinding.None, (p, v) => p.LoadoutSkipMouseButton = v),
     ];
 
     // Layout constants

@@ -52,8 +52,15 @@ public sealed class InputBindingProfile
     public Buttons ShootButton { get; set; }
     public Buttons LoadoutSkipButton { get; set; }
     public Buttons InteractButton { get; set; }
+    public MouseButtonBinding? MenuConfirmMouseButton { get; set; }
+    public MouseButtonBinding? MenuBackMouseButton { get; set; }
+    public MouseButtonBinding? PauseMouseButton { get; set; }
+    public MouseButtonBinding? JumpMouseButton { get; set; }
     public MouseButtonBinding ShootMouseButton { get; set; }
     public MouseButtonBinding? DashMouseButton { get; set; }
+    public MouseButtonBinding? DropMouseButton { get; set; }
+    public MouseButtonBinding? InteractMouseButton { get; set; }
+    public MouseButtonBinding? LoadoutSkipMouseButton { get; set; }
 
     public StickBinding MoveStick { get; set; }
     public StickBinding AimStick { get; set; }
@@ -90,8 +97,15 @@ public sealed class InputBindingProfile
             ShootButton = ShootButton,
             LoadoutSkipButton = LoadoutSkipButton,
             InteractButton = InteractButton,
+            MenuConfirmMouseButton = MenuConfirmMouseButton,
+            MenuBackMouseButton = MenuBackMouseButton,
+            PauseMouseButton = PauseMouseButton,
+            JumpMouseButton = JumpMouseButton,
             ShootMouseButton = ShootMouseButton,
             DashMouseButton = DashMouseButton,
+            DropMouseButton = DropMouseButton,
+            InteractMouseButton = InteractMouseButton,
+            LoadoutSkipMouseButton = LoadoutSkipMouseButton,
             MoveStick = MoveStick,
             AimStick = AimStick,
         };
@@ -131,8 +145,15 @@ public static class InputBindings
         ShootButton = Buttons.RightTrigger,
         LoadoutSkipButton = Buttons.Back,
         InteractButton = Buttons.X,
+        MenuConfirmMouseButton = MouseButtonBinding.Left,
+        MenuBackMouseButton = MouseButtonBinding.None,
+        PauseMouseButton = MouseButtonBinding.None,
+        JumpMouseButton = MouseButtonBinding.None,
         ShootMouseButton = MouseButtonBinding.Left,
         DashMouseButton = MouseButtonBinding.None,
+        DropMouseButton = MouseButtonBinding.None,
+        InteractMouseButton = MouseButtonBinding.None,
+        LoadoutSkipMouseButton = MouseButtonBinding.None,
         MoveStick = StickBinding.Left,
         AimStick = StickBinding.Right,
     };
@@ -261,9 +282,30 @@ public static class InputBindings
         sanitized.ShootMouseButton = Enum.IsDefined(typeof(MouseButtonBinding), profile.ShootMouseButton)
             ? profile.ShootMouseButton
             : defaults.ShootMouseButton;
+        sanitized.MenuConfirmMouseButton = profile.MenuConfirmMouseButton.HasValue && Enum.IsDefined(typeof(MouseButtonBinding), profile.MenuConfirmMouseButton.Value)
+            ? profile.MenuConfirmMouseButton.Value
+            : defaults.MenuConfirmMouseButton;
+        sanitized.MenuBackMouseButton = profile.MenuBackMouseButton.HasValue && Enum.IsDefined(typeof(MouseButtonBinding), profile.MenuBackMouseButton.Value)
+            ? profile.MenuBackMouseButton.Value
+            : defaults.MenuBackMouseButton;
+        sanitized.PauseMouseButton = profile.PauseMouseButton.HasValue && Enum.IsDefined(typeof(MouseButtonBinding), profile.PauseMouseButton.Value)
+            ? profile.PauseMouseButton.Value
+            : defaults.PauseMouseButton;
+        sanitized.JumpMouseButton = profile.JumpMouseButton.HasValue && Enum.IsDefined(typeof(MouseButtonBinding), profile.JumpMouseButton.Value)
+            ? profile.JumpMouseButton.Value
+            : defaults.JumpMouseButton;
         sanitized.DashMouseButton = profile.DashMouseButton.HasValue && Enum.IsDefined(typeof(MouseButtonBinding), profile.DashMouseButton.Value)
             ? profile.DashMouseButton.Value
             : defaults.DashMouseButton;
+        sanitized.DropMouseButton = profile.DropMouseButton.HasValue && Enum.IsDefined(typeof(MouseButtonBinding), profile.DropMouseButton.Value)
+            ? profile.DropMouseButton.Value
+            : defaults.DropMouseButton;
+        sanitized.InteractMouseButton = profile.InteractMouseButton.HasValue && Enum.IsDefined(typeof(MouseButtonBinding), profile.InteractMouseButton.Value)
+            ? profile.InteractMouseButton.Value
+            : defaults.InteractMouseButton;
+        sanitized.LoadoutSkipMouseButton = profile.LoadoutSkipMouseButton.HasValue && Enum.IsDefined(typeof(MouseButtonBinding), profile.LoadoutSkipMouseButton.Value)
+            ? profile.LoadoutSkipMouseButton.Value
+            : defaults.LoadoutSkipMouseButton;
 
         sanitized.MoveStick = Enum.IsDefined(typeof(StickBinding), profile.MoveStick) ? profile.MoveStick : defaults.MoveStick;
         sanitized.AimStick = Enum.IsDefined(typeof(StickBinding), profile.AimStick) ? profile.AimStick : defaults.AimStick;
