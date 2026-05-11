@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -17,12 +18,19 @@ internal class DevMenuScene : IScene
 
     // Cursor: 0..LevelFiles.Length-1 = level toggles, then Unlock All, Lock All, Close
     private int _cursor = 0;
+    private int _scrollOffset = 0;
+    private int _previousScrollWheelValue;
 
     private static readonly string[] LevelFiles = UnlockTracker.GetPlannedLevels().ToArray();
     private static readonly string[] LevelDisplayNames = LevelFiles.Select(UnlockTracker.GetLevelDisplayName).ToArray();
     private static readonly string[] AbilityNames = { "Dash", "WallJump" };
     private static readonly string[] AbilityDisplayNames = { "Dash", "Wall Jump" };
-    private int EntryCount => LevelFiles.Length + AbilityNames.Length + 3;
+    private static readonly string[] Actions = { "Unlock All Levels", "Lock All Levels", "Unlock All Abilities", "Lock All Abilities", "Close" };
+    private const int RowHeight = 40;
+    private const int ListStartX = 120;
+    private const int ListStartY = 200;
+    private const int ListBottomMargin = 80;
+    private int EntryCount => LevelFiles.Length + AbilityNames.Length + Actions.Length;
 
     public DevMenuScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
     {
@@ -33,6 +41,9 @@ internal class DevMenuScene : IScene
 
     public void Load()
     {
+        _cursor = Math.Clamp(_cursor, 0, Math.Max(0, EntryCount - 1));
+        _scrollOffset = 0;
+        _previousScrollWheelValue = Mouse.GetState().ScrollWheelValue;
         if (_font == null)
         {
             try { _font = _content.Load<SpriteFont>("Fonts/PauseMenu"); }
@@ -42,24 +53,30 @@ internal class DevMenuScene : IScene
 
     public void Update(GameTime gameTime)
     {
+        HandleMouseWheelScroll();
+        EnsureCursorVisible();
 
         if (_font != null)
         {
             var viewport  = _graphics.GraphicsDevice.Viewport;
-            int startX    = 120;
-            int startY    = 200;
-            int abilityY = startY + LevelFiles.Length * 40 + 40;
-            int actionBaseY = abilityY + AbilityNames.Length * 40 + 20;
+            int startX = ListStartX;
 
             for (int i = 0; i < LevelFiles.Length; i++)
             {
+                int index = i;
+                int rowY = GetRowY(index);
+                if (!IsRowVisible(rowY, viewport.Height))
+                {
+                    continue;
+                }
+
                 bool completed = UnlockTracker.IsLevelCompleted(LevelFiles[i]);
                 string text    = (completed ? "[X] " : "[ ] ") + LevelDisplayNames[i];
                 var size       = _font.MeasureString(text);
-                var bounds     = new Rectangle(startX, startY + i * 40, (int)size.X, (int)size.Y);
+                var bounds     = new Rectangle(startX, rowY, (int)size.X, (int)size.Y);
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
-                    _cursor = i;
+                    _cursor = index;
                     if (InputManager.MenuConfirm())
                     {
                         UnlockTracker.ToggleLevelComplete(LevelFiles[i]);
@@ -70,13 +87,20 @@ internal class DevMenuScene : IScene
 
             for (int i = 0; i < AbilityNames.Length; i++)
             {
+                int index = LevelFiles.Length + i;
+                int rowY = GetRowY(index);
+                if (!IsRowVisible(rowY, viewport.Height))
+                {
+                    continue;
+                }
+
                 bool completed = UnlockTracker.IsAbilityUnlocked(AbilityNames[i]);
                 string text = (completed ? "[X] " : "[ ] ") + AbilityDisplayNames[i];
                 var size = _font.MeasureString(text);
-                var bounds = new Rectangle(startX, abilityY + i * 40, (int)size.X, (int)size.Y);
+                var bounds = new Rectangle(startX, rowY, (int)size.X, (int)size.Y);
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
-                    _cursor = LevelFiles.Length + i;
+                    _cursor = index;
                     if (InputManager.MenuConfirm())
                     {
                         UnlockTracker.ToggleAbilityUnlocked(AbilityNames[i]);
@@ -85,14 +109,20 @@ internal class DevMenuScene : IScene
                 }
             }
 
-            string[] actions = { "Unlock All Levels", "Lock All Levels", "Unlock All Abilities", "Lock All Abilities", "Close" };
-            for (int i = 0; i < actions.Length; i++)
+            for (int i = 0; i < Actions.Length; i++)
             {
-                var size   = _font.MeasureString(actions[i]);
-                var bounds = new Rectangle(startX, actionBaseY + i * 40, (int)size.X, (int)size.Y);
+                int index = LevelFiles.Length + AbilityNames.Length + i;
+                int rowY = GetRowY(index);
+                if (!IsRowVisible(rowY, viewport.Height))
+                {
+                    continue;
+                }
+
+                var size   = _font.MeasureString(Actions[i]);
+                var bounds = new Rectangle(startX, rowY, (int)size.X, (int)size.Y);
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
-                    _cursor = LevelFiles.Length + AbilityNames.Length + i;
+                    _cursor = index;
                     if (InputManager.MenuConfirm())
                     {
                         ExecuteAction(_cursor);
@@ -102,8 +132,16 @@ internal class DevMenuScene : IScene
             }
         }
 
-        if (InputManager.MenuUp()) _cursor = (_cursor - 1 + EntryCount) % EntryCount;
-        if (InputManager.MenuDown()) _cursor = (_cursor + 1) % EntryCount;
+        if (InputManager.MenuUp())
+        {
+            _cursor = (_cursor - 1 + EntryCount) % EntryCount;
+            EnsureCursorVisible();
+        }
+        if (InputManager.MenuDown())
+        {
+            _cursor = (_cursor + 1) % EntryCount;
+            EnsureCursorVisible();
+        }
         if (InputManager.MenuNonPointerConfirm()) ExecuteAction(_cursor);
         if (InputManager.MenuBack()) _sceneManager.PopScene(this);
     }
@@ -178,43 +216,60 @@ internal class DevMenuScene : IScene
         spriteBatch.DrawString(_font, title, new Vector2(vp.Width / 2f - titleSize.X / 2f, 50), Color.Cyan);
 
         // ── Left column: level toggles ───────────────────────────────────
-        int startX = 120;
-        int startY = 200;
-        spriteBatch.DrawString(_font, "Levels (toggle completed):", new Vector2(startX, startY - 40), Color.LightCyan);
+        int startX = ListStartX;
+        int startY = ListStartY;
+        DrawSectionHeaderIfVisible(spriteBatch, "Levels (toggle completed):", 0, startX, vp.Height);
 
         for (int i = 0; i < LevelFiles.Length; i++)
         {
+            int idx = i;
+            int rowY = GetRowY(idx);
+            if (!IsRowVisible(rowY, vp.Height))
+            {
+                continue;
+            }
+
             bool completed = UnlockTracker.IsLevelCompleted(LevelFiles[i]);
-            bool isCursor  = _cursor == i;
+            bool isCursor  = _cursor == idx;
             string prefix  = completed ? "[X] " : "[ ] ";
             Color color    = isCursor ? Color.Yellow : (completed ? Color.LightGreen : Color.White);
-            spriteBatch.DrawString(_font, prefix + LevelDisplayNames[i], new Vector2(startX, startY + i * 40), color);
+            spriteBatch.DrawString(_font, prefix + LevelDisplayNames[i], new Vector2(startX, rowY), color);
         }
 
         // ── Left column: ability toggles ───────────────────────────────────
-        int abilityY = startY + LevelFiles.Length * 40 + 45;
-        spriteBatch.DrawString(_font, "Abilities (toggle unlocked):", new Vector2(startX, abilityY - 40), Color.LightCyan);
+        DrawSectionHeaderIfVisible(spriteBatch, "Abilities (toggle unlocked):", LevelFiles.Length, startX, vp.Height);
 
         for (int i = 0; i < AbilityNames.Length; i++)
         {
-            bool completed = UnlockTracker.IsAbilityUnlocked(AbilityNames[i]);
             int idx = LevelFiles.Length + i;
+            int rowY = GetRowY(idx);
+            if (!IsRowVisible(rowY, vp.Height))
+            {
+                continue;
+            }
+
+            bool completed = UnlockTracker.IsAbilityUnlocked(AbilityNames[i]);
             bool isCursor = _cursor == idx;
             string prefix = completed ? "[X] " : "[ ] ";
             Color color = isCursor ? Color.Yellow : (completed ? Color.LightGreen : Color.White);
-            spriteBatch.DrawString(_font, prefix + AbilityDisplayNames[i], new Vector2(startX, abilityY + i * 40), color);
+            spriteBatch.DrawString(_font, prefix + AbilityDisplayNames[i], new Vector2(startX, rowY), color);
         }
 
-            // Action rows
-            string[] actions = { "Unlock All Levels", "Lock All Levels", "Unlock All Abilities", "Lock All Abilities", "Close" };
-        int actionBaseY  = abilityY + AbilityNames.Length * 40 + 20;
-        for (int i = 0; i < actions.Length; i++)
+        // Action rows
+        DrawSectionHeaderIfVisible(spriteBatch, "Actions:", LevelFiles.Length + AbilityNames.Length, startX, vp.Height);
+        for (int i = 0; i < Actions.Length; i++)
         {
             int idx       = LevelFiles.Length + AbilityNames.Length + i;
+            int rowY = GetRowY(idx);
+            if (!IsRowVisible(rowY, vp.Height))
+            {
+                continue;
+            }
+
             bool isCursor = _cursor == idx;
             Color color   = isCursor ? Color.Yellow : ((i == 1 || i == 3) ? Color.Tomato : Color.White);
             string prefix = isCursor ? "> " : "  ";
-            spriteBatch.DrawString(_font, prefix + actions[i], new Vector2(startX, actionBaseY + i * 40), color);
+            spriteBatch.DrawString(_font, prefix + Actions[i], new Vector2(startX, rowY), color);
         }
 
         // ── Right column: item / attachment unlock status (read-only) ─────
@@ -259,6 +314,84 @@ internal class DevMenuScene : IScene
                 $"{prefix}{allAttachments[i].Name}  ({allAttachments[i].Req})",
                 new Vector2(rightX, attY + i * 40), color);
         }
+    }
+
+    private int GetVisibleRowCount()
+    {
+        int viewportHeight = _graphics.GraphicsDevice.Viewport.Height;
+        int usableHeight = Math.Max(RowHeight, viewportHeight - ListStartY - ListBottomMargin);
+        return Math.Max(1, usableHeight / RowHeight);
+    }
+
+    private int GetMaxScrollOffset()
+    {
+        return Math.Max(0, EntryCount - GetVisibleRowCount());
+    }
+
+    private int GetRowY(int entryIndex)
+    {
+        return ListStartY + (entryIndex - _scrollOffset) * RowHeight;
+    }
+
+    private static bool IsRowVisible(int rowY, int viewportHeight)
+    {
+        return rowY + RowHeight >= ListStartY && rowY <= viewportHeight - ListBottomMargin;
+    }
+
+    private void EnsureCursorVisible()
+    {
+        int visible = GetVisibleRowCount();
+        if (_cursor < _scrollOffset)
+        {
+            _scrollOffset = _cursor;
+        }
+        else if (_cursor >= _scrollOffset + visible)
+        {
+            _scrollOffset = _cursor - visible + 1;
+        }
+
+        _scrollOffset = Math.Clamp(_scrollOffset, 0, GetMaxScrollOffset());
+    }
+
+    private void HandleMouseWheelScroll()
+    {
+        var mouseState = Mouse.GetState();
+        int delta = mouseState.ScrollWheelValue - _previousScrollWheelValue;
+        _previousScrollWheelValue = mouseState.ScrollWheelValue;
+        if (delta == 0)
+        {
+            return;
+        }
+
+        if (delta > 0)
+        {
+            _scrollOffset = Math.Max(0, _scrollOffset - 1);
+        }
+        else
+        {
+            _scrollOffset = Math.Min(GetMaxScrollOffset(), _scrollOffset + 1);
+        }
+
+        int visible = GetVisibleRowCount();
+        if (_cursor < _scrollOffset)
+        {
+            _cursor = _scrollOffset;
+        }
+        else if (_cursor >= _scrollOffset + visible)
+        {
+            _cursor = Math.Min(EntryCount - 1, _scrollOffset + visible - 1);
+        }
+    }
+
+    private void DrawSectionHeaderIfVisible(SpriteBatch spriteBatch, string text, int sectionStartIndex, int x, int viewportHeight)
+    {
+        int headerY = GetRowY(sectionStartIndex) - 40;
+        if (headerY + RowHeight < ListStartY || headerY > viewportHeight - ListBottomMargin)
+        {
+            return;
+        }
+
+        spriteBatch.DrawString(_font!, text, new Vector2(x, headerY), Color.LightCyan);
     }
 }
 #endif
