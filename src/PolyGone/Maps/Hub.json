@@ -355,6 +355,34 @@
                  "width":32,
                  "x":640,
                  "y":288
+                }, 
+                {
+                 "height":32,
+                 "id":34,
+                 "name":"Level 5 - Dylan",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level5-Dylan"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":320
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":1184
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":800,
+                 "y":288
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -394,7 +422,7 @@
          "y":0
         }],
  "nextlayerid":6,
- "nextobjectid":34,
+ "nextobjectid":35,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

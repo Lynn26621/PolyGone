@@ -14,7 +14,7 @@
          "repeatx":true,
          "repeaty":true,
          "type":"imagelayer",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -155,7 +155,7 @@
          "name":"tiles",
          "opacity":1,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":35,
          "x":0,
          "y":0
@@ -179,12 +179,12 @@
                         {
                          "name":"loadX",
                          "type":"int",
-                         "value":96
+                         "value":64
                         }, 
                         {
                          "name":"loadY",
                          "type":"int",
-                         "value":480
+                         "value":576
                         }],
                  "rotation":0,
                  "type":"Door",
