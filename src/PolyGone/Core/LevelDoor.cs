@@ -15,6 +15,7 @@ namespace PolyGone.Core
         public int LoadY;
         public string? Requirement { get; private set; }
         public string? DisplayName { get; private set; }
+        public virtual bool ChangesScene => true;
 
         public bool IsUnlocked => string.IsNullOrWhiteSpace(Requirement) || UnlockTracker.IsLevelCompleted(Requirement);
 
