@@ -130,6 +130,8 @@
     <property name="connects" value="Level10"/>
     <property name="loadX" type="int" value="128"/>
     <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
   <object id="28" name="Level 11" type="Door" x="160" y="384" width="32" height="32">
    <properties>
     <property name="connects" value="Level1-StephenResch"/>
@@ -166,7 +168,7 @@
     <property name="loadY" type="int" value="864"/>
    </properties>
   </object>
- </objectgroup>
+</objectgroup>
  <layer id="3" name="collisions" width="30" height="20">
   <data encoding="csv">
 65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,
