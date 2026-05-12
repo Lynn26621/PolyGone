@@ -15,7 +15,7 @@
          "repeatx":true,
          "repeaty":true,
          "type":"imagelayer",
-         "visible":false,
+         "visible":true,
          "x":0,
          "y":0
         }, 
@@ -246,8 +246,293 @@
                 }, 
                 {
                  "height":32,
+                 "id":28,
+                 "name":"Level 8",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level8"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":324
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":480,
+                 "y":480
+                }, 
+                {
+                 "height":32,
+                 "id":29,
+                 "name":"Level 7",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level7"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":1824
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":320,
+                 "y":480
+                }, 
+                {
+                 "height":32,
                  "id":30,
-                 "name":"Level 1 - Dylan",
+                 "name":"Level 6",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level6"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":1824
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":160,
+                 "y":480
+                }, 
+                {
+                 "height":32,
+                 "id":31,
+                 "name":"Level 9",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level9"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":1824
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":640,
+                 "y":480
+                }, 
+                {
+                 "height":32,
+                 "id":32,
+                 "name":"Level 10",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level10"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":1824
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":800,
+                 "y":480
+                }, 
+                {
+                 "height":32,
+                 "id":28,
+                 "name":"Level 11",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level1-StephenResch"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":162
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":864
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":160,
+                 "y":384
+                }, 
+                {
+                 "height":32,
+                 "id":29,
+                 "name":"Level 12",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level2-StephenResch"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":160
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":1504
+                        }, 
+                        {
+                         "name":"requirement",
+                         "type":"string",
+                         "value":"Level1-StephenResch"
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":320,
+                 "y":384
+                }, 
+                {
+                 "height":32,
+                 "id":31,
+                 "name":"Level 13",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level3-StephenResch"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":128
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":384
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":480,
+                 "y":384
+                }, 
+                {
+                 "height":32,
+                 "id":32,
+                 "name":"Level 14",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level4-StephenResch"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":160
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":160
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":640,
+                 "y":384
+                }, 
+                {
+                 "height":32,
+                 "id":33,
+                 "name":"Level 15",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"connects",
+                         "type":"string",
+                         "value":"Level5-StephenResch"
+                        }, 
+                        {
+                         "name":"loadX",
+                         "type":"int",
+                         "value":160
+                        }, 
+                        {
+                         "name":"loadY",
+                         "type":"int",
+                         "value":864
+                        }],
+                 "rotation":0,
+                 "type":"Door",
+                 "visible":true,
+                 "width":32,
+                 "x":800,
+                 "y":384
+                }, 
+                {
+                 "height":32,
+                 "id":33,
+                 "name":"Level 16",
                  "opacity":1,
                  "properties":[
                         {
@@ -274,8 +559,8 @@
                 }, 
                 {
                  "height":32,
-                 "id":31,
-                 "name":"Level 2 - Dylan",
+                 "id":34,
+                 "name":"Level 17",
                  "opacity":1,
                  "properties":[
                         {
@@ -302,8 +587,8 @@
                 }, 
                 {
                  "height":32,
-                 "id":32,
-                 "name":"Level 3 - Dylan",
+                 "id":35,
+                 "name":"Level 18",
                  "opacity":1,
                  "properties":[
                         {
@@ -330,8 +615,8 @@
                 }, 
                 {
                  "height":32,
-                 "id":33,
-                 "name":"Level 4 - Dylan",
+                 "id":36,
+                 "name":"Level 19",
                  "opacity":1,
                  "properties":[
                         {
@@ -358,8 +643,8 @@
                 }, 
                 {
                  "height":32,
-                 "id":34,
-                 "name":"Level 5 - Dylan",
+                 "id":37,
+                 "name":"Level 20",
                  "opacity":1,
                  "properties":[
                         {
@@ -395,7 +680,7 @@
             65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
             65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
             65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
-            65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65,
+            65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
             65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65,
             65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65,
             65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65,
@@ -422,7 +707,7 @@
          "y":0
         }],
  "nextlayerid":6,
- "nextobjectid":35,
+ "nextobjectid":38,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",
