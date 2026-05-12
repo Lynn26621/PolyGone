@@ -204,6 +204,78 @@
    </properties>
   </object>
  </objectgroup>
+  <object id="28" name="Level 8" type="Door" x="480" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level8"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="324"/>
+   </properties>
+  </object>
+  <object id="29" name="Level 7" type="Door" x="320" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level7"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
+  <object id="30" name="Level 6" type="Door" x="160" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level6"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
+  <object id="31" name="Level 9" type="Door" x="640" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level9"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
+  <object id="32" name="Level 10" type="Door" x="800" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level10"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
+  <object id="28" name="Level 11" type="Door" x="160" y="384" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level1-StephenResch"/>
+    <property name="loadX" type="int" value="162"/>
+    <property name="loadY" type="int" value="864"/>
+   </properties>
+  </object>
+  <object id="29" name="Level 12" type="Door" x="320" y="384" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level2-StephenResch"/>
+    <property name="loadX" type="int" value="160"/>
+    <property name="loadY" type="int" value="1504"/>
+    <property name="requirement" value="Level1-StephenResch"/>
+   </properties>
+  </object>
+  <object id="31" name="Level 13" type="Door" x="480" y="384" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level3-StephenResch"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="384"/>
+   </properties>
+  </object>
+  <object id="32" name="Level 14" type="Door" x="640" y="384" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level4-StephenResch"/>
+    <property name="loadX" type="int" value="160"/>
+    <property name="loadY" type="int" value="160"/>
+   </properties>
+  </object>
+  <object id="33" name="Level 15" type="Door" x="800" y="384" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level5-StephenResch"/>
+    <property name="loadX" type="int" value="160"/>
+    <property name="loadY" type="int" value="864"/>
+   </properties>
+  </object>
+</objectgroup>
  <layer id="3" name="collisions" width="30" height="20">
   <data encoding="csv">
 65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,
