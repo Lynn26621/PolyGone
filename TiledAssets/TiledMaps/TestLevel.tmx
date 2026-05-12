@@ -6,7 +6,7 @@
  <tileset firstgid="1" source="../TiledSets/CollisionTiles.tsx"/>
  <tileset firstgid="17" source="../TiledSets/TextureSheet.tsx"/>
  <tileset firstgid="81" source="../TiledSets/EnemySheet.tsx"/>
- <tileset firstgid="85" source="../TiledSets/PlayerSheet.tsx"/>
+ <tileset firstgid="97" source="../TiledSets/PlayerSheet.tsx"/>
  <imagelayer id="5" name="Background" parallaxx="0.8" parallaxy="0.9" repeatx="1" repeaty="1">
   <image source="../../src/PolyGone/Content/Textures/Backgrounds/CastleBackground.png" width="256" height="256"/>
  </imagelayer>
@@ -131,7 +131,7 @@
   <object id="110" type="Enemy" gid="81" x="1952" y="224" width="32" height="32"/>
   <object id="111" type="Enemy" gid="81" x="2496" y="864" width="32" height="32"/>
   <object id="112" type="Enemy" gid="81" x="2656" y="224" width="32" height="32"/>
-  <object id="113" type="Player" gid="85" x="64" y="864" width="32" height="32"/>
+  <object id="113" type="Player" gid="97" x="64" y="864" width="32" height="32"/>
  </objectgroup>
  <layer id="3" name="Collisions" width="90" height="30" opacity="0.5">
   <data encoding="csv">
