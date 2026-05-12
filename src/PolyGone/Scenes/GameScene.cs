@@ -474,6 +474,55 @@ public class GameScene : IScene
 
                         levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connects, playerLoadX, playerLoadY, requirement, doorName));
                         break;
+                    case "SubDoor":
+                        Vector2 subDoorPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        int subDoorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                        int subDoorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                        string subDoorConnects = levelName;
+                        int subDoorLoadX = 0;
+                        int subDoorLoadY = 0;
+                        string? subDoorRequirement = null;
+                        if (obj.TryGetProperty("properties", out JsonElement subDoorPropertiesElement) &&
+                            subDoorPropertiesElement.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (JsonElement prop in subDoorPropertiesElement.EnumerateArray())
+                            {
+                                string? propName = prop.GetProperty("name").GetString();
+                                switch (propName)
+                                {
+                                    case "connects":
+                                        subDoorConnects = (string)(prop.GetProperty("value").GetString() ?? levelName);
+                                        break;
+                                    case "loadX":
+                                        subDoorLoadX = (int)prop.GetProperty("value").GetSingle();
+                                        break;
+                                    case "loadY":
+                                        subDoorLoadY = (int)prop.GetProperty("value").GetSingle();
+                                        break;
+                                    case "requirement":
+                                        subDoorRequirement = prop.GetProperty("value").GetString();
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            subDoorLoadX = (int)obj.GetProperty("x").GetSingle();
+                            subDoorLoadY = (int)obj.GetProperty("y").GetSingle();
+                        }
+                        string? subDoorName = null;
+                        if (obj.TryGetProperty("name", out JsonElement subDoorNameElem))
+                        {
+                            subDoorName = subDoorNameElem.GetString();
+                        }
+
+                        levelDoors.Add(new SubDoor(subDoorPos, subDoorWidth, subDoorHeight, audioManager, subDoorConnects, subDoorLoadX, subDoorLoadY, subDoorRequirement, subDoorName));
+                        break;
                     case "Inventory":
                         Vector2 inventoryPos = AdjustCoordinates(
                             obj.GetProperty("x").GetSingle(),
@@ -999,8 +1048,15 @@ public class GameScene : IScene
             door.CheckTrigger(player.Rectangle);
             if (door.IsTriggered && door.IsActivated)
             {
-                sceneManager.PopScene(this);
-                sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.Connects, selectedItems, selectedAttachments, door.LoadX, door.LoadY));
+                if (door.ChangesScene)
+                {
+                    sceneManager.PopScene(this);
+                    sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.Connects, selectedItems, selectedAttachments, door.LoadX, door.LoadY));
+                }
+                else
+                {
+                    player.position = AdjustCoordinates(door.LoadX, door.LoadY);
+                }
             }
         }
     }
