@@ -159,9 +159,6 @@ namespace PolyGone.Entities
                 Item? item = null;
                 switch (itemType)
                 {
-                    case ItemType.DoubleJump:
-                        item = new DoubleJumpItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Blue, srcRect);
-                        break;
                     case ItemType.HealingGlow:
                         item = new HealingGlowItem(texture, Vector2.Zero, new int[] { 32, 32 }, Color.Green, srcRect);
                         break;
@@ -310,10 +307,9 @@ namespace PolyGone.Entities
                 : 1f;
             ApplyHorizontalIntent(moveDirection, NORMAL_MAX_MOVE_SPEED, NORMAL_MOVE_ACCELERATION, reverseFactor);
 
-            // Jumping with coyote time and double jump
+            // Jumping with coyote time
             bool JumpTriggered = InputManager.GameJump();
             bool JumpHeld = InputManager.GameJumpHeld();
-            bool wasOnGroundLastFrame = IsOnGround;
 
             if ((IsOnGround || coyoteTime > 0f) && JumpHeld)
             {
@@ -333,7 +329,6 @@ namespace PolyGone.Entities
                 base.ChangeY = jumpPower;
                 audioManager.PlayAudio("jumpSfx", true, "null", false);
                 coyoteTime = 0f;
-                GetActiveDoubleJumpItem()?.Reset();
             }
             else
             {
@@ -345,8 +340,6 @@ namespace PolyGone.Entities
                     sameWallJumpLockTimer > 0f &&
                     jumpWallDirection != 0 &&
                     jumpWallDirection == lastWallJumpDirection;
-
-                bool consumedAirJump = false;
 
                 // Check for wall jump with coyote time
                 if (usingWallAssist && !lockedToSameWall && jumpWallDirection != 0 && (JumpTriggered && UnlockTracker.IsAbilityUnlocked(wallJump)))
@@ -365,22 +358,10 @@ namespace PolyGone.Entities
                     wallDashLockTimer = 60f;
                     wallDashLockDirection = jumpWallDirection; // Lock the direction the player jumped from
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
-                    consumedAirJump = true;
                     performedWallJumpThisFrame = true;
                 }
-                // Check for double jump (only when wall jump is not currently available)
-                else
-                {
-                    var doubleJumpItem = GetActiveDoubleJumpItem();
-                    if (!usingWallAssist && doubleJumpItem != null && doubleJumpItem.TryDoubleJump(this, JumpTriggered, wasOnGroundLastFrame))
-                    {
-                        base.ChangeY = JumpStrength; // Same jump strength for double jump
-                        audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
-                        consumedAirJump = true;
-                    }
-                }
 #if DEBUG
-                if (!consumedAirJump && GetDevModeItem()?.IsActive == true && JumpTriggered)
+                if (GetDevModeItem()?.IsActive == true && JumpTriggered)
                 {
                     base.ChangeY = JumpStrength; // DEV: infinite jumps
                     audioManager.PlayAudio("jumpSfx", true, "null", false); //Play jump sound effect
@@ -810,11 +791,6 @@ namespace PolyGone.Entities
 
                 position.X += nudge;
             }
-        }
-
-        private DoubleJumpItem? GetActiveDoubleJumpItem()
-        {
-            return itemInventory.OfType<DoubleJumpItem>().FirstOrDefault(item => item.IsActive);
         }
 
         private HealingGlowItem? GetActiveHealingGlowItem()
