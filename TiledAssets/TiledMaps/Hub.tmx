@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#ffffff" nextlayerid="6" nextobjectid="34">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#ffffff" nextlayerid="6" nextobjectid="38">
  <editorsettings>
   <export target="../../src/PolyGone/Maps/Hub.json" format="json"/>
  </editorsettings>
@@ -97,6 +97,41 @@
     <property name="loadY" type="int" value="1504"/>
    </properties>
   </object>
+  <object id="28" name="Level 8" type="Door" x="480" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level8"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="324"/>
+   </properties>
+  </object>
+  <object id="29" name="Level 7" type="Door" x="320" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level7"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
+  <object id="30" name="Level 6" type="Door" x="160" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level6"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
+  <object id="31" name="Level 9" type="Door" x="640" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level9"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
+  <object id="32" name="Level 10" type="Door" x="800" y="480" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level10"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
   <object id="28" name="Level 11" type="Door" x="160" y="384" width="32" height="32">
    <properties>
     <property name="connects" value="Level1-StephenResch"/>
@@ -131,6 +166,41 @@
     <property name="connects" value="Level5-StephenResch"/>
     <property name="loadX" type="int" value="160"/>
     <property name="loadY" type="int" value="864"/>
+   </properties>
+  </object>
+  <object id="33" name="Level 16" type="Door" x="160" y="288" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level1-Dylan"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="864"/>
+   </properties>
+  </object>
+  <object id="34" name="Level 17" type="Door" x="320" y="288" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level2-Dylan"/>
+    <property name="loadX" type="int" value="224"/>
+    <property name="loadY" type="int" value="864"/>
+   </properties>
+  </object>
+  <object id="35" name="Level 18" type="Door" x="480" y="288" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level3-Dylan"/>
+    <property name="loadX" type="int" value="128"/>
+    <property name="loadY" type="int" value="864"/>
+   </properties>
+  </object>
+  <object id="36" name="Level 19" type="Door" x="640" y="288" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level4-Dylan"/>
+    <property name="loadX" type="int" value="160"/>
+    <property name="loadY" type="int" value="1824"/>
+   </properties>
+  </object>
+  <object id="37" name="Level 20" type="Door" x="800" y="288" width="32" height="32">
+   <properties>
+    <property name="connects" value="Level5-Dylan"/>
+    <property name="loadX" type="int" value="320"/>
+    <property name="loadY" type="int" value="1184"/>
    </properties>
   </object>
  </objectgroup>
