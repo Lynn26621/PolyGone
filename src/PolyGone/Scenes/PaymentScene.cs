@@ -96,12 +96,14 @@ internal class PaymentScene : IScene
         if (InputManager.MenuNonPointerConfirm() && _pin.Length > 0)
             StartPayment();
 
+#if DEBUG
         // Developer bypass: Ctrl + Shift + D skips payment entirely
         if (InputManager.DevPaymentBypass())
         {
             DevBypass();
             return;
         }
+#endif
 
         if (_font == null)
         {
@@ -161,11 +163,13 @@ internal class PaymentScene : IScene
             FormbarSession.LevelCost, "PolyGone: unlock all levels", pinInt);
     }
 
+#if DEBUG
     private void DevBypass()
     {
         PurchaseTracker.RecordPurchase(FormbarSession.UserId, FormbarSession.AllLevelsKey);
         _sceneManager.PopScene(this);
     }
+#endif
 
     private void DoLogout()
     {

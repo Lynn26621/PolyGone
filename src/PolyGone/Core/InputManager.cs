@@ -601,18 +601,19 @@ public static class InputManager
     //function for developer payment bypass in payment scene (Ctrl + Shift + D for keyboard, and Start + A for gamepad)
     public static bool DevPaymentBypass()
     {
-        bool keyboardBypass = _currentKeyboardState.IsKeyDown(Keys.LeftControl)
-                            && _currentKeyboardState.IsKeyDown(Keys.LeftShift)
-                            && _currentKeyboardState.IsKeyDown(Keys.D)
-                            && !_previousKeyboardState.IsKeyDown(Keys.LeftControl)
-                            && !_previousKeyboardState.IsKeyDown(Keys.LeftShift)
-                            && !_previousKeyboardState.IsKeyDown(Keys.D)
-                            && _escapeKeyCooldown <= 0f;
+        bool ctrlHeld = _currentKeyboardState.IsKeyDown(Keys.LeftControl)
+                        || _currentKeyboardState.IsKeyDown(Keys.RightControl);
+        bool shiftHeld = _currentKeyboardState.IsKeyDown(Keys.LeftShift)
+                         || _currentKeyboardState.IsKeyDown(Keys.RightShift);
+        bool keyboardBypass = ctrlHeld
+                              && shiftHeld
+                              && IsKeyPressed(Keys.D)
+                              && _escapeKeyCooldown <= 0f;
+
         bool gamepadBypass = _currentGamepadState.Buttons.Start == ButtonState.Pressed
-                                       && _previousGamepadState.Buttons.Start == ButtonState.Released
-                                       && _currentGamepadState.Buttons.A == ButtonState.Pressed
-                                       && _previousGamepadState.Buttons.A == ButtonState.Released
-                                        && _escapeKeyCooldown <= 0f;
+                             && _currentGamepadState.Buttons.A == ButtonState.Pressed
+                             && _previousGamepadState.Buttons.A == ButtonState.Released
+                             && _escapeKeyCooldown <= 0f;
         return keyboardBypass || gamepadBypass;
     }
 
