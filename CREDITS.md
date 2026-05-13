@@ -11,8 +11,8 @@ Thank you to everyone who put time and effort into making this game possible.
 |---|---|---|
 | Jesse Bailey-Motts | Lead Developer, Project Owner | [@jesse26603](https://github.com/jesse26603) |
 | Lynn Wells | Developer, QA & Bug Reporting | [@Lynn26621](https://github.com/Lynn26621) |
-| Stephen Resch | Junior Developer | |
-| Dylan Mechler | Junior Developer | |
+| Stephen Resch | Junior Developer | [@StephenResch](https://github.com/StephenResch) |
+| Dylan Mechler | Junior Developer | [@DylanMechler](https://github.com/DylanMechler) |
 
 ---
 
