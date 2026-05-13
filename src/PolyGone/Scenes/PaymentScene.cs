@@ -56,6 +56,11 @@ internal class PaymentScene : IScene
 
     public void Update(GameTime gameTime)
     {
+        if (InputManager.MenuBack())
+        {
+            Environment.Exit(0);
+            return;
+        }
 
         // Poll async payment task
         if (_paymentTask != null && _paymentTask.IsCompleted)
@@ -91,14 +96,12 @@ internal class PaymentScene : IScene
         if (InputManager.MenuNonPointerConfirm() && _pin.Length > 0)
             StartPayment();
 
-#if DEBUG
         // Developer bypass: Ctrl + Shift + D skips payment entirely
         if (InputManager.DevPaymentBypass())
         {
             DevBypass();
             return;
         }
-#endif
 
         if (_font == null)
         {
@@ -107,6 +110,7 @@ internal class PaymentScene : IScene
 
         var viewport = _graphics.GraphicsDevice.Viewport;
         var mousePos = InputManager.GetMousePosition();
+        bool mouseConfirm = InputManager.MenuMouseConfirm();
         float cx = viewport.Width / 2f;
         float cy = viewport.Height / 2f;
 
@@ -115,10 +119,11 @@ internal class PaymentScene : IScene
         string payLabel = $"Pay {FormbarSession.LevelCost} Digipogs";
         var paySize = _font.MeasureString(payLabel);
         var payBounds = Btn((int)(cx - paySize.X / 2f), (int)payBtnY, paySize);
-        if (payBounds.Contains(mousePos) && _pin.Length > 0)
+        if (payBounds.Contains(mousePos) && mouseConfirm && _pin.Length > 0)
         {
             StartPayment();
             InputManager.ConsumeClick();
+            return;
         }
 
         // Log Out button  (same Y as drawn: cy + 2*RowGap)
@@ -126,12 +131,23 @@ internal class PaymentScene : IScene
         string logoutLabel = "Log Out";
         var logoutSize = _font.MeasureString(logoutLabel);
         var logoutBounds = Btn((int)(cx - logoutSize.X / 2f), (int)logoutBtnY, logoutSize);
-        if (logoutBounds.Contains(mousePos))
+        if (logoutBounds.Contains(mousePos) && mouseConfirm)
         {
             DoLogout();
             InputManager.ConsumeClick();
+            return;
         }
 
+        // Exit button  (same Y as drawn: cy + 3*RowGap)
+        float exitBtnY = cy + RowGap * 3f;
+        string exitLabel = "Exit";
+        var exitSize = _font.MeasureString(exitLabel);
+        var exitBounds = Btn((int)(cx - exitSize.X / 2f), (int)exitBtnY, exitSize);
+        if (exitBounds.Contains(mousePos) && mouseConfirm)
+        {
+            InputManager.ConsumeClick();
+            Environment.Exit(0);
+        }
     }
 
     private void StartPayment()
@@ -145,13 +161,11 @@ internal class PaymentScene : IScene
             FormbarSession.LevelCost, "PolyGone: unlock all levels", pinInt);
     }
 
-#if DEBUG
     private void DevBypass()
     {
         PurchaseTracker.RecordPurchase(FormbarSession.UserId, FormbarSession.AllLevelsKey);
         _sceneManager.PopScene(this);
     }
-#endif
 
     private void DoLogout()
     {
@@ -223,12 +237,20 @@ internal class PaymentScene : IScene
         spriteBatch.Draw(_pixel, Btn((int)logoutX, (int)logoutBtnY, logoutSize), new Color(80, 30, 30));
         spriteBatch.DrawString(_font, logoutLabel, new Vector2(logoutX, logoutBtnY), Color.White);
 
-        // Row 7  (cy + 3*gap): status message
+        // Row 7  (cy + 3*gap): Exit button
+        float exitBtnY = cy + RowGap * 3f;
+        string exitLabel = "Exit";
+        var exitSize = _font.MeasureString(exitLabel);
+        float exitX = cx - exitSize.X / 2f;
+        spriteBatch.Draw(_pixel, Btn((int)exitX, (int)exitBtnY, exitSize), new Color(80, 30, 30));
+        spriteBatch.DrawString(_font, exitLabel, new Vector2(exitX, exitBtnY), Color.White);
+
+        // Row 8  (cy + 4*gap): status message
         if (!string.IsNullOrEmpty(_statusMessage))
         {
             Color statusColor = _statusMessage.StartsWith("Payment failed", StringComparison.OrdinalIgnoreCase)
                 ? Color.OrangeRed : Color.LightGray;
-            DrawCentered(spriteBatch, viewport, _statusMessage, cy + RowGap * 3f, statusColor);
+            DrawCentered(spriteBatch, viewport, _statusMessage, cy + RowGap * 4f, statusColor);
         }
 
 #if DEBUG
