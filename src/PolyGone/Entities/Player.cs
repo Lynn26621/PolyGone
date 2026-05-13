@@ -53,6 +53,7 @@ namespace PolyGone.Entities
         private int wallCoyoteDirection = 0;
         private float wallDashLockTimer = 0f; // Prevents dashing back towards a wall after wall jumping
         private int wallDashLockDirection = 0; // Direction to prevent dashing towards (1 for left, -1 for right)
+        private float damageFlashTimer = 0f;
 
         // -----------------------------------------------------------------------
         // Player Ability Definitions
@@ -246,7 +247,7 @@ namespace PolyGone.Entities
                     position.Y = deltaY > 0 ? tileRect.Top - size[1] : tileRect.Bottom;
                     onGround = deltaY > 0;
                     deltaY = 0;
-                    TakeDamage(10);
+                    TryApplyDamage(10);
                     break;
             }
         }
@@ -270,7 +271,7 @@ namespace PolyGone.Entities
                 case CollisionType.Damage:
                     position.X = deltaX > 0 ? tileRect.Left - size[0] : tileRect.Right;
                     deltaX = 0;
-                    TakeDamage(10);
+                    TryApplyDamage(10);
                     break;
             }
         }
@@ -422,25 +423,25 @@ namespace PolyGone.Entities
 
                         audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
 #endif
-                        Health -= projectile.Damage;
-                        if (Health <= 0)
+                        if (TryApplyDamage(projectile.Damage))
                         {
-                            TryAbsorbLethalHit();
+                            if (Health <= 0)
+                            {
+                                TryAbsorbLethalHit();
+                            }
+
+                            // Apply knockback in the direction the projectile was travelling
+                            Vector2 projectileVelocity = new Vector2(projectile.XSpeed, projectile.YSpeed);
+                            if (projectileVelocity != Vector2.Zero)
+                            {
+                                projectileVelocity.Normalize();
+                                ChangeX = projectileVelocity.X * 10f;
+                                base.ChangeY = projectileVelocity.Y * 10f - 5f; // extra upward bias
+                            }
+
+                            // Despawn the projectile on contact
+                            projectile.Lifetime = 0f;
                         }
-
-                        // Apply knockback in the direction the projectile was travelling
-                        Vector2 projectileVelocity = new Vector2(projectile.XSpeed, projectile.YSpeed);
-                        if (projectileVelocity != Vector2.Zero)
-                        {
-                            projectileVelocity.Normalize();
-                            ChangeX = projectileVelocity.X * 10f;
-                            base.ChangeY = projectileVelocity.Y * 10f - 5f; // extra upward bias
-                        }
-
-                        InvincibilityFrames = 60f;
-
-                        // Despawn the projectile on contact
-                        projectile.Lifetime = 0f;
                     }
                     break;
                 case BerserkEnemy:
@@ -455,22 +456,21 @@ namespace PolyGone.Entities
 #endif
                         audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
                         // Take 40 damage
-                        Health -= 40;
-                        if (Health <= 0)
+                        if (TryApplyDamage(40))
                         {
-                            TryAbsorbLethalHit();
+                            if (Health <= 0)
+                            {
+                                TryAbsorbLethalHit();
+                            }
+
+                            // Calculate knockback direction (away from enemy)
+                            float knockbackX = position.X < other.position.X ? -10f : 10f;
+                            float knockbackY = -20f;
+
+                            // Apply knockback
+                            ChangeX = knockbackX;
+                            ChangeY = knockbackY / 2; // Reduced vertical knockback for better feel
                         }
-
-                        // Calculate knockback direction (away from enemy)
-                        float knockbackX = position.X < other.position.X ? -10f : 10f;
-                        float knockbackY = -20f;
-
-                        // Apply knockback
-                        ChangeX = knockbackX;
-                        ChangeY = knockbackY / 2; // Reduced vertical knockback for better feel
-
-                        // Set invincibility frames (roughly 1 second at 60fps)
-                        InvincibilityFrames = 60f;
                     }
                     break;
                 case Enemy:
@@ -485,22 +485,21 @@ namespace PolyGone.Entities
 #endif
                         audioManager.PlayAudio("collisionSfx", true, "null", false); //Play collision sound effect
                         // Take 40 damage
-                        Health -= 40;
-                        if (Health <= 0)
+                        if (TryApplyDamage(40))
                         {
-                            TryAbsorbLethalHit();
+                            if (Health <= 0)
+                            {
+                                TryAbsorbLethalHit();
+                            }
+
+                            // Calculate knockback direction (away from enemy)
+                            float knockbackX = position.X < other.position.X ? -10f : 10f;
+                            float knockbackY = -20f;
+
+                            // Apply knockback
+                            ChangeX = knockbackX;
+                            base.ChangeY = knockbackY / 2; // Reduced vertical knockback for better feel
                         }
-
-                        // Calculate knockback direction (away from enemy)
-                        float knockbackX = position.X < other.position.X ? -10f : 10f;
-                        float knockbackY = -20f;
-
-                        // Apply knockback
-                        ChangeX = knockbackX;
-                        base.ChangeY = knockbackY / 2; // Reduced vertical knockback for better feel
-
-                        // Set invincibility frames (roughly 1 second at 60fps)
-                        InvincibilityFrames = 60f;
                     }
                     break;
             }
@@ -793,6 +792,33 @@ namespace PolyGone.Entities
             }
         }
 
+        private Color GetDamageFlashColor()
+        {
+            if (damageFlashTimer <= 0f)
+            {
+                return color;
+            }
+
+            return Color.Lerp(color, new Color((byte)255, (byte)80, (byte)80, color.A), 0.65f);
+        }
+
+        private void TriggerDamageFlash()
+        {
+            damageFlashTimer = 6f;
+        }
+
+        private bool TryApplyDamage(int damage, float invincibilityDuration = 60f)
+        {
+            if (InvincibilityFrames > 0f)
+            {
+                return false;
+            }
+
+            TakeDamage(damage, invincibilityDuration);
+            TriggerDamageFlash();
+            return true;
+        }
+
         private HealingGlowItem? GetActiveHealingGlowItem()
         {
             return itemInventory.OfType<HealingGlowItem>().FirstOrDefault(item => item.IsActive);
@@ -875,6 +901,7 @@ namespace PolyGone.Entities
 
             sameWallJumpLockTimer = Math.Max(0f, sameWallJumpLockTimer - 1f);
             wallDashLockTimer = Math.Max(0f, wallDashLockTimer - 1f);
+            damageFlashTimer = Math.Max(0f, damageFlashTimer - 1f);
 
             // Update only the currently equipped weapon
             var currentBlaster = GetBlaster();
@@ -950,7 +977,16 @@ namespace PolyGone.Entities
                 }
             }
 
-            base.Draw(spriteBatch, offset);
+            var originalColor = color;
+            try
+            {
+                color = GetDamageFlashColor();
+                base.Draw(spriteBatch, offset);
+            }
+            finally
+            {
+                color = originalColor;
+            }
 
             // Draw only the currently equipped weapon
             var currentBlaster = GetBlaster();
