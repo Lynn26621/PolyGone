@@ -31,8 +31,10 @@ internal class CreditsScene : IScene
     {
         "## Development Team",
         "",
-        "Jesse  —  Lead Developer, Project Owner",
-        "Lynn  —  Developer, QA & Bug Reporting",
+        "Jesse Bailey-Motts  —  Lead Developer, Project Owner",
+        "Lynn Wells  —  Developer, QA & Bug Reporting",
+        "Stephen Resch  —  Junior Developer",
+        "Dylan Mechler  —  Junior Developer",
         "",
         "## Tools & Frameworks",
         "",
