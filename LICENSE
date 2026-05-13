@@ -1,21 +1,41 @@
-MIT License
+PolyGone Proprietary License
+Copyright (c) 2026 PolyGone Development Team — York County School of Technology
 
-Copyright (c) 2026 jesse26603
+All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+PERMISSION RESTRICTED
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Except as expressly stated below, no part of this software, its source code,
+assets, documentation, or any associated files (collectively, "the Software")
+may be used, copied, modified, merged, published, distributed, sublicensed,
+sold, or otherwise dealt with, in whole or in part, without the prior written
+permission of the copyright holders.
+
+EXCEPTION FOR YORK COUNTY SCHOOL OF TECHNOLOGY STUDENTS
+
+Students currently enrolled at York County School of Technology ("YCST") are
+granted a limited, non-exclusive, non-transferable license to use, view,
+modify, and run the Software solely for educational purposes within the school
+environment, provided that:
+
+  1. The Software is not redistributed outside the YCST community without
+     explicit written permission from the copyright holders.
+  2. Any modifications or derivative works created by YCST students that are
+     contributed back to the project must be submitted as a pull request and
+     are subject to review and acceptance by the project maintainers.
+  3. Credit to the original authors must be maintained in all copies or
+     substantial portions of the Software.
+  4. The Software may not be sold or used for commercial gain.
+
+DISCLAIMER
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL
+THE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF,
+OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+For permission requests, contact the project maintainers via GitHub:
+https://github.com/jesse26603/PolyGone
