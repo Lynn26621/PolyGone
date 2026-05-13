@@ -293,7 +293,7 @@ internal class FormbarLoginScene : IScene
         var mousePos = InputManager.GetMousePosition();
         float cy = viewport.Height / 2f;
 
-        float exitY = _state == LoginState.Idle ? cy + RowGap * 2f : cy + RowGap * 2f;
+        float exitY = cy + RowGap * 2f;
         string exitLabel = "Exit";
         var exitSize = _font.MeasureString(exitLabel);
         var exitBounds = new Rectangle(
