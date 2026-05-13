@@ -29,8 +29,8 @@ public static class UnlockTracker
     /// </summary>
     private static readonly Dictionary<ItemType, string> _itemUnlockRequirements = new()
     {
-        { ItemType.HealingGlow, "Level1" },
-        { ItemType.LowGravity,  "Level2" },
+        { ItemType.HealingGlow, "Level15" },
+        { ItemType.LowGravity,  "Level20" },
         { ItemType.IronWill,    "Level3" },
     };
 
@@ -40,10 +40,10 @@ public static class UnlockTracker
     /// </summary>
     private static readonly Dictionary<BlasterAttachmentType, string> _attachmentUnlockRequirements = new()
     {
-        { BlasterAttachmentType.MultiShot,   "Level1" },
+        { BlasterAttachmentType.MultiShot,   "Level12" },
         { BlasterAttachmentType.RapidFire,   "Level2" },
-        { BlasterAttachmentType.Piercing,    "Level3" },
-        { BlasterAttachmentType.DamageBoost, "Level4" },
+        { BlasterAttachmentType.Piercing,    "Level5" },
+        { BlasterAttachmentType.DamageBoost, "Level15" },
     };
 
     /// <summary>
@@ -140,34 +140,40 @@ public static class UnlockTracker
         return $"Complete {GetLevelDisplayName(level)} to unlock";
     }
 
+    /// <summary>Returns the unlock requirement level for this attachment, or null if always unlocked.</summary>
+    public static string? GetAttachmentUnlockRequirement(BlasterAttachmentType attachment)
+    {
+        return _attachmentUnlockRequirements.TryGetValue(attachment, out var level) ? level : null;
+    }
+
     /// <summary>
     /// Returns the number of player item slots available.
-    /// Starts at 2; completing Level1, Level2, and Level3 each add one slot.
+    /// Starts at 2; completing Level5, Level10, and Level15 each add one slot.
     /// </summary>
     public static int GetPlayerItemSlotCount()
     {
         int slots = 2;
-        if (_completedLevels.Contains("Level1"))
+        if (_completedLevels.Contains("Level5"))
             slots++;
-        if (_completedLevels.Contains("Level2"))
+        if (_completedLevels.Contains("Level10"))
             slots++;
-        if (_completedLevels.Contains("Level3"))
+        if (_completedLevels.Contains("Level15"))
             slots++;
         return slots;
     }
 
     /// <summary>
     /// Returns the number of blaster attachment slots available.
-    /// Starts at 2; completing Level1, Level2, and Level3 each add one slot.
+    /// Starts at 2; completing Level5, Level10, and Level15 each add one slot.
     /// </summary>
     public static int GetBlasterSlotCount()
     {
         int slots = 2;
-        if (_completedLevels.Contains("Level1"))
+        if (_completedLevels.Contains("Level5"))
             slots++;
-        if (_completedLevels.Contains("Level2"))
+        if (_completedLevels.Contains("Level10"))
             slots++;
-        if (_completedLevels.Contains("Level3"))
+        if (_completedLevels.Contains("Level15"))
             slots++;
         return slots;
     }

@@ -27,6 +27,7 @@ internal class DevMenuScene : IScene
     private static readonly string[] AbilityDisplayNames = { "Dash", "Wall Jump" };
     private static readonly string[] Actions = { "Unlock All Levels", "Lock All Levels", "Unlock All Abilities", "Lock All Abilities", "Close" };
     private const int RowHeight = 40;
+    private const int SectionSpacing = 80;
     private const int ListStartX = 120;
     private const int ListStartY = 200;
     private const int ListBottomMargin = 80;
@@ -34,9 +35,9 @@ internal class DevMenuScene : IScene
 
     public DevMenuScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
     {
-        _content               = content;
-        _sceneManager          = sceneManager;
-        _graphics              = graphics;
+        _content = content;
+        _sceneManager = sceneManager;
+        _graphics = graphics;
     }
 
     public void Load()
@@ -46,7 +47,8 @@ internal class DevMenuScene : IScene
         _previousScrollWheelValue = Mouse.GetState().ScrollWheelValue;
         if (_font == null)
         {
-            try { _font = _content.Load<SpriteFont>("Fonts/PauseMenu"); }
+            try
+            { _font = _content.Load<SpriteFont>("Fonts/PauseMenu"); }
             catch { }
         }
     }
@@ -58,7 +60,7 @@ internal class DevMenuScene : IScene
 
         if (_font != null)
         {
-            var viewport  = _graphics.GraphicsDevice.Viewport;
+            var viewport = _graphics.GraphicsDevice.Viewport;
             int startX = ListStartX;
 
             for (int i = 0; i < LevelFiles.Length; i++)
@@ -71,9 +73,9 @@ internal class DevMenuScene : IScene
                 }
 
                 bool completed = UnlockTracker.IsLevelCompleted(LevelFiles[i]);
-                string text    = (completed ? "[X] " : "[ ] ") + LevelDisplayNames[i];
-                var size       = _font.MeasureString(text);
-                var bounds     = new Rectangle(startX, rowY, (int)size.X, (int)size.Y);
+                string text = (completed ? "[X] " : "[ ] ") + LevelDisplayNames[i];
+                var size = _font.MeasureString(text);
+                var bounds = new Rectangle(startX, rowY, (int)size.X, (int)size.Y);
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _cursor = index;
@@ -118,7 +120,7 @@ internal class DevMenuScene : IScene
                     continue;
                 }
 
-                var size   = _font.MeasureString(Actions[i]);
+                var size = _font.MeasureString(Actions[i]);
                 var bounds = new Rectangle(startX, rowY, (int)size.X, (int)size.Y);
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
@@ -142,8 +144,10 @@ internal class DevMenuScene : IScene
             _cursor = (_cursor + 1) % EntryCount;
             EnsureCursorVisible();
         }
-        if (InputManager.MenuNonPointerConfirm()) ExecuteAction(_cursor);
-        if (InputManager.MenuBack()) _sceneManager.PopScene(this);
+        if (InputManager.MenuNonPointerConfirm())
+            ExecuteAction(_cursor);
+        if (InputManager.MenuBack())
+            _sceneManager.PopScene(this);
     }
 
     private void ExecuteAction(int index)
@@ -208,11 +212,12 @@ internal class DevMenuScene : IScene
         var vp = spriteBatch.GraphicsDevice.Viewport;
         spriteBatch.Draw(_pixel, new Rectangle(0, 0, vp.Width, vp.Height), new Color(15, 15, 35));
 
-        if (_font == null) return;
+        if (_font == null)
+            return;
 
         // Title
-        string title    = "[DEV] Unlock Manager";
-        var titleSize   = _font.MeasureString(title);
+        string title = "[DEV] Unlock Manager";
+        var titleSize = _font.MeasureString(title);
         spriteBatch.DrawString(_font, title, new Vector2(vp.Width / 2f - titleSize.X / 2f, 50), Color.Cyan);
 
         // ── Left column: level toggles ───────────────────────────────────
@@ -230,9 +235,9 @@ internal class DevMenuScene : IScene
             }
 
             bool completed = UnlockTracker.IsLevelCompleted(LevelFiles[i]);
-            bool isCursor  = _cursor == idx;
-            string prefix  = completed ? "[X] " : "[ ] ";
-            Color color    = isCursor ? Color.Yellow : (completed ? Color.LightGreen : Color.White);
+            bool isCursor = _cursor == idx;
+            string prefix = completed ? "[X] " : "[ ] ";
+            Color color = isCursor ? Color.Yellow : (completed ? Color.LightGreen : Color.White);
             spriteBatch.DrawString(_font, prefix + LevelDisplayNames[i], new Vector2(startX, rowY), color);
         }
 
@@ -259,7 +264,7 @@ internal class DevMenuScene : IScene
         DrawSectionHeaderIfVisible(spriteBatch, "Actions:", LevelFiles.Length + AbilityNames.Length, startX, vp.Height);
         for (int i = 0; i < Actions.Length; i++)
         {
-            int idx       = LevelFiles.Length + AbilityNames.Length + i;
+            int idx = LevelFiles.Length + AbilityNames.Length + i;
             int rowY = GetRowY(idx);
             if (!IsRowVisible(rowY, vp.Height))
             {
@@ -267,7 +272,7 @@ internal class DevMenuScene : IScene
             }
 
             bool isCursor = _cursor == idx;
-            Color color   = isCursor ? Color.Yellow : ((i == 1 || i == 3) ? Color.Tomato : Color.White);
+            Color color = isCursor ? Color.Yellow : ((i == 1 || i == 3) ? Color.Tomato : Color.White);
             string prefix = isCursor ? "> " : "  ";
             spriteBatch.DrawString(_font, prefix + Actions[i], new Vector2(startX, rowY), color);
         }
@@ -276,42 +281,48 @@ internal class DevMenuScene : IScene
         int rightX = vp.Width / 2 + 50;
         spriteBatch.DrawString(_font, "Player Item Unlock Status:", new Vector2(rightX, startY - 40), Color.LightCyan);
 
-        var allItems = new (ItemType Type, string Name, string Req)[]
+        var allItems = new (ItemType Type, string Name)[]
         {
-            (ItemType.HealingGlow, "Healing Glow", "Level 1"),
-            (ItemType.LowGravity,  "Low Gravity",  "Level 2"),
-            (ItemType.IronWill,    "Iron Will",    "Level 3"),
-            (ItemType.DevMode,     "Dev Mode",     "always [DEV]"),
+            (ItemType.HealingGlow, "Healing Glow"),
+            (ItemType.LowGravity,  "Low Gravity"),
+            (ItemType.IronWill,    "Iron Will"),
+            (ItemType.DevMode,     "Dev Mode"),
         };
 
         for (int i = 0; i < allItems.Length; i++)
         {
             bool unlocked = UnlockTracker.IsItemUnlocked(allItems[i].Type);
+            string requirement = allItems[i].Type == ItemType.DevMode
+                ? "always [DEV]"
+                : FormatRequirementLabel(UnlockTracker.GetUnlockRequirement(allItems[i].Type));
             string prefix = unlocked ? "[+] " : "[ ] ";
-            Color color   = unlocked ? Color.LightGreen : Color.DarkGray;
+            Color color = unlocked ? Color.LightGreen : Color.DarkGray;
             spriteBatch.DrawString(_font,
-                $"{prefix}{allItems[i].Name}  ({allItems[i].Req})",
+                $"{prefix}{allItems[i].Name}  ({requirement})",
                 new Vector2(rightX, startY + i * 40), color);
         }
 
         // Blaster attachment unlock status
         int attY = startY + allItems.Length * 40 + 20;
         spriteBatch.DrawString(_font, "Blaster Attachment Unlocks:", new Vector2(rightX, attY - 30), Color.LightCyan);
-        var allAttachments = new (BlasterAttachmentType Type, string Name, string Req)[]
+        var allAttachments = new (BlasterAttachmentType Type, string Name)[]
         {
-            (BlasterAttachmentType.MultiShot,   "Multi-Shot",     "Level 1"),
-            (BlasterAttachmentType.RapidFire,   "Rapid Fire",     "Level 2"),
-            (BlasterAttachmentType.Piercing,    "Piercing Rounds","Level 3"),
-            (BlasterAttachmentType.DamageBoost, "Damage Amp",     "Level 4"),
-            (BlasterAttachmentType.DevBlaster,  "Dev Blaster",    "always [DEV]"),
+            (BlasterAttachmentType.MultiShot,   "Multi-Shot"),
+            (BlasterAttachmentType.RapidFire,   "Rapid Fire"),
+            (BlasterAttachmentType.Piercing,    "Piercing Rounds"),
+            (BlasterAttachmentType.DamageBoost, "Damage Amp"),
+            (BlasterAttachmentType.DevBlaster,  "Dev Blaster"),
         };
         for (int i = 0; i < allAttachments.Length; i++)
         {
             bool unlocked = UnlockTracker.IsAttachmentUnlocked(allAttachments[i].Type);
+            string requirement = allAttachments[i].Type == BlasterAttachmentType.DevBlaster
+                ? "always [DEV]"
+                : FormatRequirementLabel(UnlockTracker.GetAttachmentUnlockRequirement(allAttachments[i].Type));
             string prefix = unlocked ? "[+] " : "[ ] ";
-            Color color   = unlocked ? Color.LightGreen : Color.DarkGray;
+            Color color = unlocked ? Color.LightGreen : Color.DarkGray;
             spriteBatch.DrawString(_font,
-                $"{prefix}{allAttachments[i].Name}  ({allAttachments[i].Req})",
+                $"{prefix}{allAttachments[i].Name}  ({requirement})",
                 new Vector2(rightX, attY + i * 40), color);
         }
     }
@@ -319,18 +330,55 @@ internal class DevMenuScene : IScene
     private int GetVisibleRowCount()
     {
         int viewportHeight = _graphics.GraphicsDevice.Viewport.Height;
-        int usableHeight = Math.Max(RowHeight, viewportHeight - ListStartY - ListBottomMargin);
-        return Math.Max(1, usableHeight / RowHeight);
+        return Math.Max(1, GetLastVisibleIndex(_scrollOffset, viewportHeight) - _scrollOffset + 1);
     }
 
     private int GetMaxScrollOffset()
     {
-        return Math.Max(0, EntryCount - GetVisibleRowCount());
+        return Math.Max(0, EntryCount - 1);
     }
 
     private int GetRowY(int entryIndex)
     {
-        return ListStartY + (entryIndex - _scrollOffset) * RowHeight;
+        return GetRowY(entryIndex, _scrollOffset);
+    }
+
+    private int GetRowY(int entryIndex, int scrollOffset)
+    {
+        int spacing = GetSectionSpacingBeforeEntry(entryIndex) - GetSectionSpacingBeforeEntry(scrollOffset);
+        return ListStartY + (entryIndex - scrollOffset) * RowHeight + spacing;
+    }
+
+    private int GetSectionSpacingBeforeEntry(int entryIndex)
+    {
+        int spacing = 0;
+        if (entryIndex >= LevelFiles.Length)
+        {
+            spacing += SectionSpacing;
+        }
+
+        if (entryIndex >= LevelFiles.Length + AbilityNames.Length)
+        {
+            spacing += SectionSpacing;
+        }
+
+        return spacing;
+    }
+
+    private int GetLastVisibleIndex(int scrollOffset, int viewportHeight)
+    {
+        int lastVisible = scrollOffset;
+        for (int i = scrollOffset; i < EntryCount; i++)
+        {
+            if (!IsRowVisible(GetRowY(i, scrollOffset), viewportHeight))
+            {
+                break;
+            }
+
+            lastVisible = i;
+        }
+
+        return lastVisible;
     }
 
     private static bool IsRowVisible(int rowY, int viewportHeight)
@@ -340,14 +388,17 @@ internal class DevMenuScene : IScene
 
     private void EnsureCursorVisible()
     {
-        int visible = GetVisibleRowCount();
-        if (_cursor < _scrollOffset)
+        int viewportHeight = _graphics.GraphicsDevice.Viewport.Height;
+        _scrollOffset = Math.Clamp(_scrollOffset, 0, GetMaxScrollOffset());
+
+        while (_cursor < _scrollOffset)
         {
-            _scrollOffset = _cursor;
+            _scrollOffset--;
         }
-        else if (_cursor >= _scrollOffset + visible)
+
+        while (_cursor > _scrollOffset && !IsRowVisible(GetRowY(_cursor, _scrollOffset), viewportHeight))
         {
-            _scrollOffset = _cursor - visible + 1;
+            _scrollOffset++;
         }
 
         _scrollOffset = Math.Clamp(_scrollOffset, 0, GetMaxScrollOffset());
@@ -372,15 +423,25 @@ internal class DevMenuScene : IScene
             _scrollOffset = Math.Min(GetMaxScrollOffset(), _scrollOffset + 1);
         }
 
-        int visible = GetVisibleRowCount();
+        int viewportHeight = _graphics.GraphicsDevice.Viewport.Height;
         if (_cursor < _scrollOffset)
         {
             _cursor = _scrollOffset;
         }
-        else if (_cursor >= _scrollOffset + visible)
+        else if (!IsRowVisible(GetRowY(_cursor, _scrollOffset), viewportHeight))
         {
-            _cursor = Math.Min(EntryCount - 1, _scrollOffset + visible - 1);
+            _cursor = GetLastVisibleIndex(_scrollOffset, viewportHeight);
         }
+    }
+
+    private static string FormatRequirementLabel(string? levelName)
+    {
+        if (string.IsNullOrWhiteSpace(levelName))
+        {
+            return "always";
+        }
+
+        return UnlockTracker.GetLevelDisplayName(levelName);
     }
 
     private void DrawSectionHeaderIfVisible(SpriteBatch spriteBatch, string text, int sectionStartIndex, int x, int viewportHeight)
