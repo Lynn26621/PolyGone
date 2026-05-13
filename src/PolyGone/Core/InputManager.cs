@@ -610,9 +610,10 @@ public static class InputManager
                               && IsKeyPressed(Keys.D)
                               && _escapeKeyCooldown <= 0f;
 
-        bool gamepadBypass = _currentGamepadState.Buttons.Start == ButtonState.Pressed
-                             && _currentGamepadState.Buttons.A == ButtonState.Pressed
-                             && _previousGamepadState.Buttons.A == ButtonState.Released
+        bool gamepadBypass = (
+                                (IsButtonPressed(Buttons.Start) && IsButtonHeld(Buttons.A))
+                                || (IsButtonPressed(Buttons.A) && IsButtonHeld(Buttons.Start))
+                             )
                              && _escapeKeyCooldown <= 0f;
         return keyboardBypass || gamepadBypass;
     }
