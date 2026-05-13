@@ -11,29 +11,34 @@ using System.IO;
 using System.Text.Json;
 using System.Linq;
 using System;
+using PolyGone.Core;
 
 namespace PolyGone;
+
 internal class PauseScene : IScene
 {
-    private Texture2D _pixel;
-    private SpriteFont _font;
-    private KeyboardState keyboardState;
-    private KeyboardState previousKeyboardState;
+    private Texture2D? _pixel;
+    private SpriteFont? _font;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
+    private readonly AudioManager _audioManager;
     private readonly GraphicsDeviceManager _graphics;
     private readonly GameScene _gameScene;
-    private readonly string[] _options = { "Continue", "Restart Level", "Change Loadout (Restarts Level)", "Exit to Menu" };
+    private readonly string[] _options;
     private int _selectedIndex;
+    private readonly bool _isHub;
 
-    public PauseScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics, GameScene gameScene)
+    public PauseScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, GameScene gameScene)
     {
-        _pixel = null;
         _content = content;
         _sceneManager = sceneManager;
+        _audioManager = audioManager;
         _graphics = graphics;
         _gameScene = gameScene;
-        previousKeyboardState = Keyboard.GetState();
+        _isHub = gameScene.GetLevelName() == "Hub";
+        _options = _isHub
+            ? new[] { "Continue", "Inventory", "Exit to Menu" }
+            : new[] { "Continue", "Exit to Menu" };
         _selectedIndex = 0;
     }
 
@@ -47,7 +52,6 @@ internal class PauseScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        keyboardState = Keyboard.GetState();
 
         // Mouse navigation
         if (_font != null)
@@ -65,9 +69,7 @@ internal class PauseScene : IScene
                 if (bounds.Contains(InputManager.GetMousePosition()))
                 {
                     _selectedIndex = i;
-                    
-                    // Mouse click with InputManager
-                    if (InputManager.IsLeftMouseButtonClicked())
+                    if (InputManager.MenuConfirmMouseClick())
                     {
                         ExecuteSelection();
                         InputManager.ConsumeClick();
@@ -77,22 +79,21 @@ internal class PauseScene : IScene
         }
 
         // Keyboard navigation
-        if (IsKeyPressed(Keys.Up))
+        if (InputManager.MenuUp())
         {
             _selectedIndex = (_selectedIndex - 1 + _options.Length) % _options.Length;
         }
 
-        if (IsKeyPressed(Keys.Down))
+        if (InputManager.MenuDown())
         {
             _selectedIndex = (_selectedIndex + 1) % _options.Length;
         }
 
-        if (IsKeyPressed(Keys.Enter))
+        if (InputManager.MenuNonPointerConfirm())
         {
             ExecuteSelection();
         }
 
-        previousKeyboardState = keyboardState;
     }
 
     private void ExecuteSelection()
@@ -102,39 +103,20 @@ internal class PauseScene : IScene
             // Continue
             _sceneManager.PopScene(this);
         }
-        else if (_selectedIndex == 1)
+        else if (_selectedIndex == 1 && _isHub)
         {
-            // Restart Level - reload with same loadout
-            string levelName = _gameScene.GetLevelName();
-            List<ItemType> currentItems = _gameScene.GetSelectedItems();
-            WeaponType currentWeapon = _gameScene.GetSelectedWeapon();
-            
-            _sceneManager.PopScene(this); // Pop pause scene
-            _sceneManager.PopScene(_gameScene); // Pop game scene
-            // Create fresh game scene with same settings
-            var newGameScene = new GameScene(_content, _sceneManager, _graphics, levelName, currentItems, currentWeapon);
-            _sceneManager.AddScene(newGameScene);
+            // Inventory — only available in the hub
+            _sceneManager.PopScene(this);
+            _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _audioManager, _graphics, "Hub"));
             InputManager.ResetClickCooldown();
         }
-        else if (_selectedIndex == 2)
+        else
         {
-            // Change Loadout (Restarts Level) - go back to inventory management
-            // The original Menu and LevelSelect should still be in the stack from initial navigation
-            string levelName = _gameScene.GetLevelName();
-            _sceneManager.PopScene(this); // Pop pause scene
-            _sceneManager.PopScene(_gameScene); // Pop game scene
-            // Stack is now: Menu → LevelSelect
-            // Just add InventoryManagement on top
-            _sceneManager.AddScene(new InventoryManagement(_content, _sceneManager, _graphics, levelName));
-            InputManager.ResetClickCooldown();
-        }
-        else if (_selectedIndex == 3)
-        {
-            // Exit to Menu - clear all and go to menu
+            // Exit to Menu — clear all and go to menu
             _sceneManager.PopScene(this);
             _sceneManager.PopScene(_gameScene);
             // Pop any remaining scenes to get to a clean menu
-            _sceneManager.AddScene(new MenuScene(_content, _sceneManager, _graphics));
+            _sceneManager.AddScene(new MenuScene(_content, _sceneManager, _audioManager, _graphics));
         }
     }
 
@@ -165,11 +147,5 @@ internal class PauseScene : IScene
             }
         }
     }
-
-    private bool IsKeyPressed(Keys key)
-    {
-        return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
-    }
-
 
 }

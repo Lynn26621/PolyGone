@@ -31,16 +31,24 @@ public static class PurchaseTracker
         _purchases = new Dictionary<int, Dictionary<string, string>>();
         try
         {
-            if (!File.Exists(SavePath)) return;
+            if (!File.Exists(SavePath))
+            {
+                return;
+            }
 
             string json = File.ReadAllText(SavePath);
             var raw = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(json);
-            if (raw == null) return;
+            if (raw == null)
+            {
+                return;
+            }
 
             foreach (var kvp in raw)
             {
                 if (int.TryParse(kvp.Key, out int uid))
+                {
                     _purchases[uid] = kvp.Value ?? new Dictionary<string, string>();
+                }
             }
         }
         catch { }
@@ -52,8 +60,16 @@ public static class PurchaseTracker
     /// </summary>
     public static bool HasPurchased(int userId, string levelName)
     {
-        if (!_purchases.TryGetValue(userId, out var levels)) return false;
-        if (!levels.TryGetValue(levelName, out string? storedSig)) return false;
+        if (!_purchases.TryGetValue(userId, out var levels))
+        {
+            return false;
+        }
+
+        if (!levels.TryGetValue(levelName, out string? storedSig))
+        {
+            return false;
+        }
+
         return storedSig == ComputeSignature(userId, levelName);
     }
 
@@ -82,17 +98,35 @@ public static class PurchaseTracker
         return Convert.ToBase64String(hmac.ComputeHash(data));
     }
 
+    /// <summary>Clears all purchase records for every user and deletes the save file.</summary>
+    public static void Reset()
+    {
+        _purchases = new Dictionary<int, Dictionary<string, string>>();
+        try
+        {
+            if (File.Exists(SavePath))
+            {
+                File.Delete(SavePath);
+            }
+        }
+        catch { }
+    }
+
     private static void Save()
     {
         try
         {
             string? dir = Path.GetDirectoryName(SavePath);
             if (dir != null && !Directory.Exists(dir))
+            {
                 Directory.CreateDirectory(dir);
+            }
 
             var raw = new Dictionary<string, Dictionary<string, string>>();
             foreach (var kvp in _purchases)
+            {
                 raw[kvp.Key.ToString()] = kvp.Value;
+            }
 
             File.WriteAllText(SavePath, JsonSerializer.Serialize(raw));
         }

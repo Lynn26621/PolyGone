@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PolyGone.Core;
 
 namespace PolyGone;
 
@@ -20,6 +21,7 @@ internal class PaymentScene : IScene
     private Texture2D? _pixel;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
+    private readonly AudioManager _audioManager;
     private readonly GraphicsDeviceManager _graphics;
 
     private string _pin = "";
@@ -27,18 +29,16 @@ internal class PaymentScene : IScene
     private bool _isProcessing = false;
     private Task<FormbarService.TransferResult>? _paymentTask;
 
-    private KeyboardState _keyboardState;
-    private KeyboardState _previousKeyboardState;
 
     // Maximum chars rendered inside the PIN box (prevents overflow)
     private const int PinDisplayMax = 8;
 
-    public PaymentScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
+    public PaymentScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)
     {
         _content = content;
         _sceneManager = sceneManager;
+        _audioManager = audioManager;
         _graphics = graphics;
-        _previousKeyboardState = Keyboard.GetState();
     }
 
     public void Load()
@@ -56,7 +56,11 @@ internal class PaymentScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        _keyboardState = Keyboard.GetState();
+        if (InputManager.MenuBack())
+        {
+            Environment.Exit(0);
+            return;
+        }
 
         // Poll async payment task
         if (_paymentTask != null && _paymentTask.IsCompleted)
@@ -78,7 +82,6 @@ internal class PaymentScene : IScene
 
         if (_isProcessing)
         {
-            _previousKeyboardState = _keyboardState;
             return;
         }
 
@@ -90,28 +93,26 @@ internal class PaymentScene : IScene
             else if (char.IsDigit(c) && _pin.Length < FormbarSession.PinMaxLength) _pin += c;
         }
 
-        if (IsKeyPressed(Keys.Enter) && _pin.Length > 0)
+        if (InputManager.MenuNonPointerConfirm() && _pin.Length > 0)
             StartPayment();
 
 #if DEBUG
         // Developer bypass: Ctrl + Shift + D skips payment entirely
-        if (_keyboardState.IsKeyDown(Keys.LeftControl) &&
-            _keyboardState.IsKeyDown(Keys.LeftShift) &&
-            IsKeyPressed(Keys.D))
+        if (InputManager.DevPaymentBypass())
         {
             DevBypass();
             return;
         }
 #endif
 
-        if (_font == null || !InputManager.IsLeftMouseButtonClicked())
+        if (_font == null)
         {
-            _previousKeyboardState = _keyboardState;
             return;
         }
 
         var viewport = _graphics.GraphicsDevice.Viewport;
         var mousePos = InputManager.GetMousePosition();
+        bool mouseConfirm = InputManager.MenuMouseConfirm();
         float cx = viewport.Width / 2f;
         float cy = viewport.Height / 2f;
 
@@ -120,10 +121,11 @@ internal class PaymentScene : IScene
         string payLabel = $"Pay {FormbarSession.LevelCost} Digipogs";
         var paySize = _font.MeasureString(payLabel);
         var payBounds = Btn((int)(cx - paySize.X / 2f), (int)payBtnY, paySize);
-        if (payBounds.Contains(mousePos) && _pin.Length > 0)
+        if (payBounds.Contains(mousePos) && mouseConfirm && _pin.Length > 0)
         {
             StartPayment();
             InputManager.ConsumeClick();
+            return;
         }
 
         // Log Out button  (same Y as drawn: cy + 2*RowGap)
@@ -131,13 +133,23 @@ internal class PaymentScene : IScene
         string logoutLabel = "Log Out";
         var logoutSize = _font.MeasureString(logoutLabel);
         var logoutBounds = Btn((int)(cx - logoutSize.X / 2f), (int)logoutBtnY, logoutSize);
-        if (logoutBounds.Contains(mousePos))
+        if (logoutBounds.Contains(mousePos) && mouseConfirm)
         {
             DoLogout();
             InputManager.ConsumeClick();
+            return;
         }
 
-        _previousKeyboardState = _keyboardState;
+        // Exit button  (same Y as drawn: cy + 3*RowGap)
+        float exitBtnY = cy + RowGap * 3f;
+        string exitLabel = "Exit";
+        var exitSize = _font.MeasureString(exitLabel);
+        var exitBounds = Btn((int)(cx - exitSize.X / 2f), (int)exitBtnY, exitSize);
+        if (exitBounds.Contains(mousePos) && mouseConfirm)
+        {
+            InputManager.ConsumeClick();
+            Environment.Exit(0);
+        }
     }
 
     private void StartPayment()
@@ -163,7 +175,7 @@ internal class PaymentScene : IScene
     {
         FormbarSession.Clear();
         _sceneManager.PopScene(this);
-        _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _graphics));
+        _sceneManager.AddScene(new FormbarLoginScene(_content, _sceneManager, _audioManager, _graphics));
     }
 
     // -----------------------------------------------------------------------
@@ -229,12 +241,20 @@ internal class PaymentScene : IScene
         spriteBatch.Draw(_pixel, Btn((int)logoutX, (int)logoutBtnY, logoutSize), new Color(80, 30, 30));
         spriteBatch.DrawString(_font, logoutLabel, new Vector2(logoutX, logoutBtnY), Color.White);
 
-        // Row 7  (cy + 3*gap): status message
+        // Row 7  (cy + 3*gap): Exit button
+        float exitBtnY = cy + RowGap * 3f;
+        string exitLabel = "Exit";
+        var exitSize = _font.MeasureString(exitLabel);
+        float exitX = cx - exitSize.X / 2f;
+        spriteBatch.Draw(_pixel, Btn((int)exitX, (int)exitBtnY, exitSize), new Color(80, 30, 30));
+        spriteBatch.DrawString(_font, exitLabel, new Vector2(exitX, exitBtnY), Color.White);
+
+        // Row 8  (cy + 4*gap): status message
         if (!string.IsNullOrEmpty(_statusMessage))
         {
             Color statusColor = _statusMessage.StartsWith("Payment failed", StringComparison.OrdinalIgnoreCase)
                 ? Color.OrangeRed : Color.LightGray;
-            DrawCentered(spriteBatch, viewport, _statusMessage, cy + RowGap * 3f, statusColor);
+            DrawCentered(spriteBatch, viewport, _statusMessage, cy + RowGap * 4f, statusColor);
         }
 
 #if DEBUG
@@ -255,7 +275,4 @@ internal class PaymentScene : IScene
     /// <summary>Returns a padded button Rectangle for a text element at (x, y).</summary>
     private static Rectangle Btn(int x, int y, Vector2 textSize) =>
         new Rectangle(x - 10, y - 5, (int)textSize.X + 20, (int)textSize.Y + 10);
-
-    private bool IsKeyPressed(Keys key) =>
-        _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
 }

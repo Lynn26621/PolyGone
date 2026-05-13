@@ -1,7 +1,8 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.Collections.Generic;
+using PolyGone.Core;
 using PolyGone.Entities;
+using System.Collections.Generic;
 
 namespace PolyGone;
 
@@ -11,6 +12,7 @@ namespace PolyGone;
 class TurretEnemy : Enemy
 {
     private readonly Player player;
+    private AudioManager audioManager;
     private float shootCooldown = 0f;
     private const float SHOOT_COOLDOWN = 120f; // 2 seconds at 60 fps
     private const float SHOOT_RANGE = 700f;    // Max firing range in pixels
@@ -23,16 +25,18 @@ class TurretEnemy : Enemy
     public TurretEnemy(
         Texture2D texture,
         Vector2 position,
+        AudioManager audioManager,
         int[] size,
         Player player,
         int health = 80,
         Color color = default,
         Rectangle? srcRect = null,
-        Dictionary<Vector2, int>? collisionMap = null,
+        Dictionary<Vector2, int>? CollisionMap = null,
         int[]? visualSize = null)
-        : base(texture, position, size, health, color, srcRect, collisionMap, patrolSpeed: 0f, visualSize: visualSize)
+        : base(texture, position, audioManager, size, health, color, srcRect, CollisionMap, patrolSpeed: 0f, visualSize: visualSize)
     {
         this.player = player;
+        this.audioManager = audioManager;
     }
 
     private void ShootAtPlayer()
@@ -53,6 +57,7 @@ class TurretEnemy : Enemy
         Bullets.Add(new Projectile(
             texture: texture,
             position: new Vector2(myCenter.X - 5f, myCenter.Y - 5f),
+            audioManager: audioManager,
             size: new int[2] { 10, 10 },
             lifetime: 200f,
             health: 1,
@@ -62,8 +67,11 @@ class TurretEnemy : Enemy
             ySpeed: direction.Y * BULLET_SPEED,
             owner: Owner.Enemy,
             srcRect: srcRect,
-            collisionMap: collisionMap
+            CollisionMap: CollisionMap
         ));
+
+        audioManager.PlayAudio("shootSfx", true, "null", false); //Play shoot sound effect
+
     }
 
     public override void Update(GameTime gameTime)
@@ -83,7 +91,7 @@ class TurretEnemy : Enemy
         for (int i = Bullets.Count - 1; i >= 0; i--)
         {
             Bullets[i].Update(gameTime);
-            if (Bullets[i].lifetime <= 0)
+            if (Bullets[i].Lifetime <= 0)
             {
                 Bullets.RemoveAt(i);
             }

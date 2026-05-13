@@ -66,7 +66,9 @@ public static class FormbarSession
         {
             string? dir = Path.GetDirectoryName(SessionPath);
             if (dir != null && !Directory.Exists(dir))
+            {
                 Directory.CreateDirectory(dir);
+            }
 
             var data = new { ServerUrl, ApiKey, UserId, DisplayName };
             File.WriteAllText(SessionPath, JsonSerializer.Serialize(data));
@@ -83,7 +85,10 @@ public static class FormbarSession
     {
         try
         {
-            if (!File.Exists(SessionPath)) return false;
+            if (!File.Exists(SessionPath))
+            {
+                return false;
+            }
 
             string json = File.ReadAllText(SessionPath);
             using var doc = JsonDocument.Parse(json);
@@ -92,7 +97,10 @@ public static class FormbarSession
             string apiKey = root.TryGetProperty("ApiKey", out var ak) ? ak.GetString() ?? "" : "";
 
             // Reject the saved session if the JWT has already expired
-            if (IsJwtExpired(apiKey)) return false;
+            if (IsJwtExpired(apiKey))
+            {
+                return false;
+            }
 
             ServerUrl = root.TryGetProperty("ServerUrl", out var su)
                 ? su.GetString() ?? DefaultServerUrl
@@ -112,14 +120,25 @@ public static class FormbarSession
         try
         {
             var parts = jwt.Split('.');
-            if (parts.Length != 3) return true;
+            if (parts.Length != 3)
+            {
+                return true;
+            }
+
             string b64 = parts[1].Replace('-', '+').Replace('_', '/');
             int pad = (4 - b64.Length % 4) % 4;
-            if (pad < 4) b64 += new string('=', pad);
+            if (pad < 4)
+            {
+                b64 += new string('=', pad);
+            }
+
             string payload = Encoding.UTF8.GetString(Convert.FromBase64String(b64));
             using var doc = JsonDocument.Parse(payload);
             if (doc.RootElement.TryGetProperty("exp", out var exp))
+            {
                 return DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= exp.GetInt64();
+            }
+
             return false; // no exp claim – treat as non-expiring
         }
         catch { return true; }
@@ -132,6 +151,10 @@ public static class FormbarSession
         UserId = 0;
         DisplayName = "";
         IsLoggedIn = false;
-        try { if (File.Exists(SessionPath)) File.Delete(SessionPath); } catch { }
+        try { if (File.Exists(SessionPath))
+            {
+                File.Delete(SessionPath);
+            }
+        } catch { }
     }
 }

@@ -9,54 +9,90 @@ using System.Linq;
 using System;
 using PolyGone.Entities;
 using PolyGone.Graphics;
+using PolyGone.Core;
+using System.Diagnostics;
 
 namespace PolyGone;
 
 public class GameScene : IScene
 {
     private ContentManager contentManager;
-    private Texture2D texture;
-    private SpriteFont hudFont;
+    private Texture2D playerSheet = null!;
+    private Texture2D enemySheet = null!;
+    private Texture2D miscSheet = null!;
+    private Texture2D textureSheet = null!;
+    private Texture2D foregroundSheet = null!;
+    private Texture2D uiSheet = null!;
+    private Texture2D? backgroundSheet;
+    private Texture2D collisionSheet = null!;
+    private Vector2 backgroundLayerOffset = Vector2.Zero;
+    private Vector2 backgroundParallax = new Vector2(0.5f, 0.5f);
+    private float backgroundOpacity = 1f;
+    private bool backgroundRepeatX = false;
+    private bool backgroundRepeatY = false;
+    private int mapWidth;
+    private int mapHeight;
+    private AudioManager audioManager;
+    private SpriteFont hudFont = null!;
     private SceneManager sceneManager;
-    private Player player;
-    private FollowCamera camera;
-    private GameUI gameUI;
+    private Player player = null!;
+    private FollowCamera camera = null!;
+    private GameUI gameUI = null!;
     private readonly GraphicsDeviceManager graphics;
     private Dictionary<Vector2, int> tileMap = null!;
-    private Dictionary<Vector2, int> collisionMap = null!;
+    private Dictionary<Vector2, int> CollisionMap = null!;
+    private Dictionary<string, int> layerFirstGid = new(); // Store firstgid for each layer
     private List<Rectangle> textureStore;
+    private List<Rectangle> tileTextureStore;
+    private string tileTextureAssetName = "Textures/Tiles/PolyGoneTextureSheet";
+    private int[] tileTextureGridSize = new int[2] { 8, 8 };
     private Vector2 playerPos;
     private bool playerSpawnFound = false;
     private readonly List<Vector2> enemySpawns = new(); // Store enemy spawn positions
     private readonly List<Vector2> turretEnemySpawns = new(); // Store turret spawn positions
+    private readonly List<Vector2> berserkEnemySpawns = new(); // Store berserk spawn positions
+    private readonly List<Vector2> factoryEnemySpawns = new(); // Store factory spawn positions
+    private readonly List<Vector2> frogSpawns = new(); // Store frog spawn positions
     private readonly List<Entity> enemies = new(); // Placeholder for enemy list
     private readonly List<TurretEnemy> turretEnemies = new(); // Stationary blaster enemies
+    private readonly List<BerserkEnemy> berserkEnemies = new(); // Chasing enemies that shoot when low health
+    private readonly List<FactoryEnemy> factoryEnemies = new(); // Stationary enemies that spawn patrol enemies
+    private readonly List<Frog> frogs = new(); // Jumping enemies
     private readonly List<Projectile> orphanedTurretBullets = new(); // Bullets that outlive their turret
-    private GoalTrigger goalTrigger; // Win condition trigger
+    private GoalTrigger goalTrigger = null!; // Win condition trigger
+    private SwitchTrigger inventoryAccess = null!; // Inventory access trigger
+    private List<LevelDoor> levelDoors = new(); // Doors connecting levels to hub
     private bool levelComplete = false;
     private bool gameOver = false;
     private readonly List<ItemType> selectedItems;
-    private readonly WeaponType selectedWeapon;
+    private readonly List<BlasterAttachmentType> selectedAttachments;
     private readonly string levelName;
+    private int? loadX;
+    private int? loadY;
 
-    public GameScene(ContentManager contentManager, SceneManager sceneManager, GraphicsDeviceManager graphics, string levelName = "TestLevel", List<ItemType>? selectedItems = null, WeaponType selectedWeapon = WeaponType.Blaster)
-    {       
+    public GameScene(ContentManager contentManager, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics, string levelName = "Level1", List<ItemType>? selectedItems = null, List<BlasterAttachmentType>? selectedAttachments = null, int? loadX = null, int? loadY = null)
+    {
         this.contentManager = contentManager;
         this.sceneManager = sceneManager;
+        this.audioManager = audioManager;
         this.graphics = graphics;
-        this.selectedItems = selectedItems ?? new List<ItemType>(); // Default to empty list
-        this.selectedWeapon = selectedWeapon;
+        this.selectedItems = selectedItems ?? new List<ItemType>();
+        this.selectedAttachments = selectedAttachments ?? new List<BlasterAttachmentType>();
         this.levelName = levelName;
+        this.loadX = loadX;
+        this.loadY = loadY;
+
         LoadMapFromJson("Maps/" + levelName + ".json");
-        textureStore = GetTextureStore(32, new int[2] { 4, 4 });
+        textureStore = GetTextureStore(32, new int[2] { 8, 8 });
+        tileTextureStore = GetTextureStore(32, tileTextureGridSize);
     }
 
     // Public method to get the level name for restart functionality
     public string GetLevelName() => levelName;
-    
+
     // Public methods to get the current loadout for restart functionality
     public List<ItemType> GetSelectedItems() => new List<ItemType>(selectedItems);
-    public WeaponType GetSelectedWeapon() => selectedWeapon;
+    public List<BlasterAttachmentType> GetSelectedAttachments() => new List<BlasterAttachmentType>(selectedAttachments);
 
     // Generates a list of rectangles representing individual textures in a texture atlas
     public List<Rectangle> GetTextureStore(int textureSize, int[] gridSize)
@@ -80,106 +116,444 @@ public class GameScene : IScene
         return new Vector2(x * 2, y * 2 - 64);
     }
 
+    private Texture2D LoadImageLayerTexture(string mapFilePath, string imagePath)
+    {
+        string mapDirectory = Path.GetDirectoryName(Path.GetFullPath(mapFilePath)) ?? Directory.GetCurrentDirectory();
+        string resolvedPath = Path.GetFullPath(Path.Combine(mapDirectory, imagePath));
+
+        if (!File.Exists(resolvedPath))
+        {
+            throw new FileNotFoundException($"Could not find background image '{imagePath}' referenced by '{mapFilePath}'.", resolvedPath);
+        }
+
+        using FileStream stream = File.OpenRead(resolvedPath);
+        return Texture2D.FromStream(graphics.GraphicsDevice, stream);
+    }
+
+    private static float GetFloatProperty(JsonElement element, string propertyName, float defaultValue)
+    {
+        if (!element.TryGetProperty(propertyName, out JsonElement property))
+        {
+            return defaultValue;
+        }
+
+        return property.ValueKind switch
+        {
+            JsonValueKind.Number => property.GetSingle(),
+            JsonValueKind.String when float.TryParse(property.GetString(), out float parsedValue) => parsedValue,
+            _ => defaultValue,
+        };
+    }
+
+    private static bool GetBoolProperty(JsonElement element, string propertyName, bool defaultValue)
+    {
+        if (!element.TryGetProperty(propertyName, out JsonElement property))
+        {
+            return defaultValue;
+        }
+
+        return property.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String when bool.TryParse(property.GetString(), out bool parsedValue) => parsedValue,
+            _ => defaultValue,
+        };
+    }
+
+    private static int ResolveTilesetFirstGid(int globalTileId, List<int> sortedFirstGids)
+    {
+        // Tiled encodes flip flags in the top three bits of the gid.
+        const uint GidMask = 0x1FFFFFFF;
+        int cleanGid = (int)((uint)globalTileId & GidMask);
+
+        int resolvedFirstGid = 1;
+        foreach (int firstGid in sortedFirstGids)
+        {
+            if (cleanGid >= firstGid)
+            {
+                resolvedFirstGid = firstGid;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return resolvedFirstGid;
+    }
+
+    private void ConfigureTileTextureFromTilesetSource(string tilesetSource)
+    {
+        string filename = Path.GetFileName(tilesetSource);
+        if (string.Equals(filename, "Basic.tsx", StringComparison.OrdinalIgnoreCase))
+        {
+            tileTextureAssetName = "Textures/Tiles/PolyGoneBasic";
+            tileTextureGridSize = new int[2] { 2, 2 };
+            return;
+        }
+
+        if (string.Equals(filename, "Proto.tsx", StringComparison.OrdinalIgnoreCase))
+        {
+            tileTextureAssetName = "Textures/Tiles/PolyGoneProto";
+            tileTextureGridSize = new int[2] { 8, 8 };
+            return;
+        }
+
+        if (string.Equals(filename, "TextureSheet.tsx", StringComparison.OrdinalIgnoreCase))
+        {
+            tileTextureAssetName = "Textures/Tiles/PolyGoneTextureSheet";
+            tileTextureGridSize = new int[2] { 8, 8 };
+        }
+    }
+
     // Loads tile and collision maps from a JSON file exported from Tiled
     public void LoadMapFromJson(string filepath)
     {
         // Read and parse JSON file
         string jsonContent = File.ReadAllText(filepath);
         using JsonDocument doc = JsonDocument.Parse(jsonContent);
-        
+
         // Get root and layers
         JsonElement root = doc.RootElement;
         JsonElement layers = root.GetProperty("layers");
-        
-        int width = root.GetProperty("width").GetInt32();
-        
+
+        mapWidth = root.GetProperty("width").GetInt32();
+        mapHeight = root.GetProperty("height").GetInt32();
+
+        // Extract firstgid values from tilesets
+        layerFirstGid.Clear();
+        List<int> sortedFirstGids = new();
+        Dictionary<int, string> tilesetSourceByFirstGid = new();
+        if (root.TryGetProperty("tilesets", out JsonElement tilesetsArray))
+        {
+            foreach (JsonElement tileset in tilesetsArray.EnumerateArray())
+            {
+                if (tileset.TryGetProperty("firstgid", out JsonElement firstgidElement))
+                {
+                    int firstgid = firstgidElement.GetInt32();
+                    sortedFirstGids.Add(firstgid);
+
+                    if (tileset.TryGetProperty("source", out JsonElement sourceElement))
+                    {
+                        string tilesetSource = sourceElement.GetString() ?? string.Empty;
+                        tilesetSourceByFirstGid[firstgid] = tilesetSource;
+                    }
+
+                    if (tileset.TryGetProperty("name", out JsonElement nameElement))
+                    {
+                        string tilesetName = nameElement.GetString() ?? "";
+                        layerFirstGid[tilesetName] = firstgid;
+                    }
+                }
+            }
+        }
+        sortedFirstGids.Sort();
+
+        // Default visual tileset unless a tiles layer indicates otherwise.
+        tileTextureAssetName = "Textures/Tiles/PolyGoneTextureSheet";
+        tileTextureGridSize = new int[2] { 8, 8 };
+
         tileMap = new Dictionary<Vector2, int>();
-        collisionMap = new Dictionary<Vector2, int>();
-        
+        CollisionMap = new Dictionary<Vector2, int>();
+        backgroundSheet = null;
+        backgroundLayerOffset = Vector2.Zero;
+        backgroundParallax = new Vector2(0.5f, 0.5f);
+        backgroundOpacity = 1f;
+        backgroundRepeatX = false;
+        backgroundRepeatY = false;
+
         foreach (JsonElement layer in layers.EnumerateArray())
         {
+            string? layerType = layer.GetProperty("type").GetString();
             string? layerName = layer.GetProperty("name").GetString();
-            // Process tile and collision layers
-            if (layerName != "Objects")
+
+            if (layerType == "imagelayer")
+            {
+                if (backgroundSheet == null && layer.TryGetProperty("image", out JsonElement imageProperty))
+                {
+                    string? imagePath = imageProperty.GetString();
+                    if (!string.IsNullOrWhiteSpace(imagePath))
+                    {
+                        backgroundSheet = LoadImageLayerTexture(filepath, imagePath);
+                        backgroundLayerOffset = new Vector2(
+                            (GetFloatProperty(layer, "x", 0f) + GetFloatProperty(layer, "offsetx", 0f)) * 2f,
+                            (GetFloatProperty(layer, "y", 0f) + GetFloatProperty(layer, "offsety", 0f)) * 2f
+                        );
+                        backgroundParallax = new Vector2(
+                            GetFloatProperty(layer, "parallaxx", 0.5f),
+                            GetFloatProperty(layer, "parallaxy", 0.5f)
+                        );
+                        backgroundOpacity = GetFloatProperty(layer, "opacity", 1f);
+                        backgroundRepeatX = GetBoolProperty(layer, "repeatx", false);
+                        backgroundRepeatY = GetBoolProperty(layer, "repeaty", false);
+                    }
+                }
+
+                continue;
+            }
+
+            if (layerType == "tilelayer")
             {
                 JsonElement dataArray = layer.GetProperty("data");
-                
+                bool isTileLayer = string.Equals(layerName, "tiles", StringComparison.OrdinalIgnoreCase);
+                bool isCollisionLayer = string.Equals(layerName, "collisions", StringComparison.OrdinalIgnoreCase);
+
+                // Some legacy maps encode collision gids from different source tilesets.
+                // Use the first non-zero gid on the layer as a fallback base when firstgid-based
+                // conversion produces ids outside our CollisionTypeMapper range.
+                int collisionLayerBaseGid = 0;
+                if (isCollisionLayer)
+                {
+                    foreach (JsonElement tile in dataArray.EnumerateArray())
+                    {
+                        int cleanTileValue = (int)((uint)tile.GetInt32() & 0x1FFFFFFF);
+                        if (cleanTileValue > 0)
+                        {
+                            collisionLayerBaseGid = cleanTileValue;
+                            break;
+                        }
+                    }
+                }
+
                 int index = 0;
                 foreach (JsonElement tile in dataArray.EnumerateArray())
                 {
                     int tileValue = tile.GetInt32();
-                    int x = index % width;
-                    int y = index / width;
-                    
-                    if (tileValue > 0)
+                    int cleanTileValue = (int)((uint)tileValue & 0x1FFFFFFF);
+                    int x = index % mapWidth;
+                    int y = index / mapWidth;
+
+                    if (cleanTileValue > 0)
                     {
-                        // Tiled's firstgid is 1, so we subtract 1 to convert to 0-based index.
-                        // Wrap tileValue to fit within our texture store (assuming 16 tiles per layer in Tiled)
-                        if (layerName == "Tiles")
+                        int firstgid = ResolveTilesetFirstGid(cleanTileValue, sortedFirstGids);
+                        int localTileId = cleanTileValue - firstgid;
+
+                        if (isTileLayer && tilesetSourceByFirstGid.TryGetValue(firstgid, out string? tilesetSource) && !string.IsNullOrEmpty(tilesetSource))
                         {
-                            tileMap[new Vector2(x, y)] = tileValue % 16 - 1; 
+                            ConfigureTileTextureFromTilesetSource(tilesetSource);
                         }
-                        else if (layerName == "Collisions")
+
+                        if (isTileLayer)
                         {
-                            collisionMap[new Vector2(x, y)] = tileValue % 16 - 1;
+                            tileMap[new Vector2(x, y)] = Math.Max(localTileId, 0);
+                        }
+                        else if (isCollisionLayer)
+                        {
+                            // Preferred conversion uses tileset firstgid. Fallback handles maps where
+                            // collision gids are authored from a non-collision tileset palette.
+                            if ((localTileId < 0 || localTileId > 4) && collisionLayerBaseGid > 0)
+                            {
+                                localTileId = cleanTileValue - collisionLayerBaseGid;
+                            }
+
+                            CollisionMap[new Vector2(x, y)] = localTileId;
                         }
                     }
-                    
+
                     index++;
                 }
+
+                continue;
             }
-            // Process object layer for entity spawns and other objects
-            else
+
+            if (layerType != "objectgroup")
             {
-                List<JsonElement> objects = layer.GetProperty("objects").EnumerateArray().ToList();
-                foreach (JsonElement obj in objects)
+                continue;
+            }
+
+            List<JsonElement> objects = layer.GetProperty("objects").EnumerateArray().ToList();
+            foreach (JsonElement obj in objects)
+            {
+                string? objType = obj.GetProperty("type").GetString();
+                switch (objType)
                 {
-                    string? objType = obj.GetProperty("type").GetString();
-                    switch (objType)
-                    {
-                        case "Player":
-                            playerPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            playerSpawnFound = true;
-                            break;
-                        case "Enemy":
-                            Vector2 enemyPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            enemySpawns.Add(enemyPos);
-                            break;
-                        case "TurretEnemy":
-                            Vector2 turretPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            turretEnemySpawns.Add(turretPos);
-                            break;
-                        case "Goal":
-                            Vector2 goalPos = AdjustCoordinates(
-                                obj.GetProperty("x").GetSingle(),
-                                obj.GetProperty("y").GetSingle()
-                            );
-                            int goalWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
-                            int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
-                            goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight);
-                            break;
-                        default:
-                            break;
-                    }
+                    case "Player":
+                    case "PlayerSpawn":
+                        int playerX;
+                        int playerY;
+                        if (loadX.HasValue && loadY.HasValue)
+                        {
+                            playerX = loadX.Value;
+                            playerY = loadY.Value;
+                        }
+                        else
+                        {
+                            playerX = (int)obj.GetProperty("x").GetSingle();
+                            playerY = (int)obj.GetProperty("y").GetSingle();
+                        }
+                        playerPos = AdjustCoordinates(
+                            playerX,
+                            playerY
+                        );
+                        playerSpawnFound = true;
+                        break;
+                    case "Enemy":
+                        Vector2 enemyPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        enemySpawns.Add(enemyPos);
+                        break;
+                    case "Turret":
+                        Vector2 turretPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        turretEnemySpawns.Add(turretPos);
+                        break;
+                    case "Berserk":
+                        Vector2 berserkPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        berserkEnemySpawns.Add(berserkPos);
+                        break;
+                    case "Factory":
+                        Vector2 factoryPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        factoryEnemySpawns.Add(factoryPos);
+                        break;
+                    case "Frog":
+                        Vector2 frogPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        frogSpawns.Add(frogPos);
+                        break;
+                    case "Goal":
+                        Vector2 goalPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        int goalWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                        int goalHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                        goalTrigger = new GoalTrigger(goalPos, goalWidth, goalHeight, audioManager);
+                        break;
+                    case "Door":
+                        Vector2 doorPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        int doorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                        int doorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                        string connects = "Hub";
+                        int playerLoadX = 0;
+                        int playerLoadY = 0;
+                        string? requirement = null;
+                        List<JsonElement> properties = obj.GetProperty("properties").EnumerateArray().ToList();
+                        foreach (JsonElement prop in properties)
+                        {
+                            string? propName = prop.GetProperty("name").GetString();
+                            switch (propName)
+                            {
+                                case "connects":
+                                    connects = (string)(prop.GetProperty("value").GetString() ?? "Hub");
+                                    break;
+                                case "loadX":
+                                    playerLoadX = (int)prop.GetProperty("value").GetSingle();
+                                    break;
+                                case "loadY":
+                                    playerLoadY = (int)prop.GetProperty("value").GetSingle();
+                                    break;
+                                case "requirement":
+                                    requirement = prop.GetProperty("value").GetString();
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                        // Extract the object's name from the Tiled object (if present) to use as hover text
+                        string? doorName = null;
+                        if (obj.TryGetProperty("name", out JsonElement nameElem))
+                        {
+                            doorName = nameElem.GetString();
+                        }
+
+                        levelDoors.Add(new LevelDoor(doorPos, doorWidth, doorHeight, audioManager, connects, playerLoadX, playerLoadY, requirement, doorName));
+                        break;
+                    case "SubDoor":
+                        Vector2 subDoorPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        int subDoorWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                        int subDoorHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                        string subDoorConnects = levelName;
+                        int subDoorLoadX = 0;
+                        int subDoorLoadY = 0;
+                        string? subDoorRequirement = null;
+                        if (obj.TryGetProperty("properties", out JsonElement subDoorPropertiesElement) &&
+                            subDoorPropertiesElement.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (JsonElement prop in subDoorPropertiesElement.EnumerateArray())
+                            {
+                                string? propName = prop.GetProperty("name").GetString();
+                                switch (propName)
+                                {
+                                    case "connects":
+                                        subDoorConnects = (string)(prop.GetProperty("value").GetString() ?? levelName);
+                                        break;
+                                    case "loadX":
+                                        subDoorLoadX = (int)prop.GetProperty("value").GetSingle();
+                                        break;
+                                    case "loadY":
+                                        subDoorLoadY = (int)prop.GetProperty("value").GetSingle();
+                                        break;
+                                    case "requirement":
+                                        subDoorRequirement = prop.GetProperty("value").GetString();
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            subDoorLoadX = (int)obj.GetProperty("x").GetSingle();
+                            subDoorLoadY = (int)obj.GetProperty("y").GetSingle();
+                        }
+                        string? subDoorName = null;
+                        if (obj.TryGetProperty("name", out JsonElement subDoorNameElem))
+                        {
+                            subDoorName = subDoorNameElem.GetString();
+                        }
+
+                        levelDoors.Add(new SubDoor(subDoorPos, subDoorWidth, subDoorHeight, audioManager, subDoorConnects, subDoorLoadX, subDoorLoadY, subDoorRequirement, subDoorName));
+                        break;
+                    case "Inventory":
+                        Vector2 inventoryPos = AdjustCoordinates(
+                            obj.GetProperty("x").GetSingle(),
+                            obj.GetProperty("y").GetSingle()
+                        );
+                        int inventoryWidth = (int)(obj.GetProperty("width").GetSingle() * 2);
+                        int inventoryHeight = (int)(obj.GetProperty("height").GetSingle() * 2);
+                        inventoryAccess = new SwitchTrigger(inventoryPos, inventoryWidth, inventoryHeight, audioManager);
+                        break;
+                    default:
+                        break;
                 }
-            } 
+            }
         }
-        
+
+        tileTextureStore = GetTextureStore(32, tileTextureGridSize);
+
+        // If no player marker exists in the map, allow door-provided coordinates.
+        if (!playerSpawnFound && loadX.HasValue && loadY.HasValue)
+        {
+            playerPos = AdjustCoordinates(loadX.Value, loadY.Value);
+            playerSpawnFound = true;
+        }
+
         // Validate that a player spawn was found
         if (!playerSpawnFound)
         {
             throw new InvalidOperationException(
-                $"Map file '{filepath}' is missing a required PlayerSpawn object in the Objects layer. " +
-                "Please ensure the map contains exactly one object with type='PlayerSpawn'."
+                $"Map file '{filepath}' is missing a required player spawn in the Objects layer. " +
+                "Please ensure the map contains exactly one object with type='Player' or type='PlayerSpawn', " +
+                "or provide door load coordinates when transitioning into this level."
             );
         }
     }
@@ -188,9 +562,18 @@ public class GameScene : IScene
     {
         // Reset input state to prevent carried over clicks from triggering actions
         InputManager.ResetClickCooldown();
-        
+
+        //Play level music
+        audioManager.PlayAudio("null", false, "level1Song", true);
+
         // Load texture atlas and initialize camera
-        texture = contentManager.Load<Texture2D>("PolyGoneTileMap");
+        playerSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGonePlayerSheet");
+        enemySheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneEnemySheet");
+        miscSheet = contentManager.Load<Texture2D>("Textures/Sprites/PolyGoneMiscSpriteSheet");
+        uiSheet = contentManager.Load<Texture2D>("Textures/UI/PolyGoneUI");
+        textureSheet = contentManager.Load<Texture2D>(tileTextureAssetName);
+        foregroundSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneFgSheet");
+        collisionSheet = contentManager.Load<Texture2D>("Textures/Tiles/PolyGoneCollisionSheet");
         try
         {
             hudFont = contentManager.Load<SpriteFont>("Fonts/PauseMenu");
@@ -202,82 +585,170 @@ public class GameScene : IScene
         camera = new(new Vector2(0, 0));
         // Initialize player with selected items and weapon
         player = new Player(
-            texture: texture,
+            texture: playerSheet,
             position: playerPos,
-            size: new int[2] { 60, 60 },
+            size: new int[2] { 40, 60 },
             health: 100,
             color: Color.White,
-            srcRect: textureStore[1],
-            collisionMap: collisionMap,
-            blasterTexture: texture,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
+            blasterTexture: playerSheet,
             selectedItems: selectedItems,
-            selectedWeapon: selectedWeapon,
+            selectedAttachments: selectedAttachments,
+            audioManager: audioManager,
             visualSize: new int[2] { 64, 64 }
         );
-        
+
         // Initialize GameUI
-        gameUI = new GameUI(player, texture, textureStore[4], hudFont);
+        gameUI = new GameUI(player, uiSheet, textureStore[2], hudFont);
         // Initialize turret enemies
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 80,
             color: Color.White,
-            srcRect: textureStore[6],
-            collisionMap: collisionMap,
+            srcRect: textureStore[1],
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Initialize berserk enemies
+        berserkEnemies.AddRange(berserkEnemySpawns.Select(spawnPos => new BerserkEnemy(
+            texture: enemySheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 400,
+            color: Color.Red,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Initialize factory enemies
+        factoryEnemies.AddRange(factoryEnemySpawns.Select(spawnPos => new FactoryEnemy(
+            texture: enemySheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 200,
+            color: Color.White,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Initialize frogs
+        frogs.AddRange(frogSpawns.Select(spawnPos => new Frog(
+            texture: miscSheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 100,
+            color: Color.White,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Initialize patrol enemies from spawn positions
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
-            health: 50,
+            health: 100,
             color: Color.White,
-            srcRect: textureStore[2],
-            collisionMap: collisionMap,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
             patrolSpeed: 1f,
-            visualSize: new int[2] { 64, 64 }
+            visualSize: new int[2] { 64, 64 },
+            player: player
         )));
     }
-    
+
     private void Reset()
     {
         // Reset player
         player.position = playerPos;
-        player.health = 100;
-        player.bullets.Clear();
-        
+        player.Health = 100;
+        player.Bullets.Clear();
+
         // Reset turret enemies
         orphanedTurretBullets.Clear();
         turretEnemies.Clear();
         turretEnemies.AddRange(turretEnemySpawns.Select(spawnPos => new TurretEnemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
             player: player,
             health: 80,
             color: Color.White,
-            srcRect: textureStore[6],
-            collisionMap: collisionMap,
+            srcRect: textureStore[1],
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Reset berserk enemies
+        berserkEnemies.Clear();
+        berserkEnemies.AddRange(berserkEnemySpawns.Select(spawnPos => new BerserkEnemy(
+            texture: enemySheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 400,
+            color: Color.White,
+            srcRect: textureStore[2],
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Reset factory enemies
+        factoryEnemies.Clear();
+        factoryEnemies.AddRange(factoryEnemySpawns.Select(spawnPos => new FactoryEnemy(
+            texture: enemySheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 200,
+            color: Color.White,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
+            visualSize: new int[2] { 64, 64 }
+        )));
+        // Reset frogs
+        frogs.Clear();
+        frogs.AddRange(frogSpawns.Select(spawnPos => new Frog(
+            texture: miscSheet,
+            position: spawnPos,
+            audioManager: audioManager,
+            size: new int[2] { 60, 60 },
+            player: player,
+            health: 100,
+            color: Color.White,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
             visualSize: new int[2] { 64, 64 }
         )));
         // Reset patrol enemies
         enemies.Clear();
         enemies.AddRange(enemySpawns.Select(spawnPos => new Enemy(
-            texture: texture,
+            texture: enemySheet,
             position: spawnPos,
+            audioManager: audioManager,
             size: new int[2] { 60, 60 },
-            health: 50,
+            health: 100,
             color: Color.White,
-            srcRect: textureStore[2],
-            collisionMap: collisionMap,
+            srcRect: textureStore[0],
+            CollisionMap: CollisionMap,
             patrolSpeed: 1f,
-            visualSize: new int[2] { 64, 64 }
+            visualSize: new int[2] { 64, 64 },
+            player: player
         )));
-        
+
         // Reset goal trigger and level completion
         if (goalTrigger != null)
         {
@@ -285,8 +756,20 @@ public class GameScene : IScene
         }
         levelComplete = false;
         gameOver = false;
+
+        // Reset inventory access trigger
+        if (inventoryAccess != null)
+        {
+            inventoryAccess.Reset();
+        }
+
+        // Reset Doors
+        foreach (var door in levelDoors)
+        {
+            door.Reset();
+        }
     }
-    
+
     public void Update(GameTime gameTime)
     {
         // Check if level is complete or game over
@@ -294,15 +777,15 @@ public class GameScene : IScene
         {
             return;
         }
-        
+
         // Update player and camera
         player.Update(gameTime, camera.position);
-        camera.Follow(player.Rectangle, new Vector2(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight), new Vector2( tileMap.Keys.Max(k => k.X + 1) * 64, tileMap.Keys.Max(k => k.Y + 1) * 64));
-        
+        camera.Follow(player.Rectangle, new Vector2(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight), new Vector2(mapWidth * 64, mapHeight * 64));
+
         // Check all entities for out-of-bounds
-        float worldMaxY = tileMap.Keys.Max(k => k.Y + 1) * 64;
-        float worldMaxX = tileMap.Keys.Max(k => k.X + 1) * 64;
-        
+        float worldMaxY = mapHeight * 64;
+        float worldMaxX = mapWidth * 64;
+
         // Check player bounds
         if (player.position.Y > worldMaxY)
         {
@@ -321,26 +804,34 @@ public class GameScene : IScene
         if (!player.IsAlive && !gameOver)
         {
             gameOver = true;
-            sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, graphics, this));
+            sceneManager.AddScene(new GameOverScene(contentManager, sceneManager, audioManager, graphics, this));
             return;
         }
-        
+
         // Check enemies for falling out of bounds
         foreach (var enemy in enemies)
         {
             if (enemy.position.Y > worldMaxY)
+            {
                 enemy.HandleDeath();
+            }
             else if (enemy.position.X < 0)
+            {
                 enemy.position.X = 0;
+            }
             else if (enemy.position.X + enemy.size[0] > worldMaxX)
+            {
                 enemy.position.X = worldMaxX - enemy.size[0];
+            }
         }
 
         // Update alive patrol enemies
         foreach (var enemy in enemies)
         {
             if (enemy.IsAlive)
+            {
                 enemy.Update(gameTime);
+            }
         }
 
         // Remove patrol enemies that died this frame
@@ -350,14 +841,119 @@ public class GameScene : IScene
         foreach (var turret in turretEnemies)
         {
             if (turret.position.Y > worldMaxY)
+            {
                 turret.HandleDeath();
+            }
+        }
+        // Check berserk enemies for falling out of bounds
+        foreach (var berserk in berserkEnemies)
+        {
+            if (berserk.position.Y > worldMaxY)
+            {
+                berserk.HandleDeath();
+            }
+            else if (berserk.position.X < 0)
+            {
+                berserk.position.X = 0;
+            }
+            else if (berserk.position.X + berserk.size[0] > worldMaxX)
+            {
+                berserk.position.X = worldMaxX - berserk.size[0];
+            }
+        }
+
+        // Check factory enemies for falling out of bounds
+        foreach (var factory in factoryEnemies)
+        {
+            if (factory.position.Y > worldMaxY)
+            {
+                factory.HandleDeath();
+            }
+            else if (factory.position.X < 0)
+            {
+                factory.position.X = 0;
+            }
+            else if (factory.position.X + factory.size[0] > worldMaxX)
+            {
+                factory.position.X = worldMaxX - factory.size[0];
+            }
+        }
+
+        // Check frogs for falling out of bounds
+        foreach (var frog in frogs)
+        {
+            if (frog.position.Y > worldMaxY)
+            {
+                frog.HandleDeath();
+            }
+            else if (frog.position.X < 0)
+            {
+                frog.position.X = 0;
+            }
+            else if (frog.position.X + frog.size[0] > worldMaxX)
+            {
+                frog.position.X = worldMaxX - frog.size[0];
+            }
         }
 
         // Update alive turret enemies
         foreach (var turret in turretEnemies)
         {
             if (turret.IsAlive)
+            {
                 turret.Update(gameTime);
+            }
+        }
+        // Update alive berserk enemies
+        foreach (var berserk in berserkEnemies)
+        {
+            if (berserk.IsAlive)
+            {
+                berserk.Update(gameTime);
+            }
+        }
+        // Update alive factory enemies
+        foreach (var factory in factoryEnemies)
+        {
+            if (factory.IsAlive)
+            {
+                factory.Update(gameTime);
+            }
+        }
+        // Update alive frogs
+        foreach (var frog in frogs)
+        {
+            if (frog.IsAlive)
+            {
+                frog.Update(gameTime);
+            }
+        }
+
+        // Collect newly spawned enemies from factories
+        foreach (var factory in factoryEnemies)
+        {
+            if (factory.SpawnedEnemies.Count > 0)
+            {
+                enemies.AddRange(factory.SpawnedEnemies);
+                factory.SpawnedEnemies.Clear();
+            }
+        }
+
+        // Update Doors Input
+        foreach (var door in levelDoors)
+        {
+            door.Update();
+        }
+
+        //Update Inventory Access Input
+        if (inventoryAccess != null)
+        {
+            inventoryAccess.Update();
+            inventoryAccess.CheckTrigger(player.Rectangle);
+            if (inventoryAccess.IsTriggered && inventoryAccess.IsActivated)
+            {
+                sceneManager.AddScene(new InventoryManagement(contentManager, sceneManager, audioManager, graphics, levelName));
+            }
         }
 
         // Before removing dead turrets, rescue any live bullets they still own
@@ -369,21 +965,39 @@ public class GameScene : IScene
             }
         }
 
+        // Before removing dead berserk enemies, rescue any live bullets they still own
+        foreach (var berserk in berserkEnemies)
+        {
+            if (!berserk.IsAlive)
+            {
+                orphanedTurretBullets.AddRange(berserk.Bullets);
+            }
+        }
+
         // Remove turret enemies that died this frame
         turretEnemies.RemoveAll(t => !t.IsAlive);
+
+        // Remove berserk enemies that died this frame
+        berserkEnemies.RemoveAll(b => !b.IsAlive);
+
+        // Remove factory enemies that died this frame
+        factoryEnemies.RemoveAll(f => !f.IsAlive);
+
+        // Remove frogs that died this frame
+        frogs.RemoveAll(j => !j.IsAlive);
 
         // Advance and prune orphaned bullets
         for (int i = orphanedTurretBullets.Count - 1; i >= 0; i--)
         {
             orphanedTurretBullets[i].Update(gameTime);
-            if (orphanedTurretBullets[i].lifetime <= 0)
+            if (orphanedTurretBullets[i].Lifetime <= 0)
             {
                 orphanedTurretBullets.RemoveAt(i);
             }
         }
 
         // Gather all entities for collision detection after all updates
-        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. player.bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. orphanedTurretBullets];
+        List<Entity> allEntities = [player, .. enemies, .. turretEnemies, .. berserkEnemies, .. factoryEnemies, .. frogs, .. player.Bullets, .. turretEnemies.SelectMany(t => t.Bullets), .. berserkEnemies.SelectMany(b => b.Bullets), .. orphanedTurretBullets];
 
         // Handle entity-to-entity collisions
         player.EntityCollisionUpdate(allEntities);
@@ -395,21 +1009,133 @@ public class GameScene : IScene
         {
             turret.EntityCollisionUpdate(allEntities);
         }
-        
+        foreach (var berserk in berserkEnemies)
+        {
+            berserk.EntityCollisionUpdate(allEntities);
+        }
+        foreach (var factory in factoryEnemies)
+        {
+            factory.EntityCollisionUpdate(allEntities);
+        }
+        foreach (var frog in frogs)
+        {
+            frog.EntityCollisionUpdate(allEntities);
+        }
+
+
         // Check for goal trigger
         if (goalTrigger != null && !levelComplete)
         {
             goalTrigger.CheckTrigger(player.Rectangle);
-            if (goalTrigger.IsTriggered)
+            // Let the trigger handle interact input (same as doors)
+            goalTrigger.Update();
+            if (goalTrigger.IsActivated)
             {
                 levelComplete = true;
                 // Transition to win scene with current loadout
-                sceneManager.AddScene(new WinScene(contentManager, sceneManager, graphics, levelName, selectedItems, selectedWeapon));
+                sceneManager.AddScene(new WinScene(contentManager, sceneManager, audioManager, graphics, levelName, selectedItems, selectedAttachments));
+            }
+        }
+
+        //Check if player enters door
+        foreach (var door in levelDoors)
+        {
+            if (!door.IsUnlocked)
+            {
+                continue;
+            }
+
+            door.CheckTrigger(player.Rectangle);
+            if (door.IsTriggered && door.IsActivated)
+            {
+                if (door.ChangesScene)
+                {
+                    sceneManager.PopScene(this);
+                    sceneManager.AddScene(new GameScene(contentManager, sceneManager, audioManager, graphics, door.Connects, selectedItems, selectedAttachments, door.LoadX, door.LoadY));
+                }
+                else
+                {
+                    player.position = AdjustCoordinates(door.LoadX, door.LoadY);
+                }
             }
         }
     }
+
+    private void DrawBackground(SpriteBatch spriteBatch)
+    {
+        if (backgroundSheet == null)
+        {
+            return;
+        }
+
+        // Apply parallax scrolling: parallax factor closer to 0 = farther away (moves less)
+        // Invert the parallax value so that values work intuitively:
+        // 0.0 = fixed, 0.5 = typical depth effect, 1.0 = moves with camera
+        Vector2 parallaxFactor = Vector2.One - backgroundParallax;
+
+        int baseX = (int)backgroundLayerOffset.X - (int)(camera.position.X * parallaxFactor.X);
+        int baseY = (int)backgroundLayerOffset.Y - (int)(camera.position.Y * parallaxFactor.Y);
+        int bgWidth = backgroundSheet.Width * 2;
+        int bgHeight = backgroundSheet.Height * 2;
+
+        if (backgroundRepeatX || backgroundRepeatY)
+        {
+            // Calculate viewport bounds to determine which tiles to draw
+            int viewportWidth = graphics.PreferredBackBufferWidth;
+            int viewportHeight = graphics.PreferredBackBufferHeight;
+
+            // Normalize the base position to handle tiling correctly
+            int startX = baseX;
+            int startY = baseY;
+
+            if (backgroundRepeatX)
+            {
+                // Calculate how many tiles we need to cover the screen horizontally
+                startX = baseX % bgWidth;
+                if (startX > 0)
+                    startX -= bgWidth;
+
+                for (int x = startX; x < viewportWidth; x += bgWidth)
+                {
+                    int drawY = backgroundRepeatY ? (startY % bgHeight) - bgHeight : baseY;
+                    if (backgroundRepeatY)
+                    {
+                        for (int y = drawY; y < viewportHeight; y += bgHeight)
+                        {
+                            spriteBatch.Draw(backgroundSheet, new Rectangle(x, y, bgWidth, bgHeight), Color.White * backgroundOpacity);
+                        }
+                    }
+                    else
+                    {
+                        spriteBatch.Draw(backgroundSheet, new Rectangle(x, baseY, bgWidth, bgHeight), Color.White * backgroundOpacity);
+                    }
+                }
+            }
+            else if (backgroundRepeatY)
+            {
+                // Only repeat vertically
+                startY = baseY % bgHeight;
+                if (startY > 0)
+                    startY -= bgHeight;
+
+                for (int y = startY; y < viewportHeight; y += bgHeight)
+                {
+                    spriteBatch.Draw(backgroundSheet, new Rectangle(baseX, y, bgWidth, bgHeight), Color.White * backgroundOpacity);
+                }
+            }
+        }
+        else
+        {
+            // No tiling, just draw once
+            Rectangle backgroundDest = new Rectangle(baseX, baseY, bgWidth, bgHeight);
+            spriteBatch.Draw(backgroundSheet, backgroundDest, Color.White * backgroundOpacity);
+        }
+    }
+
     public void Draw(SpriteBatch spriteBatch)
     {
+        DrawBackground(spriteBatch);
+
         foreach (var tile in tileMap)
         {
             Rectangle dest = new Rectangle(
@@ -418,8 +1144,8 @@ public class GameScene : IScene
                 64,
                 64
             );
-            Rectangle src = textureStore[tile.Value % textureStore.Count]; // Ensure we don't go out of bounds
-            spriteBatch.Draw(texture, dest, src, Color.White);
+            Rectangle src = tileTextureStore[tile.Value % tileTextureStore.Count]; // Ensure we don't go out of bounds
+            spriteBatch.Draw(textureSheet, dest, src, Color.White);
         }
         foreach (var enemy in enemies)
         {
@@ -429,12 +1155,49 @@ public class GameScene : IScene
         {
             turret.Draw(spriteBatch, camera.position);
         }
+        foreach (var berserk in berserkEnemies)
+        {
+            berserk.Draw(spriteBatch, camera.position);
+        }
+        foreach (var factory in factoryEnemies)
+        {
+            factory.Draw(spriteBatch, camera.position);
+        }
+        foreach (var frog in frogs)
+        {
+            frog.Draw(spriteBatch, camera.position);
+        }
         foreach (var bullet in orphanedTurretBullets)
         {
             bullet.Draw(spriteBatch, camera.position);
         }
-        player.Draw(spriteBatch, camera.position);
-        
+        foreach (var door in levelDoors)
+        {
+            Rectangle doorRect = door.GetBounds();
+            Rectangle doorDest = new Rectangle(
+                (int)(doorRect.X - camera.position.X),
+                (int)(doorRect.Y - camera.position.Y),
+                doorRect.Width,
+                doorRect.Height
+            );
+            Color doorColor = !door.IsUnlocked ? Color.DarkSlateGray : door.IsTriggered ? Color.Gold : Color.SaddleBrown;
+            spriteBatch.Draw(uiSheet, doorDest, textureStore[0], doorColor * 0.5f);
+        }
+
+        //Draw inventory access trigger (if it exists)
+        if (inventoryAccess != null)
+        {
+            Rectangle inventoryRect = inventoryAccess.GetBounds();
+            Rectangle inventoryDest = new Rectangle(
+                (int)(inventoryRect.X - camera.position.X),
+                (int)(inventoryRect.Y - camera.position.Y),
+                inventoryRect.Width,
+                inventoryRect.Height
+            );
+            Color inventoryColor = inventoryAccess.IsTriggered ? Color.Gold : Color.SaddleBrown;
+            spriteBatch.Draw(uiSheet, inventoryDest, textureStore[0], inventoryColor * 0.5f);
+        }
+
         // Draw goal trigger (if it exists)
         if (goalTrigger != null)
         {
@@ -445,11 +1208,39 @@ public class GameScene : IScene
                 goalRect.Width,
                 goalRect.Height
             );
-            // Draw goal with a green tint (using tile 0 or any appropriate texture)
-            Color goalColor = goalTrigger.IsTriggered ? Color.Gold : Color.LimeGreen;
-            spriteBatch.Draw(texture, goalDest, textureStore[0], goalColor * 0.5f);
+            // Draw goal with a green tint: darker when idle, lighter when touching, gold when activated
+            Color goalColor = goalTrigger.IsActivated ? Color.Gold : (goalTrigger.IsTriggered ? Color.LimeGreen : Color.DarkGreen);
+            spriteBatch.Draw(uiSheet, goalDest, textureStore[0], goalColor * 0.5f);
         }
-        
+
+        // Draw door hover text (name set from Tiled) when player is in a door trigger
+        if (hudFont != null)
+        {
+            const float textScale = 0.75f; // slightly smaller than default
+            foreach (var door in levelDoors)
+            {
+                if (door.IsTriggered && !string.IsNullOrWhiteSpace(door.DisplayName))
+                {
+                    Rectangle doorRect = door.GetBounds();
+                    Vector2 textPos = new Vector2(
+                        doorRect.X - camera.position.X + (doorRect.Width / 2f),
+                        doorRect.Y - camera.position.Y - 34f // position above the door for readability
+                    );
+                    string text = door.DisplayName!;
+                    Vector2 textSize = hudFont.MeasureString(text) * textScale;
+                    textPos.X -= textSize.X / 2f;
+                    if (textPos.Y < 0)
+                        textPos.Y = 0;
+
+                    // Draw subtle shadow for readability
+                    spriteBatch.DrawString(hudFont, text, textPos + new Vector2(1f, 1f), Color.Black * 0.6f, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawString(hudFont, text, textPos, Color.White, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+                }
+            }
+        }
+
+        player.Draw(spriteBatch, camera.position);
+
         // Draw new GameUI (health, cooldown, and active items)
         gameUI.Draw(spriteBatch);
     }

@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PolyGone.Core;
 
 namespace PolyGone;
 
@@ -25,6 +26,7 @@ internal class FormbarLoginScene : IScene
     private Texture2D? _pixel;
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
+    private readonly AudioManager _audioManager;
     private readonly GraphicsDeviceManager _graphics;
 
     private LoginState _state = LoginState.Idle;
@@ -34,20 +36,18 @@ internal class FormbarLoginScene : IScene
     private HttpListener? _listener;
     private Task<HttpListenerContext>? _callbackTask;
 
-    private KeyboardState _keyboardState;
-    private KeyboardState _previousKeyboardState;
-
-    private const int CallbackPort = 59200;
+    private const int DefaultCallbackPort = 59200;
+    private int _callbackPort = DefaultCallbackPort;
 
     // Vertical spacing between UI rows (pixels)
     private const float RowGap = 70f;
 
-    public FormbarLoginScene(ContentManager content, SceneManager sceneManager, GraphicsDeviceManager graphics)
+    public FormbarLoginScene(ContentManager content, SceneManager sceneManager, AudioManager audioManager, GraphicsDeviceManager graphics)
     {
         _content = content;
         _sceneManager = sceneManager;
+        _audioManager = audioManager;
         _graphics = graphics;
-        _previousKeyboardState = Keyboard.GetState();
     }
 
     public void Load()
@@ -67,20 +67,23 @@ internal class FormbarLoginScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        _keyboardState = Keyboard.GetState();
 
         if (_callbackTask != null && _callbackTask.IsCompleted)
             ProcessCallbackResult();
+
+        if (InputManager.MenuBack() || IsExitButtonClicked())
+        {
+            Environment.Exit(0);
+            return;
+        }
 
         if (_state == LoginState.Idle)
             HandleIdleInput();
         else
         {
-            if (InputManager.IsEscapeKeyPressed() || IsCancelButtonClicked())
+            if (IsCancelButtonClicked())
                 CancelOAuth();
         }
-
-        _previousKeyboardState = _keyboardState;
     }
 
     // -----------------------------------------------------------------------
@@ -89,21 +92,51 @@ internal class FormbarLoginScene : IScene
 
     private void StartOAuth()
     {
+        // Prevent re-entrant calls if we're already in the middle of OAuth
+        if (_state != LoginState.Idle)
+            return;
         try
         {
-            string prefix = $"http://localhost:{CallbackPort}/";
-            string redirectUrl = $"http://localhost:{CallbackPort}/login";
-            _oauthUrl = $"{FormbarSession.ServerUrl.TrimEnd('/')}/oauth?redirectURL={Uri.EscapeDataString(redirectUrl)}";
+            var rng = new Random();
+            int attempts = 0;
+            const int maxAttempts = 12;
 
-            _listener = new HttpListener();
-            _listener.Prefixes.Add(prefix);
-            _listener.Start();
-            _callbackTask = _listener.GetContextAsync();
+            while (attempts < maxAttempts)
+            {
+                try
+                {
+                    string prefix = $"http://localhost:{_callbackPort}/";
+                    string redirectUrl = $"http://localhost:{_callbackPort}/login";
+                    _oauthUrl = $"{FormbarSession.ServerUrl.TrimEnd('/')}/oauth?redirectURL={Uri.EscapeDataString(redirectUrl)}";
 
-            Process.Start(new ProcessStartInfo { FileName = _oauthUrl, UseShellExecute = true });
+                    _listener = new HttpListener();
+                    _listener.Prefixes.Add(prefix);
+                    _listener.Start();
+                    _callbackTask = _listener.GetContextAsync();
 
-            _state = LoginState.WaitingForCallback;
-            _statusMessage = "";
+                    Process.Start(new ProcessStartInfo { FileName = _oauthUrl, UseShellExecute = true });
+
+                    _state = LoginState.WaitingForCallback;
+                    _statusMessage = "";
+                    return;
+                }
+                catch (HttpListenerException)
+                {
+                    StopListener();
+                    attempts++;
+                    _statusMessage = $"Port {_callbackPort} in use, trying another...";
+                    _callbackPort = rng.Next(49152, 65536);
+                    Task.Delay(200).Wait();
+                }
+                catch (Exception ex)
+                {
+                    StopListener();
+                    _statusMessage = $"Could not start login: {ex.Message}";
+                    return;
+                }
+            }
+
+            _statusMessage = "Could not start login: no available ports found.";
         }
         catch (Exception ex)
         {
@@ -151,7 +184,7 @@ internal class FormbarLoginScene : IScene
                     _sceneManager.PopScene(this);
 
                     if (!PurchaseTracker.HasPurchased(FormbarSession.UserId, FormbarSession.AllLevelsKey))
-                        _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _graphics));
+                        _sceneManager.AddScene(new PaymentScene(_content, _sceneManager, _audioManager, _graphics));
 
                     return;
                 }
@@ -178,8 +211,12 @@ internal class FormbarLoginScene : IScene
 
     private void StopListener()
     {
+        try { _listener?.Abort(); } catch { }
         try { _listener?.Stop(); } catch { }
+        try { _listener?.Close(); } catch { }
         _listener = null;
+        _callbackTask = null;
+        _callbackPort = DefaultCallbackPort;
     }
 
     // -----------------------------------------------------------------------
@@ -188,10 +225,7 @@ internal class FormbarLoginScene : IScene
 
     private void HandleIdleInput()
     {
-        if (IsKeyPressed(Keys.Enter))
-            StartOAuth();
-
-        if (_font == null || !InputManager.IsLeftMouseButtonClicked()) return;
+        if (_font == null) return;
 
         var viewport = _graphics.GraphicsDevice.Viewport;
         var mousePos = InputManager.GetMousePosition();
@@ -200,22 +234,34 @@ internal class FormbarLoginScene : IScene
         // Login button  (same Y as drawn below)
         float btnY = cy;
         string btnLabel = "Login with Formbar";
-        var btnSize = _font.MeasureString(btnLabel);
+        var btnSize = _font!.MeasureString(btnLabel);
         var btnBounds = new Rectangle(
             (int)(viewport.Width / 2f - btnSize.X / 2f) - 10,
             (int)btnY - 5,
             (int)btnSize.X + 20,
             (int)btnSize.Y + 10);
-        if (btnBounds.Contains(mousePos))
+
+        bool mouseConfirm = InputManager.MenuMouseConfirm();
+        bool nonPointerConfirm = InputManager.MenuNonPointerConfirm();
+
+        // Mouse click on the button
+        if (btnBounds.Contains(mousePos) && mouseConfirm)
         {
             StartOAuth();
             InputManager.ConsumeClick();
+            return;
+        }
+
+        if (nonPointerConfirm)
+        {
+            StartOAuth();
+            return;
         }
     }
 
     private bool IsCancelButtonClicked()
     {
-        if (_font == null || !InputManager.IsLeftMouseButtonClicked()) return false;
+        if (_font == null) return false;
 
         var viewport = _graphics.GraphicsDevice.Viewport;
         var mousePos = InputManager.GetMousePosition();
@@ -231,7 +277,32 @@ internal class FormbarLoginScene : IScene
             (int)cancelSize.X + 20,
             (int)cancelSize.Y + 10);
 
-        if (cancelBounds.Contains(mousePos))
+        if (cancelBounds.Contains(mousePos) && InputManager.MenuMouseConfirm())
+        {
+            InputManager.ConsumeClick();
+            return true;
+        }
+        return false;
+    }
+
+    private bool IsExitButtonClicked()
+    {
+        if (_font == null) return false;
+
+        var viewport = _graphics.GraphicsDevice.Viewport;
+        var mousePos = InputManager.GetMousePosition();
+        float cy = viewport.Height / 2f;
+
+        float exitY = cy + RowGap * 2f;
+        string exitLabel = "Exit";
+        var exitSize = _font.MeasureString(exitLabel);
+        var exitBounds = new Rectangle(
+            (int)(viewport.Width / 2f - exitSize.X / 2f) - 10,
+            (int)exitY - 5,
+            (int)exitSize.X + 20,
+            (int)exitSize.Y + 10);
+
+        if (exitBounds.Contains(mousePos) && InputManager.MenuMouseConfirm())
         {
             InputManager.ConsumeClick();
             return true;
@@ -275,7 +346,7 @@ internal class FormbarLoginScene : IScene
 
         // Row 2  (cy): "Login with Formbar" button — centred on cy
         string btnLabel = "Login with Formbar";
-        var btnSize = _font.MeasureString(btnLabel);
+        var btnSize = _font!.MeasureString(btnLabel);
         float btnY = cy;
         float btnX = cx - btnSize.X / 2f;
         spriteBatch.Draw(_pixel!,
@@ -286,6 +357,16 @@ internal class FormbarLoginScene : IScene
         // Row 3  (cy + gap): status / error
         if (!string.IsNullOrEmpty(_statusMessage))
             DrawCentered(spriteBatch, viewport, _statusMessage, cy + RowGap, Color.OrangeRed);
+
+        // Row 4  (cy + 2*gap): Exit button
+        float exitY = cy + RowGap * 2f;
+        string exitLabel = "Exit";
+        var exitSize = _font!.MeasureString(exitLabel);
+        float exitX = cx - exitSize.X / 2f;
+        spriteBatch.Draw(_pixel!,
+            new Rectangle((int)exitX - 10, (int)exitY - 5, (int)exitSize.X + 20, (int)exitSize.Y + 10),
+            new Color(80, 30, 30));
+        spriteBatch.DrawString(_font, exitLabel, new Vector2(exitX, exitY), Color.White);
     }
 
     private void DrawWaiting(SpriteBatch spriteBatch, Viewport viewport)
@@ -314,6 +395,16 @@ internal class FormbarLoginScene : IScene
             new Rectangle((int)cancelX - 10, (int)cancelY - 5, (int)cancelSize.X + 20, (int)cancelSize.Y + 10),
             Color.DarkRed);
         spriteBatch.DrawString(_font, cancelLabel, new Vector2(cancelX, cancelY), Color.White);
+
+        // Row 4: Exit button
+        float exitY = cy + RowGap * 2f;
+        string exitLabel = "Exit";
+        var exitSize = _font!.MeasureString(exitLabel);
+        float exitX = cx - exitSize.X / 2f;
+        spriteBatch.Draw(_pixel!,
+            new Rectangle((int)exitX - 10, (int)exitY - 5, (int)exitSize.X + 20, (int)exitSize.Y + 10),
+            new Color(80, 30, 30));
+        spriteBatch.DrawString(_font, exitLabel, new Vector2(exitX, exitY), Color.White);
     }
 
     // -----------------------------------------------------------------------
@@ -361,7 +452,4 @@ internal class FormbarLoginScene : IScene
         }
         return null;
     }
-
-    private bool IsKeyPressed(Keys key) =>
-        _keyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
 }

@@ -30,14 +30,20 @@ public static class FormbarService
         try
         {
             var parts = jwt.Split('.');
-            if (parts.Length != 3) return null;
+            if (parts.Length != 3)
+            {
+                return null;
+            }
 
             // Base64url → Base64 → bytes → JSON string
             string base64 = parts[1]
                 .Replace('-', '+')
                 .Replace('_', '/');
             int pad = (4 - base64.Length % 4) % 4;
-            if (pad < 4) base64 += new string('=', pad);
+            if (pad < 4)
+            {
+                base64 += new string('=', pad);
+            }
 
             byte[] bytes = Convert.FromBase64String(base64);
             string json = Encoding.UTF8.GetString(bytes);
@@ -60,8 +66,15 @@ public static class FormbarService
 
     private static int ReadInt(JsonElement el, string key)
     {
-        if (!el.TryGetProperty(key, out var prop)) return 0;
-        if (prop.ValueKind != JsonValueKind.Number) return 0;
+        if (!el.TryGetProperty(key, out var prop))
+        {
+            return 0;
+        }
+
+        if (prop.ValueKind != JsonValueKind.Number)
+        {
+            return 0;
+        }
         // Use GetDouble() then cast so fractional values like 10.0 are handled correctly
         return (int)prop.GetDouble();
     }
@@ -127,7 +140,10 @@ public static class FormbarService
             var request = new HttpRequestMessage(HttpMethod.Post,
                 $"{serverUrl.TrimEnd('/')}/api/digipogs/transfer");
             if (!string.IsNullOrEmpty(apiKey))
+            {
                 request.Headers.TryAddWithoutValidation("API", apiKey);
+            }
+
             request.Content = content;
 
             var response = await _client.SendAsync(request);
