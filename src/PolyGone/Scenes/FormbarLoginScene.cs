@@ -71,11 +71,17 @@ internal class FormbarLoginScene : IScene
         if (_callbackTask != null && _callbackTask.IsCompleted)
             ProcessCallbackResult();
 
+        if (InputManager.MenuBack() || IsExitButtonClicked())
+        {
+            Environment.Exit(0);
+            return;
+        }
+
         if (_state == LoginState.Idle)
             HandleIdleInput();
         else
         {
-            if (InputManager.MenuBack() || IsCancelButtonClicked())
+            if (IsCancelButtonClicked())
                 CancelOAuth();
         }
     }
@@ -279,6 +285,31 @@ internal class FormbarLoginScene : IScene
         return false;
     }
 
+    private bool IsExitButtonClicked()
+    {
+        if (_font == null) return false;
+
+        var viewport = _graphics.GraphicsDevice.Viewport;
+        var mousePos = InputManager.GetMousePosition();
+        float cy = viewport.Height / 2f;
+
+        float exitY = cy + RowGap * 2f;
+        string exitLabel = "Exit";
+        var exitSize = _font.MeasureString(exitLabel);
+        var exitBounds = new Rectangle(
+            (int)(viewport.Width / 2f - exitSize.X / 2f) - 10,
+            (int)exitY - 5,
+            (int)exitSize.X + 20,
+            (int)exitSize.Y + 10);
+
+        if (exitBounds.Contains(mousePos) && InputManager.MenuMouseConfirm())
+        {
+            InputManager.ConsumeClick();
+            return true;
+        }
+        return false;
+    }
+
     // -----------------------------------------------------------------------
     // Drawing
     // -----------------------------------------------------------------------
@@ -326,6 +357,16 @@ internal class FormbarLoginScene : IScene
         // Row 3  (cy + gap): status / error
         if (!string.IsNullOrEmpty(_statusMessage))
             DrawCentered(spriteBatch, viewport, _statusMessage, cy + RowGap, Color.OrangeRed);
+
+        // Row 4  (cy + 2*gap): Exit button
+        float exitY = cy + RowGap * 2f;
+        string exitLabel = "Exit";
+        var exitSize = _font!.MeasureString(exitLabel);
+        float exitX = cx - exitSize.X / 2f;
+        spriteBatch.Draw(_pixel!,
+            new Rectangle((int)exitX - 10, (int)exitY - 5, (int)exitSize.X + 20, (int)exitSize.Y + 10),
+            new Color(80, 30, 30));
+        spriteBatch.DrawString(_font, exitLabel, new Vector2(exitX, exitY), Color.White);
     }
 
     private void DrawWaiting(SpriteBatch spriteBatch, Viewport viewport)
@@ -354,6 +395,16 @@ internal class FormbarLoginScene : IScene
             new Rectangle((int)cancelX - 10, (int)cancelY - 5, (int)cancelSize.X + 20, (int)cancelSize.Y + 10),
             Color.DarkRed);
         spriteBatch.DrawString(_font, cancelLabel, new Vector2(cancelX, cancelY), Color.White);
+
+        // Row 4: Exit button
+        float exitY = cy + RowGap * 2f;
+        string exitLabel = "Exit";
+        var exitSize = _font!.MeasureString(exitLabel);
+        float exitX = cx - exitSize.X / 2f;
+        spriteBatch.Draw(_pixel!,
+            new Rectangle((int)exitX - 10, (int)exitY - 5, (int)exitSize.X + 20, (int)exitSize.Y + 10),
+            new Color(80, 30, 30));
+        spriteBatch.DrawString(_font, exitLabel, new Vector2(exitX, exitY), Color.White);
     }
 
     // -----------------------------------------------------------------------
