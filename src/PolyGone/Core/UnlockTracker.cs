@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace PolyGone;
@@ -11,6 +12,8 @@ namespace PolyGone;
 /// </summary>
 public static class UnlockTracker
 {
+    public const int PlannedLevelCount = 20;
+
     private static readonly string SavePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "PolyGone",
@@ -26,9 +29,9 @@ public static class UnlockTracker
     /// </summary>
     private static readonly Dictionary<ItemType, string> _itemUnlockRequirements = new()
     {
-        { ItemType.HealingGlow, "Level"  },
-        { ItemType.LowGravity,  "TestLevel2" },
-        { ItemType.IronWill,    "TestLevel3" },
+        { ItemType.HealingGlow, "Level15" },
+        { ItemType.LowGravity,  "Level20" },
+        { ItemType.IronWill,    "Level3" },
     };
 
     /// <summary>
@@ -37,16 +40,20 @@ public static class UnlockTracker
     /// </summary>
     private static readonly Dictionary<BlasterAttachmentType, string> _attachmentUnlockRequirements = new()
     {
-        { BlasterAttachmentType.RapidFire,   "Level"  },
-        { BlasterAttachmentType.Piercing,    "TestLevel2" },
-        { BlasterAttachmentType.DamageBoost, "TestLevel3" },
+        { BlasterAttachmentType.MultiShot,   "Level12" },
+        { BlasterAttachmentType.RapidFire,   "Level2" },
+        { BlasterAttachmentType.Piercing,    "Level5" },
+        { BlasterAttachmentType.DamageBoost, "Level15" },
     };
 
     /// <summary>
     /// The ordered list of level file names. Index 0 is always unlocked;
     /// every subsequent level requires the one before it to be completed.
     /// </summary>
-    private static readonly string[] _levelOrder = { "Level", "TestLevel2", "TestLevel3" };
+    private static readonly string[] _levelOrder = Enumerable
+        .Range(1, PlannedLevelCount)
+        .Select(i => $"Level{i}")
+        .ToArray();
 
     /// <summary>
     /// List of all unlockable abilites.
@@ -61,6 +68,8 @@ public static class UnlockTracker
             return true; // first level (or unknown) always unlocked
         return _completedLevels.Contains(_levelOrder[idx - 1]);
     }
+
+    public static IReadOnlyList<string> GetPlannedLevels() => _levelOrder;
 
     /// <summary>Returns true if the level has been completed.</summary>
     public static bool IsLevelCompleted(string levelFile) => _completedLevels.Contains(levelFile);
@@ -115,12 +124,12 @@ public static class UnlockTracker
     public static bool IsAttachmentUnlocked(BlasterAttachmentType attachment)
     {
 #if DEBUG
-        return true; // All attachments available in dev builds
-#else
+        if (attachment == BlasterAttachmentType.DevBlaster)
+            return true;
+#endif
         if (!_attachmentUnlockRequirements.TryGetValue(attachment, out var requiredLevel))
             return true;
         return _completedLevels.Contains(requiredLevel);
-#endif
     }
 
     /// <summary>Returns a human-readable hint describing how to unlock the attachment, or null if always unlocked.</summary>
@@ -131,48 +140,55 @@ public static class UnlockTracker
         return $"Complete {GetLevelDisplayName(level)} to unlock";
     }
 
+    /// <summary>Returns the unlock requirement level for this attachment, or null if always unlocked.</summary>
+    public static string? GetAttachmentUnlockRequirement(BlasterAttachmentType attachment)
+    {
+        return _attachmentUnlockRequirements.TryGetValue(attachment, out var level) ? level : null;
+    }
+
     /// <summary>
     /// Returns the number of player item slots available.
-    /// Starts at 1; completing Level adds a 2nd slot; completing TestLevel3 adds a 3rd.
+    /// Starts at 2; completing Level5, Level10, and Level15 each add one slot.
     /// </summary>
     public static int GetPlayerItemSlotCount()
     {
         int slots = 2;
-        if (_completedLevels.Contains("Level1"))
+        if (_completedLevels.Contains("Level5"))
             slots++;
-        if (_completedLevels.Contains("TestLevel2"))
+        if (_completedLevels.Contains("Level10"))
             slots++;
-        if (_completedLevels.Contains("TestLevel3"))
+        if (_completedLevels.Contains("Level15"))
             slots++;
-        if (_completedLevels.Contains("TestLevel4"))
-            slots++;
-        return slots; // Max 5
+        return slots;
     }
 
     /// <summary>
     /// Returns the number of blaster attachment slots available.
-    /// Starts at 2; each completed level adds another slot.
+    /// Starts at 2; completing Level5, Level10, and Level15 each add one slot.
     /// </summary>
     public static int GetBlasterSlotCount()
     {
         int slots = 2;
-        if (_completedLevels.Contains("Level1"))
+        if (_completedLevels.Contains("Level5"))
             slots++;
-        if (_completedLevels.Contains("TestLevel2"))
+        if (_completedLevels.Contains("Level10"))
             slots++;
-        if (_completedLevels.Contains("TestLevel3"))
+        if (_completedLevels.Contains("Level15"))
             slots++;
         return slots;
     }
 
     /// <summary>Converts an internal level file name to a display name.</summary>
-    public static string GetLevelDisplayName(string levelName) => levelName switch
+    public static string GetLevelDisplayName(string levelName)
     {
-        "TestLevel" => "Test Level 1",
-        "TestLevel2" => "Test Level 2",
-        "TestLevel3" => "Test Level 3",
-        _ => levelName,
-    };
+        if (levelName.StartsWith("Level", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(levelName.AsSpan("Level".Length), out int levelNumber))
+        {
+            return $"Level {levelNumber}";
+        }
+
+        return levelName;
+    }
 
     /// <summary>Loads unlock data from disk. Safe to call multiple times.</summary>
     public static void Load()

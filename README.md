@@ -53,7 +53,7 @@ dotnet run --project src/PolyGone/PolyGone.csproj
 - **Arrow Keys / WASD** - Move the player
 - **Space** - Jump
 - **Mouse** - Aim
-- **Left Mouse Button** - Shoot
+- **Left Mouse Button / F** - Shoot
 
 ## Project Structure
 

@@ -10,13 +10,14 @@ namespace PolyGone;
 
 internal class ControlRemapScene : IScene
 {
-    private enum Tab { Keyboard, Gamepad }
+    private enum Tab { Keyboard, Gamepad, Mouse }
 
     private enum RowKind
     {
         Header,
         KeyboardBinding,
         GamepadBinding,
+        MouseBinding,
         MoveStick,
         AimStick,
         Apply,
@@ -51,6 +52,7 @@ internal class ControlRemapScene : IScene
         ("Jump", p => p.JumpKey, (p, v) => p.JumpKey = v),
         ("Dash", p => p.DashKey, (p, v) => p.DashKey = v),
         ("Drop", p => p.DropKey, (p, v) => p.DropKey = v),
+        ("Shoot", p => p.ShootKey, (p, v) => p.ShootKey = v),
         ("Interact", p => p.InteractKey, (p, v) => p.InteractKey = v),
         ("Loadout Skip", p => p.LoadoutSkipKey, (p, v) => p.LoadoutSkipKey = v),
     ];
@@ -72,6 +74,19 @@ internal class ControlRemapScene : IScene
         ("Loadout Skip", p => p.LoadoutSkipButton, (p, v) => p.LoadoutSkipButton = v),
     ];
 
+    private static readonly (string Label, Func<InputBindingProfile, MouseButtonBinding> Get, Action<InputBindingProfile, MouseButtonBinding> Set)[] MouseMappings =
+    [
+        ("Menu Confirm", p => p.MenuConfirmMouseButton ?? MouseButtonBinding.None, (p, v) => p.MenuConfirmMouseButton = v),
+        ("Menu Back", p => p.MenuBackMouseButton ?? MouseButtonBinding.None, (p, v) => p.MenuBackMouseButton = v),
+        ("Pause", p => p.PauseMouseButton ?? MouseButtonBinding.None, (p, v) => p.PauseMouseButton = v),
+        ("Jump", p => p.JumpMouseButton ?? MouseButtonBinding.None, (p, v) => p.JumpMouseButton = v),
+        ("Shoot", p => p.ShootMouseButton, (p, v) => p.ShootMouseButton = v),
+        ("Dash", p => p.DashMouseButton ?? MouseButtonBinding.None, (p, v) => p.DashMouseButton = v),
+        ("Drop", p => p.DropMouseButton ?? MouseButtonBinding.None, (p, v) => p.DropMouseButton = v),
+        ("Interact", p => p.InteractMouseButton ?? MouseButtonBinding.None, (p, v) => p.InteractMouseButton = v),
+        ("Loadout Skip", p => p.LoadoutSkipMouseButton ?? MouseButtonBinding.None, (p, v) => p.LoadoutSkipMouseButton = v),
+    ];
+
     // Layout constants
     private const float TitleY = 10f;
     private const float TabBarY = 78f;
@@ -82,14 +97,20 @@ internal class ControlRemapScene : IScene
     private const float LabelX = 40f;
     private const float ValueX = 780f;
 
-    private static readonly string[] TabLabels = ["Keyboard", "Gamepad"];
+    private static readonly string[] TabLabels = ["Keyboard", "Gamepad", "Mouse"];
 
     private readonly ContentManager _content;
     private readonly SceneManager _sceneManager;
     private readonly GraphicsDeviceManager _graphics;
     private readonly List<Row> _keyboardRows = [];
     private readonly List<Row> _gamepadRows = [];
-    private List<Row> CurrentRows => _currentTab == Tab.Keyboard ? _keyboardRows : _gamepadRows;
+    private readonly List<Row> _mouseRows = [];
+    private List<Row> CurrentRows => _currentTab switch
+    {
+        Tab.Keyboard => _keyboardRows,
+        Tab.Gamepad => _gamepadRows,
+        _ => _mouseRows,
+    };
 
     private Texture2D? _pixel;
     private SpriteFont? _font;
@@ -102,7 +123,6 @@ internal class ControlRemapScene : IScene
     private KeyboardState _previousKeyboardState;
     private GamePadState _previousGamepadState;
     private MouseState _previousMouseState;
-    private int _captureFramesToSkip;
     private bool _hasUnappliedChanges;
     private bool _confirmingDiscard;
     private int _confirmDiscardSelectedIndex;
@@ -140,6 +160,13 @@ internal class ControlRemapScene : IScene
         _gamepadRows.Add(new Row(RowKind.Apply, "Apply"));
         _gamepadRows.Add(new Row(RowKind.ResetDefaults, "Reset To Defaults"));
         _gamepadRows.Add(new Row(RowKind.Back, "Back"));
+
+        _mouseRows.Clear();
+        for (int i = 0; i < MouseMappings.Length; i++)
+            _mouseRows.Add(new Row(RowKind.MouseBinding, MouseMappings[i].Label, i));
+        _mouseRows.Add(new Row(RowKind.Apply, "Apply"));
+        _mouseRows.Add(new Row(RowKind.ResetDefaults, "Reset To Defaults"));
+        _mouseRows.Add(new Row(RowKind.Back, "Back"));
     }
 
     public void Load()
@@ -151,6 +178,7 @@ internal class ControlRemapScene : IScene
         _selectedIndex = FirstSelectableIndex();
         _hasUnappliedChanges = false;
         _confirmingDiscard = false;
+        SyncPreviousInputStates();
 
         if (_font == null)
         {
@@ -168,7 +196,7 @@ internal class ControlRemapScene : IScene
 
         if (_waitingForBinding)
         {
-            HandleBindingCapture(keyboardState, gamepadState);
+            HandleBindingCapture(keyboardState, gamepadState, mouseState);
             _previousKeyboardState = keyboardState;
             _previousGamepadState = gamepadState;
             _previousMouseState = mouseState;
@@ -552,14 +580,8 @@ internal class ControlRemapScene : IScene
 
     // ── Binding capture ──────────────────────────────────────────────────────
 
-    private void HandleBindingCapture(KeyboardState keyboardState, GamePadState gamepadState)
+    private void HandleBindingCapture(KeyboardState keyboardState, GamePadState gamepadState, MouseState mouseState)
     {
-        if (_captureFramesToSkip > 0)
-        {
-            _captureFramesToSkip--;
-            return;
-        }
-
         if (TryGetNewKeyPress(keyboardState, out var key))
         {
             // Escape always cancels capture — it is never stored as a binding value.
@@ -577,6 +599,12 @@ internal class ControlRemapScene : IScene
         if (TryGetNewGamepadPress(gamepadState, out var button))
         {
             ApplyCapturedBinding(null, button);
+            return;
+        }
+
+        if (TryGetNewMousePress(mouseState, out var mouseButton))
+        {
+            ApplyCapturedBinding(mouseButton);
         }
     }
 
@@ -600,6 +628,23 @@ internal class ControlRemapScene : IScene
         if (_bindingRow.Kind == RowKind.GamepadBinding && button.HasValue)
         {
             GamepadMappings[_bindingRow.MappingIndex].Set(_pendingBindings, button.Value);
+            _hasUnappliedChanges = true;
+            _waitingForBinding = false;
+            _bindingRow = null;
+        }
+    }
+
+    private void ApplyCapturedBinding(MouseButtonBinding button)
+    {
+        if (_bindingRow == null)
+        {
+            _waitingForBinding = false;
+            return;
+        }
+
+        if (_bindingRow.Kind == RowKind.MouseBinding)
+        {
+            MouseMappings[_bindingRow.MappingIndex].Set(_pendingBindings, button);
             _hasUnappliedChanges = true;
             _waitingForBinding = false;
             _bindingRow = null;
@@ -636,6 +681,42 @@ internal class ControlRemapScene : IScene
         return false;
     }
 
+    private bool TryGetNewMousePress(MouseState mouseState, out MouseButtonBinding button)
+    {
+        if (mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+        {
+            button = MouseButtonBinding.Left;
+            return true;
+        }
+
+        if (mouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
+        {
+            button = MouseButtonBinding.Right;
+            return true;
+        }
+
+        if (mouseState.MiddleButton == ButtonState.Pressed && _previousMouseState.MiddleButton == ButtonState.Released)
+        {
+            button = MouseButtonBinding.Middle;
+            return true;
+        }
+
+        if (mouseState.XButton1 == ButtonState.Pressed && _previousMouseState.XButton1 == ButtonState.Released)
+        {
+            button = MouseButtonBinding.XButton1;
+            return true;
+        }
+
+        if (mouseState.XButton2 == ButtonState.Pressed && _previousMouseState.XButton2 == ButtonState.Released)
+        {
+            button = MouseButtonBinding.XButton2;
+            return true;
+        }
+
+        button = default;
+        return false;
+    }
+
     // ── Row activation ───────────────────────────────────────────────────────
 
     private void ActivateSelectedRow()
@@ -645,9 +726,10 @@ internal class ControlRemapScene : IScene
         {
             case RowKind.KeyboardBinding:
             case RowKind.GamepadBinding:
+            case RowKind.MouseBinding:
                 _waitingForBinding = true;
                 _bindingRow = row;
-                _captureFramesToSkip = 2; // skip the frame where Enter was pressed
+                SyncPreviousInputStates();
                 break;
             case RowKind.MoveStick:
                 _pendingBindings.MoveStick = _pendingBindings.MoveStick == StickBinding.Left
@@ -679,6 +761,13 @@ internal class ControlRemapScene : IScene
         }
     }
 
+    private void SyncPreviousInputStates()
+    {
+        _previousKeyboardState = Keyboard.GetState();
+        _previousGamepadState = GamePad.GetState(PlayerIndex.One);
+        _previousMouseState = Mouse.GetState();
+    }
+
     private void ExecuteDiscardConfirm()
     {
         if (_confirmDiscardSelectedIndex == 0)
@@ -691,7 +780,7 @@ internal class ControlRemapScene : IScene
 
     private string GetValueText(Row row, bool isSelected)
     {
-        if (_waitingForBinding && isSelected && (row.Kind == RowKind.KeyboardBinding || row.Kind == RowKind.GamepadBinding))
+        if (_waitingForBinding && isSelected && (row.Kind == RowKind.KeyboardBinding || row.Kind == RowKind.GamepadBinding || row.Kind == RowKind.MouseBinding))
         {
             return "[Press key / button...]";
         }
@@ -700,6 +789,7 @@ internal class ControlRemapScene : IScene
         {
             RowKind.KeyboardBinding => KeyDisplayName(KeyboardMappings[row.MappingIndex].Get(_pendingBindings)),
             RowKind.GamepadBinding => ButtonDisplayName(GamepadMappings[row.MappingIndex].Get(_pendingBindings)),
+            RowKind.MouseBinding => MouseButtonDisplayName(MouseMappings[row.MappingIndex].Get(_pendingBindings)),
             RowKind.MoveStick => _pendingBindings.MoveStick.ToString(),
             RowKind.AimStick => _pendingBindings.AimStick.ToString(),
             _ => string.Empty
@@ -714,6 +804,11 @@ internal class ControlRemapScene : IScene
     private static string ButtonDisplayName(Buttons button)
     {
         return (int)button == 0 ? "-" : button.ToString();
+    }
+
+    private static string MouseButtonDisplayName(MouseButtonBinding button)
+    {
+        return button == MouseButtonBinding.None ? "-" : button.ToString();
     }
 
     // ── Scrolling helpers ────────────────────────────────────────────────────

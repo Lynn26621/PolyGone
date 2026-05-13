@@ -16,12 +16,11 @@ namespace PolyGone
     // ---------------------------------------------------------------------------
     public enum ItemType
     {
-        DoubleJump,
-        HealingGlow,
-        LowGravity,
-        IronWill,
+        HealingGlow = 1,
+        LowGravity = 2,
+        IronWill = 3,
 #if DEBUG
-        DevMode
+        DevMode = 4
 #endif
     }
 
@@ -57,7 +56,6 @@ namespace PolyGone
         // -----------------------------------------------------------------------
         private readonly string[] _playerItemNames =
         {
-            "Double Jump",
             "Healing Glow",
             "Low Gravity",
             "Iron Will",
@@ -67,7 +65,6 @@ namespace PolyGone
         };
         private readonly ItemType[] _playerItemTypes =
         {
-            ItemType.DoubleJump,
             ItemType.HealingGlow,
             ItemType.LowGravity,
             ItemType.IronWill,
@@ -77,7 +74,6 @@ namespace PolyGone
         };
         private readonly string[] _playerItemDescriptions =
         {
-            "One additional jump while airborne",
             "Regenerate 10 HP every 2 seconds",
             "40% gravity - rises and falls slowly, same jump height",
             "Once per 20s, survive a killing blow and stay at 1 HP",
@@ -123,7 +119,7 @@ namespace PolyGone
         // -----------------------------------------------------------------------
         // Persistent last-selection state
         // -----------------------------------------------------------------------
-        private static List<ItemType> _lastSelectedPlayerItems = new List<ItemType> { ItemType.DoubleJump };
+        private static List<ItemType> _lastSelectedPlayerItems = new List<ItemType>();
         private static List<BlasterAttachmentType> _lastSelectedAttachments = new List<BlasterAttachmentType> { BlasterAttachmentType.MultiShot };
 
         private static readonly string _loadoutSavePath = Path.Combine(
@@ -151,7 +147,6 @@ namespace PolyGone
 
         private readonly int[] _playerItemSlotCosts =
         {
-            2, // Double Jump
             2, // Healing Glow
             1, // Low Gravity
             2, // Iron Will
@@ -620,7 +615,7 @@ namespace PolyGone
 
         public static void ResetSavedLoadout()
         {
-            _lastSelectedPlayerItems = new List<ItemType> { ItemType.DoubleJump };
+            _lastSelectedPlayerItems = new List<ItemType>();
             _lastSelectedAttachments = new List<BlasterAttachmentType> { BlasterAttachmentType.MultiShot };
         }
 

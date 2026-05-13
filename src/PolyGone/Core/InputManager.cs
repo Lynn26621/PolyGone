@@ -93,6 +93,48 @@ public static class InputManager
         return _currentGamepadState.IsButtonDown(button);
     }
 
+    private static bool IsMousePressed(MouseButtonBinding binding)
+    {
+        return binding switch
+        {
+            MouseButtonBinding.Left => _currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released,
+            MouseButtonBinding.Right => _currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released,
+            MouseButtonBinding.Middle => _currentMouseState.MiddleButton == ButtonState.Pressed && _previousMouseState.MiddleButton == ButtonState.Released,
+            MouseButtonBinding.XButton1 => _currentMouseState.XButton1 == ButtonState.Pressed && _previousMouseState.XButton1 == ButtonState.Released,
+            MouseButtonBinding.XButton2 => _currentMouseState.XButton2 == ButtonState.Pressed && _previousMouseState.XButton2 == ButtonState.Released,
+            MouseButtonBinding.None => false,
+            _ => false,
+        };
+    }
+
+    private static bool IsMouseHeld(MouseButtonBinding binding)
+    {
+        return binding switch
+        {
+            MouseButtonBinding.Left => _currentMouseState.LeftButton == ButtonState.Pressed,
+            MouseButtonBinding.Right => _currentMouseState.RightButton == ButtonState.Pressed,
+            MouseButtonBinding.Middle => _currentMouseState.MiddleButton == ButtonState.Pressed,
+            MouseButtonBinding.XButton1 => _currentMouseState.XButton1 == ButtonState.Pressed,
+            MouseButtonBinding.XButton2 => _currentMouseState.XButton2 == ButtonState.Pressed,
+            MouseButtonBinding.None => false,
+            _ => false,
+        };
+    }
+
+    private static MouseButtonBinding ResolveMouseBinding(MouseButtonBinding? binding)
+    {
+        return binding ?? MouseButtonBinding.None;
+    }
+
+    private static bool IsAnyMouseButtonHeld()
+    {
+        return _currentMouseState.LeftButton == ButtonState.Pressed
+               || _currentMouseState.RightButton == ButtonState.Pressed
+               || _currentMouseState.MiddleButton == ButtonState.Pressed
+               || _currentMouseState.XButton1 == ButtonState.Pressed
+               || _currentMouseState.XButton2 == ButtonState.Pressed;
+    }
+
     private static Vector2 GetMoveStickVector()
     {
         return Bindings.MoveStick == StickBinding.Left
@@ -151,8 +193,7 @@ public static class InputManager
                               IsButtonHeld(Bindings.MenuConfirmButton) ||
                               IsButtonHeld(Bindings.ShootButton);
 
-        bool mouseInput = _currentMouseState.Position != _previousMouseState.Position ||
-                         _currentMouseState.LeftButton == ButtonState.Pressed;
+        bool mouseInput = _currentMouseState.Position != _previousMouseState.Position || IsAnyMouseButtonHeld();
 
         bool keyboardInput = _currentKeyboardState.GetPressedKeys().Length > 0;
 
@@ -268,43 +309,49 @@ public static class InputManager
     // Function for single shooting (left click for mouse and right trigger for gamepad)
     public static bool GameShootSingle()
     {
-        bool mouseClicked = _currentMouseState.LeftButton == ButtonState.Pressed
-                            && _previousMouseState.LeftButton == ButtonState.Released
+        bool mouseClicked = IsMousePressed(Bindings.ShootMouseButton)
                             && _mouseClickCooldown <= 0f;
+        bool keyboardClicked = IsKeyPressed(Bindings.ShootKey)
+                               && _mouseClickCooldown <= 0f;
         bool gamepadClicked = IsButtonPressed(Bindings.ShootButton)
                               && _mouseClickCooldown <= 0f;
-        return mouseClicked || gamepadClicked;
+        return mouseClicked || keyboardClicked || gamepadClicked;
     }
     // function for automatic shooting (holding left click for mouse and holding right trigger for gamepad)
     public static bool GameShootHold()
     {
-        return _currentMouseState.LeftButton == ButtonState.Pressed
+        return IsMouseHeld(Bindings.ShootMouseButton)
+               || IsKeyHeld(Bindings.ShootKey)
                || IsButtonHeld(Bindings.ShootButton);
     }
     // function for game jumping (space for keyboard and A button for gamepad)
     public static bool GameJump()
     {
+        bool mouseJump = IsMousePressed(ResolveMouseBinding(Bindings.JumpMouseButton));
         bool keyboardJump = IsKeyPressed(Bindings.JumpKey);
         bool gamepadJump = IsButtonPressed(Bindings.JumpButton);
-        return keyboardJump || gamepadJump;
+        return mouseJump || keyboardJump || gamepadJump;
     }
 
     // Function for checking if jump is currently held.
     public static bool GameJumpHeld()
     {
+        bool mouseJump = IsMouseHeld(ResolveMouseBinding(Bindings.JumpMouseButton));
         bool keyboardJump = IsKeyHeld(Bindings.JumpKey);
         bool gamepadJump = IsButtonHeld(Bindings.JumpButton);
-        return keyboardJump || gamepadJump;
+        return mouseJump || keyboardJump || gamepadJump;
     }
 
     // function for dashing (left shift for keyboard and B button for gamepad)
     public static bool GameDash()
     {
+        bool mouseDash = IsMousePressed(ResolveMouseBinding(Bindings.DashMouseButton))
+                         && _dashCooldown <= 0f;
         bool keyboardDash = IsKeyPressed(Bindings.DashKey)
                             && _dashCooldown <= 0f;
         bool gamepadDash = IsButtonPressed(Bindings.DashButton)
                            && _dashCooldown <= 0f;
-        return keyboardDash || gamepadDash;
+        return mouseDash || keyboardDash || gamepadDash;
     }
 
     // function for moving left in game (A key for keyboard and left thumbstick left for gamepad)
@@ -324,25 +371,28 @@ public static class InputManager
     // Function for interacting with world objects like doors (W by default for keyboard, X by default for gamepad — both remappable).
     public static bool GameInteract()
     {
+        bool mouseInteract = IsMousePressed(ResolveMouseBinding(Bindings.InteractMouseButton));
         bool keyboardInteract = IsKeyPressed(Bindings.InteractKey);
         bool gamepadInteract = IsButtonPressed(Bindings.InteractButton);
-        return keyboardInteract || gamepadInteract;
+        return mouseInteract || keyboardInteract || gamepadInteract;
     }
 
     // Function for checking if the interact input is held (used to maintain door activation state).
     public static bool GameInteractHeld()
     {
+        bool mouseInteract = IsMouseHeld(ResolveMouseBinding(Bindings.InteractMouseButton));
         bool keyboardInteract = IsKeyHeld(Bindings.InteractKey);
         bool gamepadInteract = IsButtonHeld(Bindings.InteractButton);
-        return keyboardInteract || gamepadInteract;
+        return mouseInteract || keyboardInteract || gamepadInteract;
     }
 
     // function for dropping through platforms in game (S key for keyboard and left thumbstick down for gamepad)
     public static bool GameDrop()
     {
+        bool mouseDrop = IsMouseHeld(ResolveMouseBinding(Bindings.DropMouseButton));
         bool keyboardDrop = IsKeyHeld(Bindings.DropKey);
         bool gamepadDrop = IsButtonHeld(Bindings.DropButton) || thumbstickY < -0.9f;
-        return keyboardDrop || gamepadDrop;
+        return mouseDrop || keyboardDrop || gamepadDrop;
     }
     // function for aiming in game (mouse position for keyboard and right thumbstick for gamepad)
     public static Vector2 GameAim()
@@ -360,20 +410,24 @@ public static class InputManager
     //function for opening the pause menu while in game (Escape key for keyboard and Start button for gamepad)
     public static bool PauseMenuOpen()
     {
+        bool mousePause = IsMousePressed(ResolveMouseBinding(Bindings.PauseMouseButton))
+                          && _escapeKeyCooldown <= 0f;
         bool keyboardPause = IsKeyPressed(Bindings.PauseKey)
                              && _escapeKeyCooldown <= 0f;
         bool gamepadPause = IsButtonPressed(Bindings.PauseButton)
                             && _escapeKeyCooldown <= 0f;
-        return keyboardPause || gamepadPause;
+        return mousePause || keyboardPause || gamepadPause;
     }
     //function for closing the pause menu while in game (Escape key for keyboard and Start button for gamepad)
     public static bool PauseMenuClose()
     {
+        bool mousePause = IsMousePressed(ResolveMouseBinding(Bindings.PauseMouseButton))
+                          && _escapeKeyCooldown <= 0f;
         bool keyboardPause = IsKeyPressed(Bindings.PauseKey)
                              && _escapeKeyCooldown <= 0f;
         bool gamepadPause = IsButtonPressed(Bindings.PauseButton)
                             && _escapeKeyCooldown <= 0f;
-        return keyboardPause || gamepadPause;
+        return mousePause || keyboardPause || gamepadPause;
     }
     //function for navigating up in menus (W/Up key for keyboard and left thumbstick up for gamepad, and hovering over a button with mouse is already handled by GetMousePosition)
     public static bool MenuUp()
@@ -458,8 +512,7 @@ public static class InputManager
     //function for selecting a menu option with the mouse only (left click)
     public static bool MenuMouseConfirm()
     {
-        return _currentMouseState.LeftButton == ButtonState.Pressed
-               && _previousMouseState.LeftButton == ButtonState.Released
+        return IsMousePressed(ResolveMouseBinding(Bindings.MenuConfirmMouseButton))
                && _mouseClickCooldown <= 0f;
     }
     //function for selecting a menu option without the mouse (Enter key for keyboard and A button for gamepad)
@@ -479,7 +532,7 @@ public static class InputManager
 
     public static bool MenuConfirmHold()
     {
-        bool mouseHold = _currentMouseState.LeftButton == ButtonState.Pressed
+        bool mouseHold = IsMouseHeld(ResolveMouseBinding(Bindings.MenuConfirmMouseButton))
                          && _mouseClickCooldown <= 0f;
         bool keyboardHold = IsKeyHeld(Bindings.MenuConfirmKey)
                             && _escapeKeyCooldown <= 0f;
@@ -490,8 +543,7 @@ public static class InputManager
 
     public static bool MenuConfirmMouseClick()
     {
-        bool mouseConfirm = _currentMouseState.LeftButton == ButtonState.Pressed
-                            && _previousMouseState.LeftButton == ButtonState.Released
+        bool mouseConfirm = IsMousePressed(ResolveMouseBinding(Bindings.MenuConfirmMouseButton))
                             && _mouseClickCooldown <= 0f;
         return mouseConfirm;
     }
@@ -505,7 +557,9 @@ public static class InputManager
                             && _escapeKeyCooldown <= 0f;
         bool gamepadBack = IsButtonPressed(Bindings.MenuBackButton)
                            && _escapeKeyCooldown <= 0f;
-        return keyboardBack || gamepadBack;
+        bool mouseBack = IsMousePressed(ResolveMouseBinding(Bindings.MenuBackMouseButton))
+                         && _escapeKeyCooldown <= 0f;
+        return keyboardBack || gamepadBack || mouseBack;
     }
     //function for navigating to the left section of the loadout selection screen (left arrow for keyboard, and left thumbstick left for gamepad)
     public static bool LoadoutSectionLeft()
@@ -537,10 +591,12 @@ public static class InputManager
     //function for skipping inventory and starting with current selections in loadout selection screen (left or right control for keyboard, and A while holding down left thumbstick for gamepad)
     public static bool LoadoutSkip()
     {
+        bool mouseSkip = IsMousePressed(ResolveMouseBinding(Bindings.LoadoutSkipMouseButton))
+                         && _escapeKeyCooldown <= 0f;
         bool keyboardSkip = IsKeyPressed(Bindings.LoadoutSkipKey) && _escapeKeyCooldown <= 0f;
         bool gamepadSkip = IsButtonPressed(Bindings.LoadoutSkipButton)
                             && _escapeKeyCooldown <= 0f;
-        return keyboardSkip || gamepadSkip;
+        return mouseSkip || keyboardSkip || gamepadSkip;
     }
     //function for developer payment bypass in payment scene (Ctrl + Shift + D for keyboard, and Start + A for gamepad)
     public static bool DevPaymentBypass()
